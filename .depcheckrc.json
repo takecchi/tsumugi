@@ -1,0 +1,66 @@
+{
+  "ignores": [
+    "@types/*",
+    "@tauri-apps/cli",
+    "@eslint/js",
+    "eslint",
+    "eslint-config-prettier",
+    "eslint-import-resolver-typescript",
+    "eslint-plugin-import",
+    "eslint-plugin-jsx-a11y",
+    "eslint-plugin-react",
+    "globals",
+    "husky",
+    "jest",
+    "lint-staged",
+    "prettier",
+    "ts-jest",
+    "tsup",
+    "turbo",
+    "typescript",
+    "typescript-eslint",
+    "vite",
+    "vite-tsconfig-paths",
+    "workbox-build",
+    "eslint-plugin-storybook",
+    "@storybook/*",
+    "storybook",
+    "@playwright/test",
+    "pixelmatch",
+    "pngjs",
+    "fs-extra"
+  ],
+  "skip-missing": false,
+  "ignore-dirs": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".turbo",
+    "storybook-static"
+  ],
+  "ignore-patterns": [
+    "*.d.ts",
+    "*.test.*",
+    "*.spec.*",
+    "*.stories.*",
+    "playwright.config.*",
+    "vite.config.*",
+    "tsup.config.*",
+    "eslint.config.*"
+  ],
+  "parsers": {
+    "*.js": "es6",
+    "*.jsx": "jsx",
+    "*.ts": "typescript",
+    "*.tsx": "tsx"
+  },
+  "detectors": [
+    "requireCallExpression",
+    "importDeclaration",
+    "exportDeclaration",
+    "gruntLoadTaskCallExpression",
+    "expressViewEngine"
+  ],
+  "specials": ["eslint", "jest", "babel", "webpack", "rollup", "vite"]
+}

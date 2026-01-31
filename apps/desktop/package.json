@@ -1,0 +1,39 @@
+{
+  "name": "desktop",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tauri": "npx tauri",
+    "build": "react-router build",
+    "build:tauri": "tauri build",
+    "dev": "react-router dev",
+    "dev:tauri": "tauri dev",
+    "start": "npx serve -s build/client",
+    "tsc": "react-router typegen && tsc",
+    "lint": "eslint --fix",
+    "typegen": "react-router typegen"
+  },
+  "dependencies": {
+    "@react-router/node": "7.13.0",
+    "@react-router/serve": "7.13.0",
+    "@tauri-apps/api": "2.10.1",
+    "@tauri-apps/plugin-dialog": "2.6.0",
+    "@tauri-apps/plugin-fs": "2.4.5",
+    "@tsumugi/adapter": "*",
+    "@tsumugi/adapter-local": "*",
+    "@tsumugi/react-router": "*",
+    "@tsumugi/ui": "*",
+    "isbot": "^5",
+    "react-router": "7.13.0",
+    "react-router-next-routes": "1.0.3",
+    "swr": "2.4.0"
+  },
+  "devDependencies": {
+    "@react-router/dev": "7.13.0",
+    "@tailwindcss/vite": "4.1.17",
+    "tailwindcss": "4.1.17",
+    "vite-tsconfig-paths": "5.1.4",
+    "workbox-build": "7.3.0"
+  }
+}

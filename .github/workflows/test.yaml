@@ -1,0 +1,97 @@
+name: Test Workflow
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+
+# ブランチごとに並行実行を制御
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-draft:
+    runs-on: ubuntu-latest
+    outputs:
+      is_draft: ${{ steps.check.outputs.is_draft }}
+    steps:
+      - id: check
+        run: echo "is_draft=${{ github.event.pull_request.draft }}" >> $GITHUB_OUTPUT
+
+  check_paths:
+    needs: check-draft
+    if: needs.check-draft.outputs.is_draft == 'false'
+    runs-on: ubuntu-latest
+    outputs:
+      packages_changed: ${{ steps.filter.outputs.packages }}
+      desktop_changed: ${{ steps.filter.outputs.desktop }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        name: Check changed files
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            packages:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'packages/**'
+            desktop:
+              - 'apps/desktop/**'
+
+  test_all:
+    needs: check_paths
+    if: ${{ needs.check_paths.outputs.packages_changed == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: NPM install
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Type Check
+        run: npm run tsc
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build Storybook
+        run: npm run build-storybook
+
+  test_desktop:
+    needs: check_paths
+    if: ${{ needs.check_paths.outputs.packages_changed != 'true' && needs.check_paths.outputs.desktop_changed == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: NPM install
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Type Check
+        run: npm run tsc -w desktop
+
+      - name: Lint
+        run: npm run lint -w desktop

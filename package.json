@@ -1,0 +1,79 @@
+{
+  "name": "tsumugi",
+  "version": "1.0.0",
+  "packageManager": "npm@11.6.4",
+  "description": "AI Novel Studio",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "workspaces": [
+    "apps/desktop",
+    "packages/ui",
+    "packages/adapter/core",
+    "packages/adapter/local",
+    "packages/react-router"
+  ],
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,scss,html,md}": [
+      "prettier --write"
+    ]
+  },
+  "scripts": {
+    "format": "prettier --write \"**/*.{js,jsx,mjs,ts,tsx,css,scss,html,json}\"",
+    "prepare": "husky",
+    "lint": "turbo run lint",
+    "build": "turbo run build",
+    "tsc": "turbo run tsc",
+    "test": "turbo run test",
+    "lint-staged": "lint-staged",
+    "storybook": "npm run storybook -w @tsumugi/ui",
+    "build-storybook": "npm run build-storybook -w @tsumugi/ui",
+    "dev": "turbo run dev --parallel",
+    "dev:tauri": "turbo run dev:tauri --filter=desktop...",
+    "build:tauri": "turbo run build:tauri --filter=desktop..."
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "9.33.0",
+    "@tauri-apps/cli": "2.10.0",
+    "@types/jest": "30.0.0",
+    "@types/node": "22.17.0",
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "eslint": "9.33.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-import-resolver-typescript": "3.6.3",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-react-refresh": "0.5.0",
+    "globals": "16.2.0",
+    "husky": "9.1.7",
+    "jest": "30.0.2",
+    "lint-staged": "16.2.7",
+    "prettier": "3.6.2",
+    "ts-jest": "29.4.6",
+    "tsup": "8.4.0",
+    "turbo": "2.5.5",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.31.0",
+    "vite": "6.4.1",
+    "vite-tsconfig-paths": "5.1.4"
+  },
+  "overrides": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "typescript": "5.8.3",
+    "eslint": "9.33.0",
+    "vite": "6.4.1"
+  }
+}

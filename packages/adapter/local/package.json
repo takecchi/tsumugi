@@ -1,0 +1,54 @@
+{
+  "name": "@tsumugi/adapter-local",
+  "version": "0.0.1",
+  "description": "Local file-based adapter for tsumugi (Tauri)",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "src/**",
+    "dist/**"
+  ],
+  "author": "",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "dev:tauri": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "lint": "eslint --fix",
+    "tsc": "tsc --noEmit",
+    "test": "TZ=Asia/Tokyo jest"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "3.0.46",
+    "@ai-sdk/openai": "3.0.30",
+    "@tsumugi/adapter": "*",
+    "ai": "6.0.94",
+    "zod": "4.3.6"
+  },
+  "peerDependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "typescript": "^5.0.0"
+  }
+}

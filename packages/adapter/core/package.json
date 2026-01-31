@@ -1,0 +1,35 @@
+{
+  "name": "@tsumugi/adapter",
+  "version": "0.0.1",
+  "description": "Core interfaces for tsumugi adapters",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "src/**",
+    "dist/**"
+  ],
+  "author": "",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "dev:tauri": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "lint": "eslint --fix",
+    "tsc": "tsc --noEmit"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "tasks": {
+    "dev": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": true
+    },
+    "dev:tauri": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": true
+    },
+    "build:tauri": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": false
+    },
+    "lint": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": false
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": false
+    },
+    "test": {
+      "dependsOn": ["^test"],
+      "cache": false,
+      "persistent": false
+    },
+    "tsc": {
+      "dependsOn": ["^tsc"],
+      "cache": false,
+      "persistent": false
+    }
+  }
+}
