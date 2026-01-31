@@ -1,0 +1,29 @@
+{
+  "tasks": {
+    "dev": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": false
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": false
+    },
+    "test": {
+      "dependsOn": ["^test"],
+      "cache": false,
+      "persistent": false
+    },
+    "tsc": {
+      "dependsOn": ["^tsc"],
+      "cache": false,
+      "persistent": false
+    }
+  }
+}
