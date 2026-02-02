@@ -1,15 +1,23 @@
 {
-  "name": "react-monorepo-template",
+  "name": "tsumugi",
   "version": "1.0.0",
-  "description": "React + TypeScript monorepo template",
+  "packageManager": "npm@11.6.4",
+  "description": "AI Novel Studio",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "workspaces": [
+    "apps/desktop",
+    "packages/ui"
   ],
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
-    "*.{json,css,scss,html,md}": ["prettier --write"]
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,scss,html,md}": [
+      "prettier --write"
+    ]
   },
   "scripts": {
     "format": "prettier --write \"**/*.{js,jsx,mjs,ts,tsx,css,scss,html,json}\"",
@@ -19,6 +27,7 @@
     "tsc": "turbo run tsc",
     "test": "turbo run test",
     "lint-staged": "lint-staged",
+    "storybook": "npm run storybook -w @tsumugi/ui",
     "dev": "turbo run dev --parallel"
   },
   "husky": {
@@ -38,6 +47,8 @@
     "eslint-plugin-import": "2.31.0",
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-react-refresh": "0.5.0",
     "globals": "16.2.0",
     "husky": "9.1.7",
     "jest": "30.0.2",
@@ -48,7 +59,7 @@
     "turbo": "2.5.5",
     "typescript": "5.8.3",
     "typescript-eslint": "8.31.0",
-    "vite": "6.3.5",
+    "vite": "6.4.1",
     "vite-tsconfig-paths": "5.1.4"
   },
   "overrides": {
@@ -56,8 +67,6 @@
     "react-dom": "19.1.1",
     "typescript": "5.8.3",
     "eslint": "9.33.0",
-    "vite": "6.3.5"
-  },
-  "dependencies": {
+    "vite": "6.4.1"
   }
 }
