@@ -35,7 +35,7 @@
     "test": "TZ=Asia/Tokyo jest"
   },
   "dependencies": {
-    "@tsumugi-chan/client": "1.0.3",
+    "@tsumugi-chan/client": "1.0.4",
     "@tsumugi/adapter": "*"
   },
   "devDependencies": {

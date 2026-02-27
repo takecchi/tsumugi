@@ -6,7 +6,7 @@ import { executeAcceptProposal, buildProposalResult } from './ai-proposal';
 
 const mockFindProposalInMessages = jest.fn<Promise<AIProposal | undefined>, [string, string]>();
 const mockUpdateProposalStatusInMessages = jest.fn<Promise<void>, [string, string, string]>();
-const mockCheckAllProposalsProcessed = jest.fn<Promise<{ allProcessed: boolean; feedbackSummaries: { proposalId: string; status: string; targetName: string }[] }>, [string]>();
+const mockCheckAllProposalsProcessed = jest.fn<Promise<{ allProcessed: boolean; feedbackSummaries: { toolCallId: string; status: string; targetName: string }[] }>, [string]>();
 const mockGetProjectIdFromSessionPath = jest.fn<string, [string]>();
 
 jest.mock('./ai-session', () => ({
@@ -317,7 +317,7 @@ describe('buildProposalResult', () => {
   it('全提案が未処理の場合は stream なしで返す', async () => {
     mockCheckAllProposalsProcessed.mockResolvedValue({ allProcessed: false, feedbackSummaries: [] });
     const adapters = createMockAdapters();
-    const feedback = { proposalId: 'prop-1', status: 'accepted' as const };
+    const feedback = { toolCallId: 'prop-1', status: 'accepted' as const };
 
     const result = await buildProposalResult('session-1', feedback, getConfig, () => adapters);
 
@@ -328,7 +328,7 @@ describe('buildProposalResult', () => {
   it('全提案が処理済みだが session.json がない場合は stream なしで返す', async () => {
     mockCheckAllProposalsProcessed.mockResolvedValue({ allProcessed: true, feedbackSummaries: [] });
     const adapters = createMockAdapters();
-    const feedback = { proposalId: 'prop-1', status: 'accepted' as const };
+    const feedback = { toolCallId: 'prop-1', status: 'accepted' as const };
 
     const result = await buildProposalResult('session-1', feedback, getConfig, () => adapters);
 
@@ -345,7 +345,7 @@ describe('buildProposalResult', () => {
       return null;
     });
     const adapters = createMockAdapters();
-    const feedback = { proposalId: 'prop-1', status: 'accepted' as const };
+    const feedback = { toolCallId: 'prop-1', status: 'accepted' as const };
 
     const result = await buildProposalResult('session-1', feedback, getConfig, () => adapters);
 

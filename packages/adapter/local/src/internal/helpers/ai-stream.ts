@@ -43,6 +43,10 @@ export async function createChatStream(
       messageType: 'text',
       content: request.message,
     });
+
+    // ストリーム中の getMessages で即時反映されるようファイルに書き込む
+    const messagesPath = await join(sessionDir, 'messages.json');
+    await writeJson(messagesPath, messages);
   }
 
   // プロジェクトサマリー、アクティブタブ内容、会話要約、AIメモリを並行取得
