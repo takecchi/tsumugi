@@ -31,6 +31,8 @@ function useTauriReady(): boolean {
   return ready;
 }
 
+const isApiAdapter = import.meta.env.VITE_ADAPTER === 'api';
+
 export function AdapterProvider({
   adapter,
   children,
@@ -40,23 +42,30 @@ export function AdapterProvider({
 }) {
   const tauriReady = useTauriReady();
 
-  const value = useMemo(
-    () =>
-      adapter ??
-      (tauriReady
-        ? createAdapter({
-            local: {
-              ai: {
-                provider: import.meta.env.VITE_AI_PROVIDER || 'openai',
-                apiKey: import.meta.env.VITE_AI_API_KEY || '',
-                defaultModel: import.meta.env.VITE_AI_MODEL || undefined,
-                baseUrl: import.meta.env.VITE_AI_BASE_URL || undefined,
-              },
-            },
-          })
-        : null),
-    [adapter, tauriReady],
-  );
+  const value = useMemo(() => {
+    if (adapter) return adapter;
+
+    if (isApiAdapter) {
+      return createAdapter({
+        api: {
+          baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+        },
+      });
+    }
+
+    if (!tauriReady) return null;
+
+    return createAdapter({
+      local: {
+        ai: {
+          provider: import.meta.env.VITE_AI_PROVIDER || 'openai',
+          apiKey: import.meta.env.VITE_AI_API_KEY || '',
+          defaultModel: import.meta.env.VITE_AI_MODEL || undefined,
+          baseUrl: import.meta.env.VITE_AI_BASE_URL || undefined,
+        },
+      },
+    });
+  }, [adapter, tauriReady]);
 
   if (!value) {
     return null;

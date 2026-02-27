@@ -31,6 +31,7 @@
     "build": "vite build",
     "dev": "vite build --watch",
     "dev:tauri": "vite build --watch",
+    "dev:web": "vite build --watch",
     "lint": "eslint --fix",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",

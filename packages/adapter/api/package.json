@@ -1,7 +1,7 @@
 {
-  "name": "@tsumugi/adapter-local",
+  "name": "@tsumugi/adapter-api",
   "version": "0.0.1",
-  "description": "Local file-based adapter for tsumugi (Tauri)",
+  "description": "API adapter for tsumugi (Web)",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -35,21 +35,10 @@
     "test": "TZ=Asia/Tokyo jest"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "3.0.46",
-    "@ai-sdk/openai": "3.0.30",
-    "@tsumugi/adapter": "*",
-    "ai": "6.0.94",
-    "zod": "4.3.6"
-  },
-  "peerDependencies": {
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-dialog": "^2.0.0",
-    "@tauri-apps/plugin-fs": "^2.0.0"
+    "@tsumugi-chan/client": "1.0.3",
+    "@tsumugi/adapter": "*"
   },
   "devDependencies": {
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-dialog": "^2.0.0",
-    "@tauri-apps/plugin-fs": "^2.0.0",
     "typescript": "^5.0.0"
   }
 }

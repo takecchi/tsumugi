@@ -6,7 +6,12 @@
       "persistent": true
     },
     "dev:tauri": {
-      "dependsOn": [],
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "dev:web": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },

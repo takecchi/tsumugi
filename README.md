@@ -52,7 +52,8 @@ tsumugi/
 ├── packages/
 │   ├── adapter/
 │   │   ├── core/             # アダプターインターフェース・型定義
-│   │   └── local/            # ローカルファイルシステム実装
+│   │   ├── local/            # ローカルファイルシステム実装（Tauri）
+│   │   └── api/              # APIサーバー実装（Web）
 │   ├── react-router/         # React Router ユーティリティ
 │   └── ui/                   # 共通UIコンポーネント（Storybook付き）
 ├── turbo.json
@@ -81,7 +82,9 @@ npm install
 
 # 環境変数を設定
 cp apps/desktop/.env apps/desktop/.env.local
-# .env.local を編集し、VITE_AI_API_KEY にAPIキーを設定
+# .env.local を編集
+#   VITE_AI_API_KEY   — AIプロバイダーのAPIキー（Tauriモード時）
+#   VITE_API_BASE_URL — バックエンドAPIのURL（Webモード時、デフォルト: http://localhost:8080）
 ```
 
 ## 起動方法
@@ -89,15 +92,23 @@ cp apps/desktop/.env apps/desktop/.env.local
 ### 開発サーバー
 
 ```bash
-# デスクトップアプリを起動（依存パッケージのwatchビルドも自動で起動）
+# Tauri デスクトップアプリを起動（ローカルファイルシステム + AI SDK直接呼び出し）
 npm run dev:tauri
 
-# ビルドしてインストーラーを作成
-npm run build:tauri
+# Web モードで起動（バックエンドAPIサーバー経由）
+npm run dev:web
 
 # Storybookを起動（UIコンポーネント開発）
 npm run storybook
 ```
+
+`dev:tauri` と `dev:web` の違いは `VITE_ADAPTER` 環境変数のみです。
+
+| | `dev:tauri` | `dev:web` |
+|---|---|---|
+| **アダプター** | `@tsumugi/adapter-local` | `@tsumugi/adapter-api` |
+| **データ保存** | Tauri FS（ローカルファイル） | バックエンド API |
+| **AI** | フロントエンドから直接呼び出し | バックエンド経由 |
 
 ### その他のコマンド
 

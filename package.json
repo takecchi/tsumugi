@@ -11,6 +11,7 @@
     "packages/ui",
     "packages/adapter/core",
     "packages/adapter/local",
+    "packages/adapter/api",
     "packages/react-router"
   ],
   "lint-staged": {
@@ -34,6 +35,7 @@
     "build-storybook": "npm run build-storybook -w @tsumugi/ui",
     "dev": "turbo run dev --parallel",
     "dev:tauri": "turbo run dev:tauri --filter=desktop...",
+    "dev:web": "turbo run dev:web --filter=desktop...",
     "build:tauri": "turbo run build:tauri --filter=desktop..."
   },
   "husky": {

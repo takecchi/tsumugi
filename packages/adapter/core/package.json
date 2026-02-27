@@ -29,6 +29,7 @@
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "dev:tauri": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "dev:web": "tsup src/index.ts --format cjs,esm --dts --watch",
     "lint": "eslint --fix",
     "tsc": "tsc --noEmit"
   }
