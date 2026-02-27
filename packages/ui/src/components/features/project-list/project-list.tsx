@@ -87,7 +87,8 @@ export function ProjectList({
               {projects.map((project) => (
                 <CommandItem
                   key={project.id}
-                  value={project.name}
+                  value={project.id}
+                  keywords={[project.name, project.path]}
                   onSelect={() => onSelect?.(project)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2",
