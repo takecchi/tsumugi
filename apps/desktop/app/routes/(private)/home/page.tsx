@@ -16,8 +16,7 @@ import { PlusIcon, FolderIcon } from 'lucide-react';
 import { PATH_WORKSPACE } from '~/constants/path';
 
 export const meta: MetaFunction = () => [
-  { title: 'Tsumugi - プロジェクト' },
-  { name: 'description', content: 'AI-powered novel writing editor' },
+  { title: 'Tsumugi - プロジェクト一覧' },
 ];
 
 const isApiAdapter = import.meta.env.VITE_ADAPTER === 'api';

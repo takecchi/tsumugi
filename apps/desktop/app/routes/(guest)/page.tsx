@@ -1,4 +1,3 @@
-import { type MetaFunction } from 'react-router';
 import { Button, GoogleLogo } from '@tsumugi/ui';
 import {
   PenLineIcon,
@@ -12,11 +11,6 @@ import { cn, Separator } from '@tsumugi/ui';
 import { FeatureCard } from '~/routes/(guest)/_components/feature-card';
 import { useGoogleLogin } from '~/hooks/auth';
 import { useCallback } from 'react';
-
-export const meta: MetaFunction = () => [
-  { title: 'Tsumugi - プロジェクト' },
-  { name: 'description', content: 'AI-powered novel writing editor' },
-];
 
 export default function Page() {
   const { trigger: getGoogleUrl } = useGoogleLogin();
