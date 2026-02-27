@@ -98,16 +98,13 @@ export class TokenManager {
    *
    * - メモリ上にトークンがあり有効期限内 → そのまま返す
    * - 有効期限が間近 or 切れている → リフレッシュして返す
+   * - トークンがない場合 → リフレッシュを試みる
    * - 同時呼び出し時は進行中の refresh Promise に合流する
-   * - トークンがない場合はエラーを投げる（未認証状態）
    */
   async getAccessToken(): Promise<string> {
+    // 有効なトークンがある場合はそのまま返す
     if (this.token && !this.isExpiringSoon()) {
       return this.token;
-    }
-
-    if (!this.token) {
-      throw new Error('Not authenticated');
     }
 
     if (!this.authApi) {
@@ -119,7 +116,7 @@ export class TokenManager {
       return this.refreshPromise;
     }
 
-    // 新規リフレッシュ開始
+    // 新規リフレッシュ開始（トークンがない場合も含む）
     this.refreshPromise = this.doRefresh().finally(() => {
       this.refreshPromise = null;
     });
