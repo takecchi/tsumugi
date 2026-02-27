@@ -486,3 +486,23 @@ export interface AIChatMessageRequest extends AIChatRequestBase {
  */
 export type AIChatRequest = AIChatMessageRequest;
 
+// ─── 認証関連 ───
+
+/**
+ * 認証状態
+ */
+export interface AuthState {
+  /** ログイン済みかどうか */
+  isAuthenticated: boolean;
+  /** アクセストークン（API通信用、未ログイン時はnull） */
+  accessToken: string | null;
+}
+
+/**
+ * Google OAuth認証開始の結果
+ */
+export interface GoogleAuthUrl {
+  /** Google OAuth認可URL */
+  url: string;
+}
+

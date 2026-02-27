@@ -16,6 +16,12 @@ export class ProjectCancelledError extends Error {
 
 export function createAdapter(_: AdapterConfig = {}): Adapter {
   return {
+    auth: {
+      getAuthState: () => notImplemented(),
+      getGoogleAuthUrl: () => notImplemented(),
+      logout: () => notImplemented(),
+      refreshAccessToken: () => notImplemented(),
+    },
     projects: {
       getAll: () => notImplemented(),
       getById: () => notImplemented(),
