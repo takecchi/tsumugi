@@ -8,6 +8,7 @@ const config: StorybookConfig = {
     "@chromatic-com/storybook",
     "@storybook/addon-interactions",
   ],
+  staticDirs: [{ from: './static', to: '/static' }],
   framework: {
     name: "@storybook/react-vite",
     options: {},
