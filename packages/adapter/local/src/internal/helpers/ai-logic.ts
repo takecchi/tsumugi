@@ -388,7 +388,7 @@ export function buildSystemPrompt(
 
 ## 読み取りモード
 現在は読み取り専用モードです。データの参照・分析・アドバイスのみ行えます。データの編集はできません。
-ユーザーからデータの作成・編集・削除を求められた場合は、「現在は読み取りモードのため編集できません。Writeモードに切り替えていただければ、データの作成や編集が可能になります。」と案内してください。` + summarySection + memoriesStr + contextSection + activeSection;
+ユーザーからデータの作成・編集・提案・削除を求められた場合は、「現在は読み取りモードのため編集できません。Writeモードに切り替えていただければ、データの作成や編集が可能になります。」と案内してください。` + summarySection + memoriesStr + contextSection + activeSection;
 }
 
 /**
