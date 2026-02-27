@@ -1,4 +1,4 @@
-import type { SelectedNode } from '~/routes/workspace/[projectId]/_hooks/useEditorTabs';
+import type { SelectedNode } from '~/routes/(private)/workspace/[projectId]/_hooks/useEditorTabs';
 import { WritingEditorWrapper } from './editors/writing-editor-wrapper';
 import { PlotEditorWrapper } from './editors/plot-editor-wrapper';
 import { CharacterEditorWrapper } from './editors/character-editor-wrapper';

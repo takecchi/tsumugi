@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useProject, useUpdateProject } from '~/hooks/projects';
 import { ProjectEditor, type ProjectEditorData } from '@tsumugi/ui';
-import { useDebouncedSave } from '~/routes/workspace/[projectId]/_hooks/useDebouncedSave';
+import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import type { Project } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = { revalidateOnFocus: false, revalidateOnReconnect: false } as const;

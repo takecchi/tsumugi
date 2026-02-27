@@ -1,10 +1,11 @@
-import { useParams, useNavigate, type MetaFunction } from 'react-router';
+import { useParams, type MetaFunction, Navigate } from 'react-router';
 import { useProject } from '~/hooks/projects';
-import { useEditorTabs } from '~/routes/workspace/[projectId]/_hooks/useEditorTabs';
+import { useEditorTabs } from '~/routes/(private)/workspace/[projectId]/_hooks/useEditorTabs';
 import { WorkspaceLayout, Skeleton, EditorTabs } from '@tsumugi/ui';
 import { WorkspaceSidebar } from './_components/workspace-sidebar';
 import { WorkspaceEditor } from './_components/workspace-editor';
 import { WorkspaceAiPanel } from './_components/workspace-ai-panel';
+import { PATH_HOME } from '~/constants/path';
 
 export const meta: MetaFunction = () => [
   { title: 'Tsumugi - ワークスペース' },
@@ -13,11 +14,23 @@ export const meta: MetaFunction = () => [
 
 export default function WorkspacePage() {
   const { projectId: encodedProjectId } = useParams<{ projectId: string }>();
-  const projectId = encodedProjectId ? decodeURIComponent(encodedProjectId) : '';
-  const navigate = useNavigate();
+  const projectId = encodedProjectId
+    ? decodeURIComponent(encodedProjectId)
+    : '';
 
   const { data: project, isLoading: isLoadingProject } = useProject(projectId);
-  const { selectedNode, openTabs, selectNode, deselectNode, closeTab, closeOtherTabs, closeAllTabs, selectTab, selectProjectTab, updateProjectTabName } = useEditorTabs(projectId, project?.name ?? '');
+  const {
+    selectedNode,
+    openTabs,
+    selectNode,
+    deselectNode,
+    closeTab,
+    closeOtherTabs,
+    closeAllTabs,
+    selectTab,
+    selectProjectTab,
+    updateProjectTabName,
+  } = useEditorTabs(projectId, project?.name ?? '');
 
   if (isLoadingProject) {
     return (
@@ -31,8 +44,7 @@ export default function WorkspacePage() {
   }
 
   if (!project) {
-    navigate('/');
-    return null;
+    return <Navigate to={PATH_HOME} replace />;
   }
 
   return (
@@ -62,12 +74,7 @@ export default function WorkspacePage() {
           />
         </EditorTabs>
       }
-      aiPanel={
-        <WorkspaceAiPanel
-          projectId={projectId}
-          openTabs={openTabs}
-        />
-      }
+      aiPanel={<WorkspaceAiPanel projectId={projectId} openTabs={openTabs} />}
     />
   );
 }
