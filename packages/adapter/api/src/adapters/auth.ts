@@ -10,10 +10,18 @@ export function createAuthAdapter(
     async getAuthState(): Promise<AuthState> {
       const accessToken = tokenManager.getToken();
       if (!accessToken) {
-        return {
-          isAuthenticated: false,
-          accessToken: null,
-        };
+        try {
+          const token = await tokenManager.refreshToken();
+          return {
+            isAuthenticated: true,
+            accessToken: token,
+          };
+        } catch {
+          return {
+            isAuthenticated: false,
+            accessToken: null,
+          };
+        }
       }
       return {
         isAuthenticated: true,
