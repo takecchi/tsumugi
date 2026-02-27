@@ -98,7 +98,12 @@ export function buildDisplayMessages(
     });
 
   if (pendingUserMessage !== null) {
-    msgs.push({ id: 'pending-user', role: 'user', content: pendingUserMessage });
+    const alreadyExists = msgs.some(
+      (m) => m.role === 'user' && 'content' in m && m.content === pendingUserMessage,
+    );
+    if (!alreadyExists) {
+      msgs.push({ id: 'pending-user', role: 'user', content: pendingUserMessage });
+    }
   }
 
   // 提案を先に追加（保存順序と一致させる）
