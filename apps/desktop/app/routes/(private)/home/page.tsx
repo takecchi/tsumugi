@@ -13,6 +13,7 @@ import {
 } from '@tsumugi/ui';
 import type { ProjectItem } from '@tsumugi/ui';
 import { PlusIcon, FolderIcon } from 'lucide-react';
+import { PATH_WORKSPACE } from '~/constants/path';
 
 export const meta: MetaFunction = () => [
   { title: 'Tsumugi - プロジェクト' },
@@ -58,7 +59,7 @@ export default function Page() {
       if (project) {
         setIsCreateDialogOpen(false);
         setNewProjectTitle('untitled');
-        await navigate(`/workspace/${encodeURIComponent(project.id)}`);
+        await navigate(`${PATH_WORKSPACE}/${encodeURIComponent(project.id)}`);
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
@@ -67,7 +68,7 @@ export default function Page() {
   };
 
   const handleSelectProject = (project: ProjectItem) => {
-    navigate(`/workspace/${encodeURIComponent(project.id)}`);
+    navigate(`${PATH_WORKSPACE}/${encodeURIComponent(project.id)}`);
   };
 
   return (

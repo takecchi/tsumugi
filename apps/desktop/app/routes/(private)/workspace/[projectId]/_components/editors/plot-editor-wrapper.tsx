@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { usePlot, usePlotTree, useUpdatePlot } from '~/hooks/plots';
 import { PlotEditor, type PlotEditorData } from '@tsumugi/ui';
-import { useDebouncedSave } from '~/routes/workspace/[projectId]/_hooks/useDebouncedSave';
+import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import type { Plot } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = { revalidateOnFocus: false, revalidateOnReconnect: false } as const;

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useWriting, useWritingTree, useUpdateWriting } from '~/hooks/writings';
 import { WritingEditor } from '@tsumugi/ui';
-import { useDebouncedSave } from '~/routes/workspace/[projectId]/_hooks/useDebouncedSave';
+import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 
 const NO_REVALIDATE = { revalidateOnFocus: false, revalidateOnReconnect: false } as const;
 

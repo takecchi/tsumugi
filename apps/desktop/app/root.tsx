@@ -3,7 +3,7 @@ import type { LinksFunction } from 'react-router';
 import { AdapterProvider } from './adapter-provider';
 import { SafeErrorBoundary, SafeMeta, SafeLinks } from '@tsumugi/react-router';
 
-import '@tsumugi/ui/index.css';
+import './app.css';
 
 export const links: LinksFunction = () => [
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },

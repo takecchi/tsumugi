@@ -15,6 +15,8 @@ import type {
   AIStreamChunk,
   AIMemory,
   AIProjectUsage,
+  AuthState,
+  GoogleAuthUrl,
 } from './types';
 
 /**
@@ -201,9 +203,33 @@ export interface ProjectSettingsAdapter {
 }
 
 /**
+ * 認証操作のインターフェース
+ */
+export interface AuthAdapter {
+  /**
+   * 現在の認証状態を取得
+   */
+  getAuthState(): Promise<AuthState>;
+
+  /**
+   * Google OAuth認証を開始（認可URLを取得）
+   */
+  getGoogleAuthUrl(): Promise<GoogleAuthUrl>;
+  /**
+   * ログアウト
+   */
+  logout(): Promise<void>;
+  /**
+   * アクセストークンをリフレッシュ
+   */
+  refreshAccessToken(): Promise<AuthState>;
+}
+
+/**
  * 統合アダプター
  */
 export interface Adapter {
+  readonly auth: AuthAdapter;
   readonly projects: ProjectAdapter;
   readonly settings: ProjectSettingsAdapter;
   readonly plots: PlotAdapter;

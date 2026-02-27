@@ -12,6 +12,7 @@ import {
   type ContentType,
 } from '@tsumugi/ui';
 import { ArrowLeftIcon, SettingsIcon } from 'lucide-react';
+import { PATH_HOME } from '~/constants/path';
 
 function convertTreeNodes(nodes: TreeNode[], type: ContentType): TreeNodeData[] {
   return nodes.map((node) => ({
@@ -163,7 +164,7 @@ export function WorkspaceSidebar({
             variant="ghost"
             size="icon-sm"
             className="shrink-0"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(PATH_HOME)}
           >
             <ArrowLeftIcon className="size-4" />
           </Button>
