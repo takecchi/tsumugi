@@ -45,32 +45,42 @@ export function parseSSEStream(response: Response): ReadableStream<AIStreamChunk
   let buffer = '';
 
   return new ReadableStream<AIStreamChunk>({
-    async pull(controller) {
-      try {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.close();
-          return;
-        }
+    start(controller) {
+      // バックグラウンドで読み取りを開始（push ベース）
+      const pump = async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              controller.close();
+              return;
+            }
 
-        buffer += decoder.decode(value, { stream: true });
+            buffer += decoder.decode(value, { stream: true });
 
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() ?? '';
 
-        for (const part of parts) {
-          const chunk = parseSSEEvent(part);
-          if (chunk) {
-            controller.enqueue(chunk);
+            for (const part of parts) {
+              const chunk = parseSSEEvent(part);
+              if (chunk) {
+                controller.enqueue(chunk);
+              }
+            }
           }
+        } catch (err) {
+          controller.enqueue({
+            type: 'error',
+            error: err instanceof Error ? err.message : String(err),
+          });
+          controller.close();
         }
-      } catch (err) {
-        controller.enqueue({
-          type: 'error',
-          error: err instanceof Error ? err.message : String(err),
-        });
-        controller.close();
-      }
+      };
+
+      // 非同期で実行
+      pump().catch((e) => {
+        console.error('[adapter-api] SSE pump error:', e);
+      });
     },
     cancel() {
       reader.cancel().catch((e) => {
