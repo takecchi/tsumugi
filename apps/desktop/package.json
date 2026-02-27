@@ -7,6 +7,7 @@
     "tauri": "npx tauri",
     "build": "react-router build",
     "build:tauri": "tauri build",
+    "build:web": "VITE_ADAPTER=api react-router build",
     "dev": "react-router dev",
     "dev:tauri": "tauri dev",
     "dev:web": "VITE_ADAPTER=api react-router dev --open",

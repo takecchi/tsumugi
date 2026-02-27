@@ -1,0 +1,79 @@
+name: Deploy to Vercel
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        required: true
+        type: string
+      env-args:
+        required: true
+        type: string
+      url:
+        required: false
+        type: string
+      vercel-args:
+        required: false
+        type: string
+      scope:
+        required: false
+        type: string
+    secrets:
+      VERCEL_ORG_ID:
+        required: true
+      VERCEL_PROJECT_ID:
+        required: true
+      VERCEL_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: ${{ inputs.name }}
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: NPM install
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm install
+
+      # Vercelインストール
+      - name: Install Vercel CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm install --global vercel@50.1.3
+
+      - name: Pull Vercel Environment Information
+        run: |
+          vercel pull --yes ${{ inputs.env-args }} --token=${{ secrets.VERCEL_TOKEN }}
+          mv .vercel/.env.* ./apps/desktop/.env
+
+      - name: Build App
+        run: npm run build:web
+
+      - name: Copy vercel.json to build output
+        run: cp ./apps/desktop/vercel.json ./apps/desktop/build/client/
+
+      - name: Deploy to Vercel
+        id: deploy
+        working-directory: ./apps/desktop
+        run: |
+          echo "url=$(vercel deploy ./build/client ${{ inputs.vercel-args }} --token=${{ secrets.VERCEL_TOKEN }})" >> $GITHUB_OUTPUT
+
+      - name: Assign domain
+        if: ${{ inputs.url != '' }}
+        run: vercel alias set ${{ steps.deploy.outputs.url }} ${{ inputs.url }} --scope=${{ inputs.scope }} --token=${{ secrets.VERCEL_TOKEN }}

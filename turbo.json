@@ -20,6 +20,11 @@
       "cache": false,
       "persistent": false
     },
+    "build:web": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": false
+    },
     "lint": {
       "dependsOn": [],
       "cache": false,

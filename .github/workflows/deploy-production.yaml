@@ -1,0 +1,21 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - release/prod
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy.yaml
+    with:
+      name: production
+      env-args: --environment=production
+      vercel-args: --prod
+      url: tsumugi-chan.com
+      scope: takecchi
+    secrets:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

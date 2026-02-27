@@ -36,7 +36,8 @@
     "dev": "turbo run dev --parallel",
     "dev:tauri": "turbo run dev:tauri --filter=desktop...",
     "dev:web": "turbo run dev:web --filter=desktop...",
-    "build:tauri": "turbo run build:tauri --filter=desktop..."
+    "build:tauri": "turbo run build:tauri --filter=desktop...",
+    "build:web": "turbo run build:web --filter=desktop..."
   },
   "husky": {
     "hooks": {
