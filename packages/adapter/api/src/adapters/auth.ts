@@ -2,7 +2,10 @@ import type { AuthAdapter, AuthState, GoogleAuthUrl } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import type { TokenManager } from '@/token-manager';
 
-export function createAuthAdapter(clients: ApiClients, tokenManager: TokenManager): AuthAdapter {
+export function createAuthAdapter(
+  clients: ApiClients,
+  tokenManager: TokenManager,
+): AuthAdapter {
   return {
     async getAuthState(): Promise<AuthState> {
       const accessToken = tokenManager.getToken();
@@ -19,8 +22,8 @@ export function createAuthAdapter(clients: ApiClients, tokenManager: TokenManage
     },
 
     async getGoogleAuthUrl(): Promise<GoogleAuthUrl> {
-      const baseUrl = clients.configuration.basePath || '';
-      return { url: `${baseUrl}/auth/google` };
+      const opts = await clients.auth.getGoogleLoginRequestOpts();
+      return { url: `${clients.configuration.basePath}${opts.path}` };
     },
 
     async logout(): Promise<void> {
