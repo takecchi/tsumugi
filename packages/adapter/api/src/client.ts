@@ -25,7 +25,6 @@ export function createApiClients(baseUrl: string, tokenManager: TokenManager): A
   const configuration = new Configuration({ 
     basePath: baseUrl,
     accessToken: () => tokenManager.getAccessToken(),
-    credentials: 'include',
   });
   return {
     auth: new AuthApi(configuration),

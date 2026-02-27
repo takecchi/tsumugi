@@ -36,7 +36,7 @@ export function createAuthAdapter(
 
     async logout(): Promise<void> {
       try {
-        await clients.auth.postLogout();
+        await clients.auth.postLogout({}, { credentials: 'include' });
       } catch (error) {
         console.error('Failed to logout:', error);
       } finally {

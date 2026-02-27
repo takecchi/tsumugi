@@ -142,7 +142,10 @@ export class TokenManager {
     }
 
     try {
-      const result = await this.authApi.postTokenRefresh();
+      const result = await this.authApi.postTokenRefresh(
+        {},
+        { credentials: 'include' },
+      );
       this.setToken(result.accessToken);
       return result.accessToken;
     } catch (error) {
