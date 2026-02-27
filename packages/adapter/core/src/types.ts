@@ -378,8 +378,8 @@ export type AIProposalFeedbackStatus = 'accepted' | 'rejected' | 'conflict';
  * - conflict: 提案後にデータが変更されており、マージできなかった
  */
 export interface AIProposalFeedback {
-  /** 対象の提案ID */
-  proposalId: string;
+  /** 対象のツール呼び出しID */
+  toolCallId: string;
   /** 結果 */
   status: AIProposalFeedbackStatus;
   /** 対象コンテンツの種別（ツリー更新用） */

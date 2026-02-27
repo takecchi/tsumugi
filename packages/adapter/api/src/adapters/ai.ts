@@ -63,10 +63,12 @@ function toMessage(api: ClientAIMessage): AdapterAIMessage {
       return { ...base, messageType: 'tool_result', content: JSON.stringify(api.content) };
     }
     case 'proposal': {
+      const rawProposal = (api.proposal ?? {}) as Record<string, unknown>;
+      const toolCallId = (rawProposal.toolCallId as string) ?? api.id;
       return {
         ...base,
         messageType: 'proposal',
-        proposal: (api.proposal ?? {}) as AIProposal,
+        proposal: { ...rawProposal, id: toolCallId } as unknown as AIProposal,
         proposalStatus: (api.proposalStatus ?? 'pending') as AIProposalStatus,
       };
     }
@@ -105,7 +107,7 @@ function toUsage(api: ClientAIProjectUsage): AdapterAIProjectUsage {
 
 function toFeedback(api: ClientAIProposalFeedback): AIProposalFeedback {
   return {
-    proposalId: api.proposalId,
+    toolCallId: api.toolCallId,
     status: api.status as AIProposalFeedback['status'],
     contentType: api.contentType as EditorTabType | undefined,
     targetId: api.targetId,
@@ -218,26 +220,30 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
       };
     },
 
-    async acceptProposal(sessionId: string, proposalId: string): Promise<AIProposalResult> {
-      const opts = await clients.ai.acceptProposalRequestOpts({ sessionId, proposalId });
+    async acceptProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult> {
+      const opts = await clients.ai.acceptProposalRequestOpts({
+        sessionId,
+        toolCallId,
+      });
       const response = await fetchSSE(clients.configuration, opts);
 
       const contentType = response.headers.get('Content-Type') ?? '';
 
       if (contentType.includes('text/event-stream')) {
-        // SSE: proposal_result イベント + 後続ストリーム
         return await parseProposalSSEResponse(response);
       }
 
-      // 通常 JSON レスポンス（ストリームなし）
       const json = await response.json() as ClientAIProposalResult;
       return {
         feedback: toFeedback(json.feedback),
       };
     },
 
-    async rejectProposal(sessionId: string, proposalId: string): Promise<AIProposalResult> {
-      const opts = await clients.ai.rejectProposalRequestOpts({ sessionId, proposalId });
+    async rejectProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult> {
+      const opts = await clients.ai.rejectProposalRequestOpts({
+        sessionId,
+        toolCallId,
+      });
       const response = await fetchSSE(clients.configuration, opts);
 
       const contentType = response.headers.get('Content-Type') ?? '';

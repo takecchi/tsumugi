@@ -32,12 +32,12 @@ export function getProjectIdFromSessionPath(sessionPath: string): string {
  */
 export async function updateProposalStatusInMessages(
   sessionId: string,
-  proposalId: string,
+  toolCallId: string,
   status: AIProposalStatus,
 ): Promise<void> {
   const messagesPath = await join(sessionId, 'messages.json');
   const messages = (await readJson<MessageJson[]>(messagesPath)) ?? [];
-  if (updateProposalStatusInArray(messages, proposalId, status)) {
+  if (updateProposalStatusInArray(messages, toolCallId, status)) {
     await writeJson(messagesPath, messages);
   }
 }
@@ -47,11 +47,11 @@ export async function updateProposalStatusInMessages(
  */
 export async function findProposalInMessages(
   sessionId: string,
-  proposalId: string,
+  toolCallId: string,
 ): Promise<AIProposal | undefined> {
   const messagesPath = await join(sessionId, 'messages.json');
   const messages = (await readJson<MessageJson[]>(messagesPath)) ?? [];
-  return findProposalInArray(messages, proposalId);
+  return findProposalInArray(messages, toolCallId);
 }
 
 /**
@@ -60,7 +60,7 @@ export async function findProposalInMessages(
  */
 export async function checkAllProposalsProcessed(
   sessionId: string,
-): Promise<{ allProcessed: boolean; feedbackSummaries: { proposalId: string; status: string; targetName: string }[] }> {
+): Promise<{ allProcessed: boolean; feedbackSummaries: { toolCallId: string; status: string; targetName: string }[] }> {
   const messagesPath = await join(sessionId, 'messages.json');
   const messages = (await readJson<MessageJson[]>(messagesPath)) ?? [];
   return checkAllProposalsProcessedInArray(messages);

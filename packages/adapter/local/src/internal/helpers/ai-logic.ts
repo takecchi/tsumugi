@@ -397,11 +397,11 @@ export function buildSystemPrompt(
  */
 export function updateProposalStatusInArray(
   messages: MessageJson[],
-  proposalId: string,
+  toolCallId: string,
   status: AIProposalStatus,
 ): boolean {
   for (const m of messages) {
-    if (m.messageType === 'proposal' && m.proposal?.id === proposalId) {
+    if (m.messageType === 'proposal' && m.proposal?.id === toolCallId) {
       m.proposalStatus = status;
       return true;
     }
@@ -414,10 +414,10 @@ export function updateProposalStatusInArray(
  */
 export function findProposalInArray(
   messages: MessageJson[],
-  proposalId: string,
+  toolCallId: string,
 ): AIProposal | undefined {
   for (const m of messages) {
-    if (m.messageType === 'proposal' && m.proposal?.id === proposalId) {
+    if (m.messageType === 'proposal' && m.proposal?.id === toolCallId) {
       const p = m.proposal;
       return {
         id: p.id,
@@ -440,7 +440,7 @@ export function findProposalInArray(
  */
 export function checkAllProposalsProcessedInArray(
   messages: MessageJson[],
-): { allProcessed: boolean; feedbackSummaries: { proposalId: string; status: string; targetName: string }[] } {
+): { allProcessed: boolean; feedbackSummaries: { toolCallId: string; status: string; targetName: string }[] } {
   const proposals = messages.filter(isProposalMessage);
   if (proposals.length === 0) {
     return { allProcessed: false, feedbackSummaries: [] };
@@ -448,7 +448,7 @@ export function checkAllProposalsProcessedInArray(
 
   const hasPending = proposals.some((m) => m.proposalStatus === 'pending');
   const feedbackSummaries = proposals.map((m) => ({
-    proposalId: m.proposal.id,
+    toolCallId: m.proposal.id,
     status: m.proposalStatus ?? 'pending',
     targetName: m.proposal.targetName,
   }));

@@ -154,13 +154,13 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
       return { session, stream };
     },
 
-    async acceptProposal(sessionId: string, proposalId: string): Promise<AIProposalResult> {
-      return await executeAcceptProposal(sessionId, proposalId, getConfig, getToolAdapters);
+    async acceptProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult> {
+      return await executeAcceptProposal(sessionId, toolCallId, getConfig, getToolAdapters);
     },
 
-    async rejectProposal(sessionId: string, proposalId: string): Promise<AIProposalResult> {
-      await updateProposalStatusInMessages(sessionId, proposalId, 'rejected');
-      const feedback: AIProposalFeedback = { proposalId, status: 'rejected' };
+    async rejectProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult> {
+      await updateProposalStatusInMessages(sessionId, toolCallId, 'rejected');
+      const feedback: AIProposalFeedback = { toolCallId, status: 'rejected' };
       return await buildProposalResult(sessionId, feedback, getConfig, getToolAdapters);
     },
 

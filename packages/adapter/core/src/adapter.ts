@@ -165,13 +165,13 @@ export interface AIAdapter {
    * 提案を承認（コンフリクト検出 + データ更新 + ステータス更新）
    * 全提案が処理済みになった場合、自動的に AI へフィードバックを送信しその応答ストリームを含む result.stream を返す。
    */
-  acceptProposal(sessionId: string, proposalId: string): Promise<AIProposalResult>;
+  acceptProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult>;
 
   /**
    * 提案を拒否（ステータス更新のみ）
    * 全提案が処理済みになった場合、自動的に AI へフィードバックを送信しその応答ストリームを含む result.stream を返す。
    */
-  rejectProposal(sessionId: string, proposalId: string): Promise<AIProposalResult>;
+  rejectProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult>;
 
   /**
    * チャットセッション削除

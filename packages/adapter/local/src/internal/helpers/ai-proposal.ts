@@ -60,13 +60,13 @@ export async function buildProposalResult(
  */
 export async function executeAcceptProposal(
   sessionId: string,
-  proposalId: string,
+  toolCallId: string,
   getConfig: () => AIAdapterConfig,
   getToolAdapters: () => ToolAdapters,
 ): Promise<AIProposalResult> {
-  const raw = await findProposalInMessages(sessionId, proposalId);
+  const raw = await findProposalInMessages(sessionId, toolCallId);
   if (!raw) {
-    throw new Error(`提案が見つかりません: ${proposalId}`);
+    throw new Error(`提案が見つかりません: ${toolCallId}`);
   }
 
   let feedback: AIProposalFeedback;
@@ -92,9 +92,9 @@ export async function executeAcceptProposal(
             };
             const conflictFields = detectConflictFields(raw.original, currentRecord);
             if (conflictFields.length > 0) {
-              await updateProposalStatusInMessages(sessionId, proposalId, 'conflict');
+              await updateProposalStatusInMessages(sessionId, toolCallId, 'conflict');
               feedback = {
-                proposalId,
+                toolCallId,
                 status: 'conflict',
                 conflictDetails: `以下のフィールドが提案後に変更されています: ${conflictFields.join(', ')}`,
               };
@@ -139,9 +139,9 @@ export async function executeAcceptProposal(
               conflictFields = detectConflictFields(raw.original, toRecord(current));
             }
             if (conflictFields.length > 0) {
-              await updateProposalStatusInMessages(sessionId, proposalId, 'conflict');
+              await updateProposalStatusInMessages(sessionId, toolCallId, 'conflict');
               feedback = {
-                proposalId,
+                toolCallId,
                 status: 'conflict',
                 conflictDetails: hasLineEdits
                   ? `以下の行が提案後に変更されています: ${conflictFields.map(k => k.replace('line_', '行')).join(', ')}`
@@ -184,12 +184,12 @@ export async function executeAcceptProposal(
       }
     }
 
-    await updateProposalStatusInMessages(sessionId, proposalId, 'accepted');
-    feedback = { proposalId, status: 'accepted', contentType: raw.contentType, targetId: raw.targetId };
+    await updateProposalStatusInMessages(sessionId, toolCallId, 'accepted');
+    feedback = { toolCallId, status: 'accepted', contentType: raw.contentType, targetId: raw.targetId };
   } catch (e) {
-    await updateProposalStatusInMessages(sessionId, proposalId, 'conflict');
+    await updateProposalStatusInMessages(sessionId, toolCallId, 'conflict');
     feedback = {
-      proposalId,
+      toolCallId,
       status: 'conflict',
       contentType: raw.contentType,
       targetId: raw.targetId,
