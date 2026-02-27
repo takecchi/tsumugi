@@ -14,7 +14,6 @@ jobs:
       env-args: --environment=production
       vercel-args: --prod
       url: tsumugi-chan.com
-      scope: takecchi
     secrets:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

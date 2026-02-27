@@ -15,9 +15,6 @@ on:
       vercel-args:
         required: false
         type: string
-      scope:
-        required: false
-        type: string
     secrets:
       VERCEL_ORG_ID:
         required: true
@@ -76,4 +73,4 @@ jobs:
 
       - name: Assign domain
         if: ${{ inputs.url != '' }}
-        run: vercel alias set ${{ steps.deploy.outputs.url }} ${{ inputs.url }} --scope=${{ inputs.scope }} --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel alias set ${{ steps.deploy.outputs.url }} ${{ inputs.url }} --token=${{ secrets.VERCEL_TOKEN }}
