@@ -20,6 +20,8 @@ export const meta: MetaFunction = () => [
   { name: 'description', content: 'AI-powered novel writing editor' },
 ];
 
+const isApiAdapter = import.meta.env.VITE_ADAPTER === 'api';
+
 function toProjectItems(
   projects: { id: string; name: string }[] | undefined,
 ): ProjectItem[] {
@@ -27,7 +29,7 @@ function toProjectItems(
   return projects.map((p) => ({
     id: p.id,
     name: p.name,
-    path: p.id.replace(/^\/Users\/[^/]+/, '~'),
+    path: isApiAdapter ? '' : p.id.replace(/^\/Users\/[^/]+/, '~'),
   }));
 }
 
@@ -122,15 +124,17 @@ export default function Page() {
                 }}
               />
             </div>
-            <div className="grid gap-2">
-              <span className="text-sm font-medium">場所</span>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FolderIcon className="size-4" />
-                <span>
-                  {defaultWorkDir}/{newProjectTitle.trim()}
-                </span>
+            {!isApiAdapter && (
+              <div className="grid gap-2">
+                <span className="text-sm font-medium">場所</span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FolderIcon className="size-4" />
+                  <span>
+                    {defaultWorkDir}/{newProjectTitle.trim()}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button

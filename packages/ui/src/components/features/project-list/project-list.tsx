@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 export interface ProjectItem {
   id: string
   name: string
-  path: string
+  path?: string
 }
 
 export interface ProjectListProps {
@@ -88,7 +88,7 @@ export function ProjectList({
                 <CommandItem
                   key={project.id}
                   value={project.id}
-                  keywords={[project.name, project.path]}
+                  keywords={[project.name, ...(project.path ? [project.path] : [])]}
                   onSelect={() => onSelect?.(project)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2",
@@ -107,9 +107,11 @@ export function ProjectList({
                     <span className="truncate text-sm font-medium">
                       {project.name}
                     </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {project.path}
-                    </span>
+                    {project.path && (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {project.path}
+                      </span>
+                    )}
                   </div>
                 </CommandItem>
               ))}
