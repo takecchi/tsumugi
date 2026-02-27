@@ -9,8 +9,9 @@ import {
   BookOpenIcon,
 } from 'lucide-react';
 import { cn, Separator } from '@tsumugi/ui';
-import * as React from 'react';
 import { FeatureCard } from '~/routes/(guest)/_components/feature-card';
+import { useGoogleLogin } from '~/hooks/auth';
+import { useCallback } from 'react';
 
 export const meta: MetaFunction = () => [
   { title: 'Tsumugi - プロジェクト' },
@@ -18,6 +19,14 @@ export const meta: MetaFunction = () => [
 ];
 
 export default function Page() {
+  const { trigger: getGoogleUrl } = useGoogleLogin();
+
+  const handleGoogleLogin = useCallback(() => {
+    getGoogleUrl().then((url) => {
+      window.location.href = url.url;
+    });
+  }, []);
+
   return (
     <div className={cn('flex min-h-screen flex-col bg-background')}>
       {/* ─── ヒーローセクション ─── */}
@@ -55,12 +64,12 @@ export default function Page() {
                 AIアシスタントが創作のすべてに寄り添う、小説執筆エディタ。
               </p>
               {/* CTA */}
-              <div className="mt-2">
+              <div className="mt-2 flex justify-center">
                 <Button
                   variant="outline"
                   size="lg"
                   className="gap-3 px-8"
-                  // onClick={onGoogleLogin}
+                  onClick={handleGoogleLogin}
                 >
                   <GoogleLogo className="size-5" />
                   Googleでログインして始める
