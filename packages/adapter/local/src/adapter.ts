@@ -1,4 +1,5 @@
 import type { Adapter, AdapterConfig } from '@tsumugi/adapter';
+import { createAuthAdapter } from '@/adapters/auth';
 import { createProjectAdapter } from '@/adapters/project';
 import { createPlotAdapter } from '@/adapters/plot';
 import { createCharacterAdapter } from '@/adapters/character';
@@ -17,6 +18,7 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
   const writings = createWritingAdapter(workDir);
 
   return {
+    auth: createAuthAdapter(),
     projects,
     settings: createSettingsAdapter(),
     plots,
