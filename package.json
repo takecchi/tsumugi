@@ -11,6 +11,7 @@
     "packages/ui",
     "packages/adapter/core",
     "packages/adapter/local",
+    "packages/adapter/api",
     "packages/react-router"
   ],
   "lint-staged": {
