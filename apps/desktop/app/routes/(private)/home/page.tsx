@@ -77,7 +77,7 @@ export default function Page() {
   return (
     <div className="flex min-h-screen justify-center bg-background">
       <div className="flex-1 p-4 md:p-6">
-        <div className="mx-auto max-w-4xl">
+        <div className="flex h-[calc(100vh-2rem)] mx-auto max-w-4xl flex-col">
           {/* ヘッダー */}
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -108,7 +108,7 @@ export default function Page() {
               {error}
             </div>
           )}
-          <div className="rounded-lg border bg-card">
+          <div className="flex flex-1 flex-col overflow-hidden rounded-lg border bg-card">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <h2 className="text-lg font-semibold">プロジェクト</h2>
               <Button size="sm" onClick={handleOpenCreateDialog}>
@@ -116,11 +116,13 @@ export default function Page() {
                 新規プロジェクト
               </Button>
             </div>
-            <ProjectList
-              projects={toProjectItems(projects)}
-              isLoading={isLoading}
-              onSelect={handleSelectProject}
-            />
+            <div className="flex-1 min-h-0">
+              <ProjectList
+                projects={toProjectItems(projects)}
+                isLoading={isLoading}
+                onSelect={handleSelectProject}
+              />
+            </div>
           </div>
         </div>
       </div>
