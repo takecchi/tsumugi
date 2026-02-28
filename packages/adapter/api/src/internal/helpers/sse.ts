@@ -1,12 +1,18 @@
-import type { AIStreamChunk, AIStreamChunkType, AIToolName } from '@tsumugi/adapter';
 import type { Configuration } from '@tsumugi-chan/client';
+import type { RawAIStreamChunk } from '../types/raw-sse.types';
+import { AIStreamChunk } from '@tsumugi/adapter';
 
 /**
  * RequestOpts から SSE リクエストを発行する
  */
 export async function fetchSSE(
   configuration: Configuration,
-  requestOpts: { path: string; method: string; headers: Record<string, string>; body?: unknown },
+  requestOpts: {
+    path: string;
+    method: string;
+    headers: Record<string, string>;
+    body?: unknown;
+  },
 ): Promise<Response> {
   const url = `${configuration.basePath}${requestOpts.path}`;
 
@@ -16,11 +22,14 @@ export async function fetchSSE(
       ...requestOpts.headers,
       Accept: 'text/event-stream',
     },
-    body: requestOpts.body != null ? JSON.stringify(requestOpts.body) : undefined,
+    body:
+      requestOpts.body != null ? JSON.stringify(requestOpts.body) : undefined,
   });
 
   if (!response.ok) {
-    throw new Error(`SSE request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `SSE request failed: ${response.status} ${response.statusText}`,
+    );
   }
 
   return response;
@@ -29,7 +38,9 @@ export async function fetchSSE(
 /**
  * SSE レスポンスの body を ReadableStream<AIStreamChunk> に変換する
  */
-export function parseSSEStream(response: Response): ReadableStream<AIStreamChunk> {
+export function parseSSEStream(
+  response: Response,
+): ReadableStream<AIStreamChunk> {
   const body = response.body;
   if (!body) {
     return new ReadableStream<AIStreamChunk>({
@@ -95,53 +106,43 @@ function parseSSEEvent(raw: string): AIStreamChunk | null {
   if (!dataLine) return null;
 
   try {
-    const data = JSON.parse(dataLine.slice(6));
+    const data = JSON.parse(dataLine.slice(6)) as RawAIStreamChunk;
     return toAIStreamChunk(data);
   } catch {
     return null;
   }
 }
 
-function toAIStreamChunk(data: Record<string, unknown>): AIStreamChunk {
-  const type = data.type as AIStreamChunkType;
+export function toAIStreamChunk(raw: RawAIStreamChunk): AIStreamChunk {
+  const type = raw.type;
   const chunk: AIStreamChunk = { type };
 
   switch (type) {
     case 'text':
-      chunk.content = data.content as string | undefined;
+      chunk.content = raw.content;
       break;
     case 'tool_call':
-      if (data.toolCall) {
-        const tc = data.toolCall as Record<string, unknown>;
-        chunk.toolCall = {
-          id: tc.id as string,
-          name: tc.name as AIToolName,
-          arguments: tc.arguments as string,
-        };
+      if (raw.tool_call) {
+        chunk.toolCall = raw.tool_call as AIStreamChunk['toolCall'];
       }
       break;
     case 'tool_result':
-      if (data.toolResult) {
-        const tr = data.toolResult as Record<string, unknown>;
-        chunk.toolResult = {
-          toolCallId: tr.toolCallId as string,
-          toolName: tr.toolName as AIToolName,
-          result: tr.result as string,
-        };
+      if (raw.tool_result) {
+        chunk.toolResult = raw.tool_result as AIStreamChunk['toolResult'];
       }
       break;
     case 'proposal':
-      if (data.proposal) {
-        chunk.proposal = data.proposal as AIStreamChunk['proposal'];
+      if (raw.proposal) {
+        chunk.proposal = raw.proposal as unknown as AIStreamChunk['proposal'];
       }
       break;
     case 'usage':
-      if (data.usage) {
-        chunk.usage = data.usage as AIStreamChunk['usage'];
+      if (raw.usage) {
+        chunk.usage = raw.usage as unknown as AIStreamChunk['usage'];
       }
       break;
     case 'error':
-      chunk.error = data.error as string | undefined;
+      chunk.error = raw.error;
       break;
     case 'done':
       break;
