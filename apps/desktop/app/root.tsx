@@ -6,6 +6,9 @@ import { SafeErrorBoundary, SafeMeta, SafeLinks } from '@tsumugi/react-router';
 
 import './app.css';
 
+export const ADAPTER: 'api' | 'local' =
+  import.meta.env.VITE_ADAPTER === 'api' ? 'api' : 'local';
+
 export const links: LinksFunction = () => [
   { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
   {
@@ -33,7 +36,7 @@ export const links: LinksFunction = () => [
     href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap',
   },
   // APIとPWA
-  ...(import.meta.env.VITE_ADAPTER === 'api'
+  ...(ADAPTER === 'api'
     ? [
         { rel: 'preconnect', href: import.meta.env.VITE_API_BASE_URL },
         {
@@ -97,7 +100,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <SafeMeta />
         <SafeLinks />
-        <script src="/registerSW.js" />
+        {ADAPTER === 'local' && <script src="/registerSW.js" />}
       </head>
       <body>
         <SafeErrorBoundary
@@ -120,20 +123,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  // Register Service Worker for PWA
-  React.useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
-        })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
-        });
-    }
-  }, []);
-
   return (
     <AdapterProvider>
       <Outlet />

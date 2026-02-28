@@ -23,3 +23,17 @@ export function useGoogleLogin() {
     },
   );
 }
+
+export function useLogout() {
+  const adapter = useAdapter();
+  return useSWRMutation<AuthState, Error, AuthStateKey>(
+    { type: 'authState' },
+    async (_) => {
+      await adapter.auth.logout();
+      return {
+        isAuthenticated: false,
+        accessToken: null,
+      };
+    },
+  );
+}

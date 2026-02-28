@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, type MetaFunction } from 'react-router';
 import { useProjects, useCreateProject } from '~/hooks/projects';
+import { useLogout } from '~/hooks/auth';
 import {
   ProjectList,
   Button,
@@ -12,14 +13,13 @@ import {
   Input,
 } from '@tsumugi/ui';
 import type { ProjectItem } from '@tsumugi/ui';
-import { PlusIcon, FolderIcon } from 'lucide-react';
+import { PlusIcon, FolderIcon, LogOutIcon } from 'lucide-react';
 import { PATH_WORKSPACE } from '~/constants/path';
+import { ADAPTER } from '~/root';
 
 export const meta: MetaFunction = () => [
   { title: 'Tsumugi - プロジェクト一覧' },
 ];
-
-const isApiAdapter = import.meta.env.VITE_ADAPTER === 'api';
 
 function toProjectItems(
   projects: { id: string; name: string }[] | undefined,
@@ -28,7 +28,7 @@ function toProjectItems(
   return projects.map((p) => ({
     id: p.id,
     name: p.name,
-    path: isApiAdapter ? '' : p.id.replace(/^\/Users\/[^/]+/, '~'),
+    path: ADAPTER === 'api' ? '' : p.id.replace(/^\/Users\/[^/]+/, '~'),
   }));
 }
 
@@ -36,6 +36,7 @@ export default function Page() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
   const { trigger: createProject, isMutating: isCreating } = useCreateProject();
+  const { trigger: logout, isMutating: isLoggingOut } = useLogout();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState('untitled');
@@ -73,34 +74,57 @@ export default function Page() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-md px-6">
-        <header className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-foreground">Tsumugi</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            AI小説執筆エディタ
-          </p>
-        </header>
-
-        {error && (
-          <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {error}
+    <div className="flex min-h-screen justify-center bg-background">
+      <div className="flex-1 p-4 md:p-6">
+        <div className="flex h-[calc(100vh-2rem)] mx-auto max-w-4xl flex-col">
+          {/* ヘッダー */}
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img
+                src="/icon-512.png"
+                alt="Tsumugi"
+                className="size-8 rounded-lg"
+              />
+              <div>
+                <h1 className="text-lg font-bold text-foreground">Tsumugi</h1>
+                <p className="text-xs text-muted-foreground">
+                  AI小説執筆エディタ
+                </p>
+              </div>
+            </div>
+            {ADAPTER === 'api' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void logout()}
+                disabled={isLoggingOut}
+              >
+                <LogOutIcon className="mr-2 size-4" />
+                {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+              </Button>
+            )}
           </div>
-        )}
-
-        <div className="rounded-lg border bg-card">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <h2 className="text-sm font-semibold">プロジェクト</h2>
-            <Button size="sm" onClick={handleOpenCreateDialog}>
-              <PlusIcon className="mr-1.5 size-4" />
-              新規
-            </Button>
+          {error && (
+            <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          <div className="flex flex-1 flex-col overflow-hidden rounded-lg border bg-card">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h2 className="text-lg font-semibold">プロジェクト</h2>
+              <Button size="sm" onClick={handleOpenCreateDialog}>
+                <PlusIcon className="mr-1.5 size-4" />
+                新規プロジェクト
+              </Button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <ProjectList
+                projects={toProjectItems(projects)}
+                isLoading={isLoading}
+                onSelect={handleSelectProject}
+              />
+            </div>
           </div>
-          <ProjectList
-            projects={toProjectItems(projects)}
-            isLoading={isLoading}
-            onSelect={handleSelectProject}
-          />
         </div>
       </div>
 
@@ -123,7 +147,7 @@ export default function Page() {
                 }}
               />
             </div>
-            {!isApiAdapter && (
+            {ADAPTER === 'local' && (
               <div className="grid gap-2">
                 <span className="text-sm font-medium">場所</span>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

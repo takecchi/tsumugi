@@ -75,50 +75,52 @@ export function ProjectList({
   className,
 }: ProjectListProps) {
   return (
-    <Command className={className}>
+    <Command className={cn("h-full flex flex-col", className)}>
       <CommandInput placeholder={placeholder} />
-      <CommandList>
-        {isLoading ? (
-          <ProjectListSkeleton />
-        ) : (
-          <>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup>
-              {projects.map((project) => (
-                <CommandItem
-                  key={project.id}
-                  value={project.id}
-                  keywords={[project.name, ...(project.path ? [project.path] : [])]}
-                  onSelect={() => onSelect?.(project)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2",
-                    selectedId === project.id && "bg-accent"
-                  )}
-                >
-                  <div
+      <div className="flex-1 overflow-hidden">
+        <CommandList className="h-full overflow-y-auto" style={{ maxHeight: 'none' }}>
+          {isLoading ? (
+            <ProjectListSkeleton />
+          ) : (
+            <>
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              <CommandGroup>
+                {projects.map((project) => (
+                  <CommandItem
+                    key={project.id}
+                    value={project.id}
+                    keywords={[project.name, ...(project.path ? [project.path] : [])]}
+                    onSelect={() => onSelect?.(project)}
                     className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold",
-                      getInitialColor(project.name)
+                      "flex items-center gap-3 px-3 py-2 cursor-pointer",
+                      selectedId === project.id && "bg-accent"
                     )}
                   >
-                    {getInitial(project.name)}
-                  </div>
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm font-medium">
-                      {project.name}
-                    </span>
-                    {project.path && (
-                      <span className="truncate text-xs text-muted-foreground">
-                        {project.path}
+                    <div
+                      className={cn(
+                        "flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold",
+                        getInitialColor(project.name)
+                      )}
+                    >
+                      {getInitial(project.name)}
+                    </div>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-sm font-medium">
+                        {project.name}
                       </span>
-                    )}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </>
-        )}
-      </CommandList>
+                      {project.path && (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {project.path}
+                        </span>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )}
+        </CommandList>
+      </div>
     </Command>
   )
 }
