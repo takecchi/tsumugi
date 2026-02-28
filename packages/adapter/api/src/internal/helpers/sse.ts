@@ -12,7 +12,7 @@ export async function fetchSSE(
     method: string;
     headers: Record<string, string>;
     body?: unknown;
-  },
+  }
 ): Promise<Response> {
   const url = `${configuration.basePath}${requestOpts.path}`;
 
@@ -20,15 +20,15 @@ export async function fetchSSE(
     method: requestOpts.method,
     headers: {
       ...requestOpts.headers,
-      Accept: 'text/event-stream',
+      Accept: 'text/event-stream'
     },
     body:
-      requestOpts.body != null ? JSON.stringify(requestOpts.body) : undefined,
+      requestOpts.body != null ? JSON.stringify(requestOpts.body) : undefined
   });
 
   if (!response.ok) {
     throw new Error(
-      `SSE request failed: ${response.status} ${response.statusText}`,
+      `SSE request failed: ${response.status} ${response.statusText}`
     );
   }
 
@@ -39,7 +39,7 @@ export async function fetchSSE(
  * SSE レスポンスの body を ReadableStream<AIStreamChunk> に変換する
  */
 export function parseSSEStream(
-  response: Response,
+  response: Response
 ): ReadableStream<AIStreamChunk> {
   const body = response.body;
   if (!body) {
@@ -47,7 +47,7 @@ export function parseSSEStream(
       start(controller) {
         controller.enqueue({ type: 'error', error: 'No response body' });
         controller.close();
-      },
+      }
     });
   }
 
@@ -82,7 +82,7 @@ export function parseSSEStream(
         } catch (err) {
           controller.enqueue({
             type: 'error',
-            error: err instanceof Error ? err.message : String(err),
+            error: err instanceof Error ? err.message : String(err)
           });
           controller.close();
         }
@@ -97,7 +97,7 @@ export function parseSSEStream(
       reader.cancel().catch((e) => {
         console.error('[adapter-api] Failed to cancel SSE stream reader:', e);
       });
-    },
+    }
   });
 }
 
@@ -128,7 +128,7 @@ export function toAIStreamChunk(raw: RawAIStreamChunk): AIStreamChunk {
       break;
     case 'tool_result':
       if (raw.tool_result) {
-        chunk.toolResult = raw.tool_result as AIStreamChunk['toolResult'];
+        chunk.toolResult = raw.tool_result as unknown as AIStreamChunk['toolResult'];
       }
       break;
     case 'proposal':
@@ -138,7 +138,16 @@ export function toAIStreamChunk(raw: RawAIStreamChunk): AIStreamChunk {
       break;
     case 'usage':
       if (raw.usage) {
-        chunk.usage = raw.usage as unknown as AIStreamChunk['usage'];
+        const usage = raw.usage as {
+          prompt_tokens: number,
+          completion_tokens: number,
+          total_tokens: number,
+        };
+        chunk.usage = {
+          promptTokens: usage.prompt_tokens,
+          completionTokens: usage.completion_tokens,
+          totalTokens: usage.total_tokens,
+        }
       }
       break;
     case 'error':
