@@ -10,10 +10,7 @@ import type {
   AIProjectUsage as AdapterAIProjectUsage,
   AIProposal,
   AIProposalStatus,
-  AIRole,
-  AIMessageType,
   AIProposalFeedback,
-  EditorTabType,
 } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import type {
@@ -21,11 +18,17 @@ import type {
   AIMessage as ClientAIMessage,
   AIMemory as ClientAIMemory,
   AIProjectUsage as ClientAIProjectUsage,
-  AIProposalResult as ClientAIProposalResult,
-  AIProposalFeedback as ClientAIProposalFeedback,
   ChatRequest as ClientChatRequest,
 } from '@tsumugi-chan/client';
-import { fetchSSE, parseSSEStream } from '@/internal/helpers/sse';
+import {
+  fetchSSE,
+  parseSSEStream,
+  toAIStreamChunk,
+} from '@/internal/helpers/sse';
+import type {
+  RawAIProposalResult,
+  RawAIProposalFeedback,
+} from '@/internal/types/raw-sse.types';
 
 // ─── 型変換 ───
 
@@ -40,8 +43,8 @@ function toSession(api: ClientAISession): AIChatSession {
 }
 
 function toMessage(api: ClientAIMessage): AdapterAIMessage {
-  const role = api.role as AIRole;
-  const messageType = api.messageType as AIMessageType;
+  const role = api.role;
+  const messageType = api.messageType;
   const base = {
     id: api.id,
     sessionId: api.sessionId,
@@ -52,15 +55,23 @@ function toMessage(api: ClientAIMessage): AdapterAIMessage {
     case 'text': {
       const textContent = api.content
         .filter((c) => c.type === 'text')
-        .map((c) => (c as { type: 'text'; text: string }).text)
+        .map((c) => c.text)
         .join('');
       return { ...base, messageType: 'text', content: textContent };
     }
     case 'tool_call': {
-      return { ...base, messageType: 'tool_call', content: JSON.stringify(api.content) };
+      return {
+        ...base,
+        messageType: 'tool_call',
+        content: JSON.stringify(api.content),
+      };
     }
     case 'tool_result': {
-      return { ...base, messageType: 'tool_result', content: JSON.stringify(api.content) };
+      return {
+        ...base,
+        messageType: 'tool_result',
+        content: JSON.stringify(api.content),
+      };
     }
     case 'proposal': {
       const rawProposal = (api.proposal ?? {}) as Record<string, unknown>;
@@ -105,13 +116,13 @@ function toUsage(api: ClientAIProjectUsage): AdapterAIProjectUsage {
   };
 }
 
-function toFeedback(api: ClientAIProposalFeedback): AIProposalFeedback {
+function toFeedback(raw: RawAIProposalFeedback): AIProposalFeedback {
   return {
-    toolCallId: api.toolCallId,
-    status: api.status as AIProposalFeedback['status'],
-    contentType: api.contentType as EditorTabType | undefined,
-    targetId: api.targetId,
-    conflictDetails: api.conflictDetails,
+    toolCallId: raw.tool_call_id,
+    status: raw.status,
+    contentType: raw.content_type,
+    targetId: raw.target_id,
+    conflictDetails: raw.conflict_details,
   };
 }
 
@@ -132,7 +143,7 @@ function toChatRequest(request: AIChatRequest): ClientChatRequest {
           openTabs: request.context.openTabs?.map((tab) => ({
             id: tab.id,
             name: tab.name,
-            contentType: tab.contentType as 'plot' | 'character' | 'memo' | 'writing' | 'project',
+            contentType: tab.contentType,
             active: tab.active,
           })),
         }
@@ -144,7 +155,10 @@ function toChatRequest(request: AIChatRequest): ClientChatRequest {
 
 export function createAIAdapter(clients: ApiClients): AIAdapter {
   return {
-    async chat(sessionId: string, request: AIChatRequest): Promise<ReadableStream<AIStreamChunk>> {
+    async chat(
+      sessionId: string,
+      request: AIChatRequest,
+    ): Promise<ReadableStream<AIStreamChunk>> {
       const opts = await clients.ai.chatAIRequestOpts({
         sessionId,
         chatRequest: toChatRequest(request),
@@ -175,7 +189,10 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
     async createSession(
       projectId: string,
       request: AIChatMessageRequest,
-    ): Promise<{ session: AIChatSession; stream: ReadableStream<AIStreamChunk> }> {
+    ): Promise<{
+      session: AIChatSession;
+      stream: ReadableStream<AIStreamChunk>;
+    }> {
       const opts = await clients.projects.createAISessionRequestOpts({
         projectId,
         createSessionRequest: {
@@ -183,7 +200,10 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
           mode: request.mode,
           config: request.config
             ? {
-                model: request.config.model as 'gpt-5.2' | 'gpt-4o-mini' | 'claude-3-5-haiku-latest',
+                model: request.config.model as
+                  | 'gpt-5.2'
+                  | 'gpt-4o-mini'
+                  | 'claude-3-5-haiku-latest',
                 temperature: request.config.temperature,
                 maxTokens: request.config.maxTokens,
               }
@@ -193,7 +213,7 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
                 openTabs: request.context.openTabs?.map((tab) => ({
                   id: tab.id,
                   name: tab.name,
-                  contentType: tab.contentType as 'plot' | 'character' | 'memo' | 'writing' | 'project',
+                  contentType: tab.contentType,
                   active: tab.active,
                 })),
               }
@@ -206,13 +226,17 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
       // レスポンスヘッダからセッションIDを取得
       const newSessionId = response.headers.get('X-Session-Id');
       if (!newSessionId) {
-        throw new Error('X-Session-Id header not found in createSession response');
+        throw new Error(
+          'X-Session-Id header not found in createSession response',
+        );
       }
 
       const stream = parseSSEStream(response);
 
       // セッション情報を取得
-      const session = await clients.ai.getAISession({ sessionId: newSessionId });
+      const session = await clients.ai.getAISession({
+        sessionId: newSessionId,
+      });
 
       return {
         session: toSession(session),
@@ -220,7 +244,10 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
       };
     },
 
-    async acceptProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult> {
+    async acceptProposal(
+      sessionId: string,
+      toolCallId: string,
+    ): Promise<AIProposalResult> {
       const opts = await clients.ai.acceptProposalRequestOpts({
         sessionId,
         toolCallId,
@@ -233,13 +260,16 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
         return await parseProposalSSEResponse(response);
       }
 
-      const json = await response.json() as ClientAIProposalResult;
+      const json = (await response.json()) as RawAIProposalResult;
       return {
         feedback: toFeedback(json.feedback),
       };
     },
 
-    async rejectProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult> {
+    async rejectProposal(
+      sessionId: string,
+      toolCallId: string,
+    ): Promise<AIProposalResult> {
       const opts = await clients.ai.rejectProposalRequestOpts({
         sessionId,
         toolCallId,
@@ -252,7 +282,7 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
         return await parseProposalSSEResponse(response);
       }
 
-      const json = await response.json() as ClientAIProposalResult;
+      const json = (await response.json()) as RawAIProposalResult;
       return {
         feedback: toFeedback(json.feedback),
       };
@@ -280,7 +310,9 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
 
 // ─── Proposal SSE パーサー ───
 
-async function parseProposalSSEResponse(response: Response): Promise<AIProposalResult> {
+async function parseProposalSSEResponse(
+  response: Response,
+): Promise<AIProposalResult> {
   const body = response.body;
   if (!body) {
     throw new Error('No response body for proposal SSE');
@@ -291,14 +323,18 @@ async function parseProposalSSEResponse(response: Response): Promise<AIProposalR
   let buffer = '';
   let feedbackResolved = false;
   let resolveFeedback: (value: AIProposalFeedback) => void = () => {
-    console.warn('[adapter-api] resolveFeedback called before Promise executor assigned it');
+    console.warn(
+      '[adapter-api] resolveFeedback called before Promise executor assigned it',
+    );
   };
 
   const feedbackPromise = new Promise<AIProposalFeedback>((resolve) => {
     resolveFeedback = resolve;
   });
 
-  const ctrl: { current: ReadableStreamDefaultController<AIStreamChunk> | null } = { current: null };
+  const ctrl: {
+    current: ReadableStreamDefaultController<AIStreamChunk> | null;
+  } = { current: null };
 
   const stream = new ReadableStream<AIStreamChunk>({
     start(controller) {
@@ -329,10 +365,14 @@ async function parseProposalSSEResponse(response: Response): Promise<AIProposalR
           if (!part.trim()) continue;
 
           if (!feedbackResolved && part.startsWith('event: proposal_result')) {
-            const dataLine = part.split('\n').find((l) => l.startsWith('data: '));
+            const dataLine = part
+              .split('\n')
+              .find((l) => l.startsWith('data: '));
             if (dataLine) {
               feedbackResolved = true;
-              const resultJson = JSON.parse(dataLine.slice(6)) as ClientAIProposalResult;
+              const resultJson = JSON.parse(
+                dataLine.slice(6),
+              ) as RawAIProposalResult;
               resolveFeedback(toFeedback(resultJson.feedback));
             }
             continue;
@@ -343,7 +383,7 @@ async function parseProposalSSEResponse(response: Response): Promise<AIProposalR
           if (dataLine) {
             try {
               const chunkData = JSON.parse(dataLine.slice(6));
-              const chunk = chunkData as AIStreamChunk;
+              const chunk = toAIStreamChunk(chunkData);
               ctrl.current?.enqueue(chunk);
             } catch {
               // ignore parse errors
