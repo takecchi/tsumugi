@@ -1,6 +1,6 @@
 # Tsumugi
 
-AIアシスタントを搭載した小説エディタです。
+AIがあなたの創作活動をサポートする執筆環境です。
 
 > 🚧 **プロトタイプ段階**: 基本機能は動作しますが、まだ開発中です。
 
@@ -115,6 +115,9 @@ npm run storybook
 ```bash
 # Tauriプロダクションビルド（依存パッケージのビルド含む）
 npm run build:tauri
+
+# Webプロダクションビルド（依存パッケージのビルド含む）
+npm run build:web
 
 # 全パッケージビルド
 npm run build

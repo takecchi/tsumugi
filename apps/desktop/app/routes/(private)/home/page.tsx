@@ -88,7 +88,7 @@ export default function Page() {
               <div>
                 <h1 className="text-lg font-bold text-foreground">Tsumugi</h1>
                 <p className="text-xs text-muted-foreground">
-                  AI小説執筆エディタ
+                  AIがサポートする創作支援ツール
                 </p>
               </div>
             </div>
