@@ -6,6 +6,9 @@ import { SafeErrorBoundary, SafeMeta, SafeLinks } from '@tsumugi/react-router';
 
 import './app.css';
 
+export const ADAPTER: 'api' | 'local' =
+  import.meta.env.VITE_ADAPTER === 'api' ? 'api' : 'local';
+
 export const links: LinksFunction = () => [
   { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
   {
@@ -33,7 +36,7 @@ export const links: LinksFunction = () => [
     href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap',
   },
   // APIとPWA
-  ...(import.meta.env.VITE_ADAPTER === 'api'
+  ...(ADAPTER === 'api'
     ? [
         { rel: 'preconnect', href: import.meta.env.VITE_API_BASE_URL },
         {

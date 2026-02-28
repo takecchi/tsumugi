@@ -1,6 +1,7 @@
 import { createContext, useEffect, useMemo, useState } from 'react';
 import { createAdapter } from '@tsumugi/adapter';
 import type { Adapter } from '@tsumugi/adapter';
+import { ADAPTER } from '~/root';
 
 export const AdapterContext = createContext<Adapter | null>(null);
 
@@ -31,8 +32,6 @@ function useTauriReady(): boolean {
   return ready;
 }
 
-const isApiAdapter = import.meta.env.VITE_ADAPTER === 'api';
-
 export function AdapterProvider({
   adapter,
   children,
@@ -45,7 +44,7 @@ export function AdapterProvider({
   const value = useMemo(() => {
     if (adapter) return adapter;
 
-    if (isApiAdapter) {
+    if (ADAPTER === 'api') {
       return createAdapter({
         api: {
           baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
