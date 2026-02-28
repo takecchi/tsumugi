@@ -9,6 +9,8 @@ import './app.css';
 export const ADAPTER: 'api' | 'local' =
   import.meta.env.VITE_ADAPTER === 'api' ? 'api' : 'local';
 
+export const SITE_URL: string = import.meta.env.VITE_SITE_URL;
+
 export const links: LinksFunction = () => [
   { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
   {
@@ -74,20 +76,20 @@ export const meta: MetaFunction = () => {
     },
     { property: 'og:site_name', content: 'Tsumugi' },
     { property: 'og:locale', content: 'ja_JP' },
-    { property: 'og:image', content: '/og-image.png' },
+    { property: 'og:image', content: `${SITE_URL}/og-image.png` },
     { property: 'og:image:width', content: '400' },
     { property: 'og:image:height', content: '400' },
     { property: 'og:image:alt', content: 'Tsumugi - 小説執筆支援ツール' },
 
     // Twitter Card
-    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:card', content: 'summary' },
     { name: 'twitter:title', content: 'Tsumugi - 小説執筆支援ツール' },
     {
       name: 'twitter:description',
       content:
         'Tsumugiは小説やストーリー執筆を支援するツールです。プロット管理、キャラクター設定、執筆進捗管理など、創作活動に必要な機能を提供します。',
     },
-    { name: 'twitter:image', content: '/og-image.png' },
+    { name: 'twitter:image', content: `${SITE_URL}/og-image.png` },
     { name: 'twitter:image:alt', content: 'Tsumugi - 小説執筆支援ツール' },
   ];
 };
