@@ -49,11 +49,11 @@ export const links: LinksFunction = () => [
 
 export const meta: MetaFunction = () => {
   return [
-    { title: 'Tsumugi - AI小説執筆支援ツール' },
+    { title: 'Tsumugi - AIがサポートする創作支援ツール' },
     {
       name: 'description',
       content:
-        'Tsumugiは小説やストーリー執筆を支援するツールです。プロット管理、キャラクター設定、執筆進捗管理など、創作活動に必要な機能を提供します。',
+        'TsumugiはAIがあなたの創作活動をサポートする執筆環境です。プロット管理、キャラクター設定、執筆進捗管理など、創作に必要な機能をAIと共に活用できます。',
     },
     {
       name: 'keywords',
