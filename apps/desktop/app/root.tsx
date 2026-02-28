@@ -100,7 +100,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <SafeMeta />
         <SafeLinks />
-        <script src="/registerSW.js" />
+        {ADAPTER === 'local' && <script src="/registerSW.js" />}
       </head>
       <body>
         <SafeErrorBoundary
@@ -123,20 +123,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  // Register Service Worker for PWA
-  React.useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
-        })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
-        });
-    }
-  }, []);
-
   return (
     <AdapterProvider>
       <Outlet />
