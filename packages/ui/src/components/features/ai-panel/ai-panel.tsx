@@ -232,8 +232,6 @@ function ProposalDiff({
     pending: null,
   }[status]
 
-  const fields = Object.keys(proposal.proposed).filter((k) => k !== "parentId")
-
   return (
     <div className="rounded-md border p-3 space-y-3">
       <div className="flex items-center justify-between">
@@ -247,56 +245,42 @@ function ProposalDiff({
         )}
       </div>
 
-      {fields.map((field) => {
-        const label = FIELD_LABELS[field] ?? field
-        const change = proposal.proposed[field]
+      {proposal.diffs.map((diff, index) => {
+        const label = FIELD_LABELS[diff.fieldName || ''] ?? diff.fieldName ?? `変更${index + 1}`
 
-        if (change.type === "line_edits") {
+        // 行編集の場合（previewStartとpreviewEndがある場合）
+        if (diff.previewStart && diff.previewEnd) {
           return (
-            <div key={field} className="space-y-1">
+            <div key={index} className="space-y-1">
               <p className="text-xs text-muted-foreground font-medium">{label}（行編集）</p>
-              {change.edits.map((edit, i) => (
-                <div key={i} className="rounded border p-2 space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    {edit.startLine > edit.endLine
-                      ? `${edit.startLine}行目の前に挿入`
-                      : edit.newText === ""
-                        ? `${edit.startLine}–${edit.endLine}行を削除`
-                        : `${edit.startLine}–${edit.endLine}行を置換`}
-                  </p>
-                  {edit.startLine <= edit.endLine && proposal.original && (
-                    <div className="text-sm whitespace-pre-wrap bg-destructive/10 rounded p-1.5 line-through text-muted-foreground">
-                      {Array.from({ length: edit.endLine - edit.startLine + 1 }, (_, j) => {
-                        const lineKey = `line_${edit.startLine + j}`
-                        return String(proposal.original?.[lineKey] ?? "")
-                      }).join("\n") || "（空）"}
-                    </div>
-                  )}
-                  {edit.newText !== "" && (
-                    <div className="text-sm whitespace-pre-wrap bg-green-500/10 rounded p-1.5">
-                      {edit.newText}
-                    </div>
-                  )}
+              <div className="rounded border p-2 space-y-1">
+                <p className="text-xs text-muted-foreground">
+                  {diff.previewStart.line}–{diff.previewEnd.line}行を変更
+                </p>
+                {diff.before != null && (
+                  <div className="text-sm whitespace-pre-wrap bg-destructive/10 rounded p-1.5 line-through text-muted-foreground">
+                    {String(diff.before) || "（空）"}
+                  </div>
+                )}
+                <div className="text-sm whitespace-pre-wrap bg-green-500/10 rounded p-1.5">
+                  {String(diff.after) || "（空）"}
                 </div>
-              ))}
+              </div>
             </div>
           )
         }
 
-        // replace
-        const proposedVal = String(change.value ?? "")
-        const originalVal = proposal.original ? String(proposal.original[field] ?? "") : undefined
-
+        // 通常の置換
         return (
-          <div key={field} className="space-y-1">
+          <div key={index} className="space-y-1">
             <p className="text-xs text-muted-foreground font-medium">{label}</p>
-            {proposal.action === "update" && originalVal !== undefined && originalVal !== proposedVal && (
+            {proposal.action === "update" && diff.before != null && String(diff.before) !== String(diff.after) && (
               <div className="text-sm whitespace-pre-wrap bg-destructive/10 rounded p-2 line-through text-muted-foreground">
-                {originalVal || "（空）"}
+                {String(diff.before) || "（空）"}
               </div>
             )}
             <div className="text-sm whitespace-pre-wrap bg-green-500/10 rounded p-2">
-              {proposedVal || "（空）"}
+              {String(diff.after) || "（空）"}
             </div>
           </div>
         )

@@ -146,8 +146,13 @@ export const WithContent: Story = {
                 action: "update" as const,
                 contentType: "writing",
                 targetName: "第1章",
-                original: { content: "" },
-                proposed: { content: { type: "replace" as const, value: "今日から始まる新しい冒険への期待と不安が入り混じった複雑な感情が、胸の奥で渦を巻いていた。" } },
+                diffs: [
+                  {
+                    fieldName: "content",
+                    before: "",
+                    after: "今日から始まる新しい冒険への期待と不安が入り混じった複雑な感情が、胸の奥で渦を巻いていた。",
+                  },
+                ],
                 status: "pending" as const,
               },
             },

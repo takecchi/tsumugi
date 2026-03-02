@@ -64,7 +64,7 @@ function MockAiPanel({
       if (mode === "write") {
         setMessages(prev => [...prev,
           { id: (Date.now() + 1).toString(), role: "assistant" as const, content: "以下の変更を提案します。" },
-          { id: (Date.now() + 2).toString(), role: "assistant" as const, proposal: { id: "p-" + Date.now(), action: "update" as const, contentType: "writing", targetName: "第1章", original: { content: "元の文章" }, proposed: { content: { type: "replace" as const, value: "AIが提案する新しい文章です。より詳細で魅力的な表現になっています。" } }, status: "pending" as const } },
+          { id: (Date.now() + 2).toString(), role: "assistant" as const, proposal: { id: "p-" + Date.now(), action: "update" as const, contentType: "writing", targetName: "第1章", diffs: [{ fieldName: "content", before: "元の文章", after: "AIが提案する新しい文章です。より詳細で魅力的な表現になっています。" }], status: "pending" as const } },
         ]);
       } else {
         setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: "assistant" as const, content: "ご質問にお答えします。" }]);
@@ -119,10 +119,13 @@ const sampleMessages: Message[] = [
       action: "update",
       contentType: "writing",
       targetName: "第1章 旅立ち",
-      original: { content: "主人公は家を出た。" },
-      proposed: {
-        content: { type: "replace", value: "夜明け前の静寂が街を包んでいた。主人公は窓辺に立ち、遠くに見える山々を眺めていた。「さあ、行こう」彼は小さくつぶやくと、背負った荷物を確かめ、部屋を後にした。" },
-      },
+      diffs: [
+        {
+          fieldName: "content",
+          before: "主人公は家を出た。",
+          after: "夜明け前の静寂が街を包んでいた。主人公は窓辺に立ち、遠くに見える山々を眺めていた。「さあ、行こう」彼は小さくつぶやくと、背負った荷物を確かめ、部屋を後にした。",
+        },
+      ],
       status: "pending",
     },
   },
@@ -171,8 +174,13 @@ const acceptedMessages: Message[] = [
       action: "update",
       contentType: "writing",
       targetName: "第1章 旅立ち",
-      original: { content: "主人公は家を出た。" },
-      proposed: { content: { type: "replace", value: "夜明け前の静寂が街を包んでいた。主人公は窓辺に立ち、遠くに見える山々を眺めていた。" } },
+      diffs: [
+        {
+          fieldName: "content",
+          before: "主人公は家を出た。",
+          after: "夜明け前の静寂が街を包んでいた。主人公は窓辺に立ち、遠くに見える山々を眺めていた。",
+        },
+      ],
       status: "accepted",
     },
   },
@@ -192,8 +200,13 @@ const rejectedMessages: Message[] = [
       action: "update",
       contentType: "writing",
       targetName: "第1章 旅立ち",
-      original: { content: "主人公は家を出た。" },
-      proposed: { content: { type: "replace", value: "夜明け前の静寂が街を包んでいた。主人公は窓辺に立ち、遠くに見える山々を眺めていた。" } },
+      diffs: [
+        {
+          fieldName: "content",
+          before: "主人公は家を出た。",
+          after: "夜明け前の静寂が街を包んでいた。主人公は窓辺に立ち、遠くに見える山々を眺めていた。",
+        },
+      ],
       status: "rejected",
     },
   },
