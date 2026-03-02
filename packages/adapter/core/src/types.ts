@@ -261,7 +261,6 @@ export interface AIToolResultMessage extends AIMessageBase {
 export interface AIProposalMessage extends AIMessageBase {
   messageType: 'proposal';
   proposal: AIProposal;
-  proposalStatus: AIProposalStatus;
 }
 
 /**
@@ -310,27 +309,21 @@ export interface AIModelConfig {
  */
 export type AIProposalAction = 'create' | 'update';
 
-/**
- * 行単位の編集指示
- */
-export interface AILineEdit {
-  /** 変更開始行（1-indexed） */
-  startLine: number;
-  /** 変更終了行（1-indexed, inclusive）。startLine > endLine なら挿入 */
-  endLine: number;
-  /** 置換後のテキスト（空文字列なら削除） */
-  newText: string;
+interface LineNumber {
+  line: number,
+  col: number
 }
 
 /**
- * フィールドの変更指示
- *
- * - replace: フィールド全体を置換する（短文フィールド向け）
- * - line_edits: 行単位で部分的に編集する（長文フィールド向け）
+ * フィールドの変更指示(before/after)
  */
-export type AIFieldChange =
-  | { type: 'replace'; value: unknown }
-  | { type: 'line_edits'; edits: AILineEdit[] };
+interface FieldChange<T extends string | unknown> {
+  fieldName?:string,
+  before: T,
+  after: T,
+  previewStart?:LineNumber,
+  previewEnd?:LineNumber
+}
 
 /**
  * AIによる変更提案
@@ -356,12 +349,10 @@ export interface AIProposal {
   contentType: EditorTabType;
   /** 対象コンテンツの表示名 */
   targetName: string;
-  /** 提案時点の updatedAt（コンフリクト検出用、update 時のみ） */
-  updatedAt?: Date;
-  /** 変更前の値（update 時のみ、変更対象フィールドのみ） */
-  original?: Record<string, unknown>;
-  /** フィールドごとの変更指示 */
-  proposed: Record<string, AIFieldChange>;
+  /** フィールド毎の差分 */
+  diffs: FieldChange<string | unknown>[]
+  /** ステータス */
+  status: AIProposalStatus;
 }
 
 /**
