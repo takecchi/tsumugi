@@ -317,7 +317,7 @@ interface LineNumber {
 /**
  * フィールドの変更指示(before/after)
  */
-interface FieldChange<T extends string | unknown> {
+export interface FieldChange<T extends string | unknown> {
   fieldName?:string,
   before: T,
   after: T,
