@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { isIMEActive } from "@/lib/keyboard-utils"
 import { Markdown } from "@/components/ui/markdown"
+import { DiffInline } from "@/components/ui/diff-highlight"
 
 export type AiMode = "write" | "ask"
 
@@ -250,37 +251,47 @@ function ProposalDiff({
 
         // 行編集の場合（previewStartとpreviewEndがある場合）
         if (diff.previewStart && diff.previewEnd) {
+          const beforeText = String(diff.before || "")
+          const afterText = String(diff.after || "")
+          
           return (
             <div key={index} className="space-y-1">
-              <p className="text-xs text-muted-foreground font-medium">{label}（行編集）</p>
               <div className="rounded border p-2 space-y-1">
-                <p className="text-xs text-muted-foreground">
-                  {diff.previewStart.line}–{diff.previewEnd.line}行を変更
-                </p>
-                {diff.before != null && (
-                  <div className="text-sm whitespace-pre-wrap bg-destructive/10 rounded p-1.5 line-through text-muted-foreground">
-                    {String(diff.before) || "（空）"}
-                  </div>
-                )}
-                <div className="text-sm whitespace-pre-wrap bg-green-500/10 rounded p-1.5">
-                  {String(diff.after) || "（空）"}
-                </div>
+                <DiffInline
+                  label={`${label} ${diff.previewStart.line}-${diff.previewEnd.line}行を変更`}
+                  oldText={beforeText} 
+                  newText={afterText}
+                  className="text-sm"
+                />
               </div>
             </div>
           )
         }
 
         // 通常の置換
+        const beforeText = String(diff.before || "")
+        const afterText = String(diff.after || "")
+        
+        // 差分がある場合はハイライト表示
+        if (proposal.action === "update" && diff.before != null && beforeText !== afterText) {
+          return (
+            <div key={index} className="space-y-1">
+              <DiffInline
+                label={label}
+                oldText={beforeText} 
+                newText={afterText}
+                className="text-sm"
+              />
+            </div>
+          )
+        }
+        
+        // 新規作成または差分がない場合は通常表示
         return (
           <div key={index} className="space-y-1">
             <p className="text-xs text-muted-foreground font-medium">{label}</p>
-            {proposal.action === "update" && diff.before != null && String(diff.before) !== String(diff.after) && (
-              <div className="text-sm whitespace-pre-wrap bg-destructive/10 rounded p-2 line-through text-muted-foreground">
-                {String(diff.before) || "（空）"}
-              </div>
-            )}
             <div className="text-sm whitespace-pre-wrap bg-green-500/10 rounded p-2">
-              {String(diff.after) || "（空）"}
+              {afterText || "（空）"}
             </div>
           </div>
         )
