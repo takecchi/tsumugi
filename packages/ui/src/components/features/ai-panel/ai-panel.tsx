@@ -11,23 +11,25 @@ import { Markdown } from "@/components/ui/markdown"
 
 export type AiMode = "write" | "ask"
 
-interface LineEdit {
-  startLine: number
-  endLine: number
-  newText: string
+interface LineNumber {
+  line: number,
+  col: number
 }
 
-type FieldChange =
-  | { type: "replace"; value: unknown }
-  | { type: "line_edits"; edits: LineEdit[] }
+interface FieldChange<T extends string | unknown> {
+  fieldName?:string,
+  before: T,
+  after: T,
+  previewStart?:LineNumber,
+  previewEnd?:LineNumber
+}
 
 export interface Proposal {
   id: string
   action: "create" | "update"
   contentType: string
   targetName: string
-  original?: Record<string, unknown>
-  proposed: Record<string, FieldChange>
+  diffs: FieldChange<string | unknown>[]
   status: "pending" | "accepted" | "rejected" | "conflict"
 }
 
