@@ -102,7 +102,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <SafeMeta />
         <SafeLinks />
-        {ADAPTER === 'local' && <script src="/registerSW.js" />}
+        {ADAPTER === 'api' && <script src="/registerSW.js" />}
       </head>
       <body>
         <SafeErrorBoundary
