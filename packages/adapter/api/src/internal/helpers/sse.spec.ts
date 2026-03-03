@@ -323,7 +323,7 @@ describe('parseSSEStream', () => {
     const sseData = [
       'data: {"type":"text","content":"メモを作成しますね。"}\n\n',
       'data: {"type":"tool_call","tool_call":{"id":"call_MEMO123","name":"propose_memo","arguments":"{\\"name\\":\\"テストメモ\\",\\"content\\":\\"これはテスト用に作成したメモです。\\",\\"tags\\":[\\"テスト\\",\\"メモ\\"]}"}}\n\n',
-      'data: {"type":"proposal","proposal":{"id":"call_MEMO123","content_type":"memo","action":"create","name":"テストメモ","content":"これはテスト用に作成したメモです。","tags":["テスト","メモ"]}}\n\n',
+      'data: {"type":"proposal","proposal":{"id":"call_MEMO123","content_type":"memo","action":"create","tool_call_id":"call_MEMO123","target_id":"aaa","target_name":"テストメモ","proposal_status":"pending","replace_previews":[],"line_edits_previews":[]}}\n\n\n\n',
       'data: {"type":"text","content":"メモの提案を作成しました。承認してください。"}\n\n',
       'data: {"type":"usage","usage":{"prompt_tokens":100,"completion_tokens":50,"total_tokens":150}}\n\n',
       'data: {"type":"done"}\n\n',
@@ -355,15 +355,16 @@ describe('parseSSEStream', () => {
       },
     });
     expect(chunks[2]).toEqual({
-      type: 'proposal',
       proposal: {
-        id: 'call_MEMO123',
-        contentType: 'memo',
         action: 'create',
-        name: 'テストメモ',
-        content: 'これはテスト用に作成したメモです。',
-        tags: ['テスト', 'メモ'],
+        contentType: 'memo',
+        diffs: [],
+        id: 'call_MEMO123',
+        status: 'pending',
+        targetId: 'aaa',
+        targetName: 'テストメモ',
       },
+      type: 'proposal',
     });
     expect(chunks[3]).toEqual({
       type: 'text',
