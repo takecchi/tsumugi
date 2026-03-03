@@ -9,7 +9,10 @@ import type {
 import { tool } from 'ai';
 import { z } from 'zod/v4';
 import { diffFields, toReplaceFields } from '@/internal/helpers/ai-tools-logic';
-import { validateLineEditsConsistency, toRecord } from '@/internal/helpers/ai-logic';
+import {
+  validateLineEditsConsistency,
+  toRecord,
+} from '@/internal/helpers/ai-logic';
 
 /**
  * ツール実行に必要なアダプター群
@@ -32,18 +35,30 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
         'プロジェクトの統計情報（件数・総文字数）を取得します。注意: プロジェクト名やコンテンツ一覧はシステムプロンプトに含まれているため、通常このツールは不要です。統計の最新値が必要な場合のみ使用してください。',
       inputSchema: z.object({}),
       execute: async () => {
-        const [project, plots, characters, memos, totalWordCount] = await Promise.all([
-          adapters.projects.getById(projectId),
-          adapters.plots.getByProjectId(projectId),
-          adapters.characters.getByProjectId(projectId),
-          adapters.memos.getByProjectId(projectId),
-          adapters.writings.getTotalWordCount(projectId),
-        ]);
+        const [project, plots, characters, memos, totalWordCount] =
+          await Promise.all([
+            adapters.projects.getById(projectId),
+            adapters.plots.getByProjectId(projectId),
+            adapters.characters.getByProjectId(projectId),
+            adapters.memos.getByProjectId(projectId),
+            adapters.writings.getTotalWordCount(projectId),
+          ]);
         return {
-          project: project ? { id: project.id, name: project.name, synopsis: project.synopsis, theme: project.theme, goal: project.goal, targetWordCount: project.targetWordCount, targetAudience: project.targetAudience } : null,
+          project: project
+            ? {
+                id: project.id,
+                name: project.name,
+                synopsis: project.synopsis,
+                theme: project.theme,
+                goal: project.goal,
+                targetWordCount: project.targetWordCount,
+                targetAudience: project.targetAudience,
+              }
+            : null,
           stats: {
             plotCount: plots.filter((p) => p.nodeType !== 'folder').length,
-            characterCount: characters.filter((c) => c.nodeType !== 'folder').length,
+            characterCount: characters.filter((c) => c.nodeType !== 'folder')
+              .length,
             memoCount: memos.filter((m) => m.nodeType !== 'folder').length,
             totalWordCount,
           },
@@ -61,9 +76,14 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
         const plot = await adapters.plots.getById(id);
         if (!plot) return { error: 'プロットが見つかりません' };
         return {
-          id: plot.id, name: plot.name,
-          synopsis: plot.synopsis, setting: plot.setting, theme: plot.theme,
-          structure: plot.structure, conflict: plot.conflict, resolution: plot.resolution,
+          id: plot.id,
+          name: plot.name,
+          synopsis: plot.synopsis,
+          setting: plot.setting,
+          theme: plot.theme,
+          structure: plot.structure,
+          conflict: plot.conflict,
+          resolution: plot.resolution,
           notes: plot.notes,
         };
       },
@@ -76,9 +96,13 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
       execute: async () => {
         const plots = await adapters.plots.getByProjectId(projectId);
         return {
-          plots: plots.filter((p) => p.nodeType !== 'folder').map((p) => ({
-            id: p.id, name: p.name, synopsis: p.synopsis,
-          })),
+          plots: plots
+            .filter((p) => p.nodeType !== 'folder')
+            .map((p) => ({
+              id: p.id,
+              name: p.name,
+              synopsis: p.synopsis,
+            })),
         };
       },
     }),
@@ -93,10 +117,18 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
         const c = await adapters.characters.getById(id);
         if (!c) return { error: 'キャラクターが見つかりません' };
         return {
-          id: c.id, name: c.name, aliases: c.aliases, role: c.role,
-          gender: c.gender, age: c.age, appearance: c.appearance,
-          personality: c.personality, background: c.background,
-          motivation: c.motivation, relationships: c.relationships, notes: c.notes,
+          id: c.id,
+          name: c.name,
+          aliases: c.aliases,
+          role: c.role,
+          gender: c.gender,
+          age: c.age,
+          appearance: c.appearance,
+          personality: c.personality,
+          background: c.background,
+          motivation: c.motivation,
+          relationships: c.relationships,
+          notes: c.notes,
         };
       },
     }),
@@ -108,9 +140,13 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
       execute: async () => {
         const characters = await adapters.characters.getByProjectId(projectId);
         return {
-          characters: characters.filter((c) => c.nodeType !== 'folder').map((c) => ({
-            id: c.id, name: c.name, role: c.role,
-          })),
+          characters: characters
+            .filter((c) => c.nodeType !== 'folder')
+            .map((c) => ({
+              id: c.id,
+              name: c.name,
+              role: c.role,
+            })),
         };
       },
     }),
@@ -124,7 +160,12 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
       execute: async ({ id }) => {
         const memo = await adapters.memos.getById(id);
         if (!memo) return { error: 'メモが見つかりません' };
-        return { id: memo.id, name: memo.name, content: memo.content, tags: memo.tags };
+        return {
+          id: memo.id,
+          name: memo.name,
+          content: memo.content,
+          tags: memo.tags,
+        };
       },
     }),
 
@@ -135,9 +176,13 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
       execute: async () => {
         const memos = await adapters.memos.getByProjectId(projectId);
         return {
-          memos: memos.filter((m) => m.nodeType !== 'folder').map((m) => ({
-            id: m.id, name: m.name, tags: m.tags,
-          })),
+          memos: memos
+            .filter((m) => m.nodeType !== 'folder')
+            .map((m) => ({
+              id: m.id,
+              name: m.name,
+              tags: m.tags,
+            })),
         };
       },
     }),
@@ -152,7 +197,10 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
         const memos = await adapters.memos.getByTag(projectId, tag);
         return {
           memos: memos.map((m) => ({
-            id: m.id, name: m.name, content: m.content, tags: m.tags,
+            id: m.id,
+            name: m.name,
+            content: m.content,
+            tags: m.tags,
           })),
         };
       },
@@ -168,8 +216,16 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
         const writing = await adapters.writings.getById(id);
         if (!writing) return { error: '執筆データが見つかりません' };
         const lines = (writing.content ?? '').split('\n');
-        const numberedContent = lines.map((line, i) => `${i + 1}: ${line}`).join('\n');
-        return { id: writing.id, name: writing.name, content: writing.content, numberedContent, wordCount: writing.wordCount };
+        const numberedContent = lines
+          .map((line, i) => `${i + 1}: ${line}`)
+          .join('\n');
+        return {
+          id: writing.id,
+          name: writing.name,
+          content: writing.content,
+          numberedContent,
+          wordCount: writing.wordCount,
+        };
       },
     }),
 
@@ -180,9 +236,13 @@ function createReadTools(projectId: string, adapters: ToolAdapters) {
       execute: async () => {
         const writings = await adapters.writings.getByProjectId(projectId);
         return {
-          writings: writings.filter((w) => w.nodeType !== 'folder').map((w) => ({
-            id: w.id, name: w.name, wordCount: w.wordCount,
-          })),
+          writings: writings
+            .filter((w) => w.nodeType !== 'folder')
+            .map((w) => ({
+              id: w.id,
+              name: w.name,
+              wordCount: w.wordCount,
+            })),
         };
       },
     }),
@@ -215,7 +275,11 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
         '新しいプロットの作成を提案します。ユーザーの承認後に実際に作成されます。できるだけ多くのフィールドを埋めてください。',
       inputSchema: z.object({
         name: z.string().describe('プロット名'),
-        parentId: z.string().nullable().optional().describe('親フォルダID（ルート直下の場合はnullまたは省略）'),
+        parentId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe('親フォルダID（ルート直下の場合はnullまたは省略）'),
         synopsis: z.string().optional().describe('あらすじ'),
         setting: z.string().optional().describe('舞台設定'),
         theme: z.string().optional().describe('テーマ'),
@@ -231,7 +295,11 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
           contentType: 'plot' as const,
           targetId: parentId ?? null,
           targetName: name,
-          proposed: toReplaceFields({ name, parentId: parentId ?? null, ...data }),
+          proposed: toReplaceFields({
+            name,
+            parentId: parentId ?? null,
+            ...data,
+          }),
         };
       },
     }),
@@ -241,7 +309,11 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
         '新しいキャラクター設定の作成を提案します。ユーザーの承認後に実際に作成されます。できるだけ多くのフィールドを埋めてください。',
       inputSchema: z.object({
         name: z.string().describe('キャラクター名'),
-        parentId: z.string().nullable().optional().describe('親フォルダID（ルート直下の場合はnullまたは省略）'),
+        parentId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe('親フォルダID（ルート直下の場合はnullまたは省略）'),
         aliases: z.string().optional().describe('別名・あだ名'),
         role: z.string().optional().describe('役職・立場'),
         gender: z.string().optional().describe('性別'),
@@ -260,7 +332,11 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
           contentType: 'character' as const,
           targetId: parentId ?? null,
           targetName: name,
-          proposed: toReplaceFields({ name, parentId: parentId ?? null, ...data }),
+          proposed: toReplaceFields({
+            name,
+            parentId: parentId ?? null,
+            ...data,
+          }),
         };
       },
     }),
@@ -270,7 +346,11 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
         '新しいメモの作成を提案します。ユーザーの承認後に実際に作成されます。',
       inputSchema: z.object({
         name: z.string().describe('メモ名'),
-        parentId: z.string().nullable().optional().describe('親フォルダID（ルート直下の場合はnullまたは省略）'),
+        parentId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe('親フォルダID（ルート直下の場合はnullまたは省略）'),
         content: z.string().describe('メモ内容'),
         tags: z.array(z.string()).optional().describe('タグ'),
       }),
@@ -281,7 +361,12 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
           contentType: 'memo' as const,
           targetId: parentId ?? null,
           targetName: name,
-          proposed: toReplaceFields({ name, parentId: parentId ?? null, content, ...(tags ? { tags } : {}) }),
+          proposed: toReplaceFields({
+            name,
+            parentId: parentId ?? null,
+            content,
+            ...(tags ? { tags } : {}),
+          }),
         };
       },
     }),
@@ -291,7 +376,11 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
         '新しい執筆本文の作成を提案します。ユーザーの承認後に実際に作成されます。',
       inputSchema: z.object({
         name: z.string().describe('執筆タイトル'),
-        parentId: z.string().nullable().optional().describe('親フォルダID（ルート直下の場合はnullまたは省略）'),
+        parentId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe('親フォルダID（ルート直下の場合はnullまたは省略）'),
         content: z.string().describe('本文'),
       }),
       execute: async ({ name, parentId, content }) => {
@@ -301,7 +390,11 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
           contentType: 'writing' as const,
           targetId: parentId ?? null,
           targetName: name,
-          proposed: toReplaceFields({ name, parentId: parentId ?? null, content }),
+          proposed: toReplaceFields({
+            name,
+            parentId: parentId ?? null,
+            content,
+          }),
         };
       },
     }),
@@ -405,12 +498,27 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
         '既存の執筆本文を行単位で変更提案します。ユーザーの承認後に実際に更新されます。変更したい行だけを edits で指定してください。事前に get_writing で行番号付きテキストを確認してから使用してください（現在編集中のコンテンツの場合はシステムプロンプトの内容を参照）。expectedText には変更前の行テキストを指定してください（整合性検証に使用）。',
       inputSchema: z.object({
         id: z.string().describe('執筆ID'),
-        edits: z.array(z.object({
-          startLine: z.number().describe('変更開始行（1始まり）'),
-          endLine: z.number().describe('変更終了行（1始まり、含む）。startLine > endLine なら startLine の前に挿入'),
-          newText: z.string().describe('置換後のテキスト（空文字列なら削除）'),
-          expectedText: z.string().optional().describe('変更前の行テキスト（startLine〜endLineの内容を改行区切りで指定。整合性検証に使用。省略可能だが指定を強く推奨）'),
-        })).describe('行単位の編集指示の配列'),
+        edits: z
+          .array(
+            z.object({
+              startLine: z.number().describe('変更開始行（1始まり）'),
+              endLine: z
+                .number()
+                .describe(
+                  '変更終了行（1始まり、含む）。startLine > endLine なら startLine の前に挿入',
+                ),
+              newText: z
+                .string()
+                .describe('置換後のテキスト（空文字列なら削除）'),
+              expectedText: z
+                .string()
+                .optional()
+                .describe(
+                  '変更前の行テキスト（startLine〜endLineの内容を改行区切りで指定。整合性検証に使用。省略可能だが指定を強く推奨）',
+                ),
+            }),
+          )
+          .describe('行単位の編集指示の配列'),
       }),
       execute: async ({ id, edits }) => {
         const current = await adapters.writings.getById(id);
@@ -420,9 +528,9 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
         // 行内容の整合性検証
         const validation = validateLineEditsConsistency(lines, edits);
         if (!validation.valid) {
-          const details = validation.mismatches.map(
-            (m) => `行${m.line}: 期待="${m.expected}" 実際="${m.actual}"`,
-          ).join(', ');
+          const details = validation.mismatches
+            .map((m) => `行${m.line}: 期待="${m.expected}" 実際="${m.actual}"`)
+            .join(', ');
           return {
             error: `行内容が一致しません。テキストが更新されている可能性があります。get_writing で最新のテキストを再取得してください。不一致: ${details}`,
           };
@@ -431,7 +539,11 @@ function createProposalTools(projectId: string, adapters: ToolAdapters) {
         // original: 編集対象行のテキストを保持
         const originalLines: Record<string, unknown> = {};
         for (const edit of edits) {
-          for (let i = edit.startLine; i <= edit.endLine && i <= lines.length; i++) {
+          for (
+            let i = edit.startLine;
+            i <= edit.endLine && i <= lines.length;
+            i++
+          ) {
             originalLines[`line_${i}`] = lines[i - 1];
           }
         }
@@ -539,7 +651,12 @@ function createMemoryTools(memoryOps: MemoryOperations) {
 /**
  * モードに応じたツールセットを生成
  */
-export function createAITools(projectId: string, mode: AIChatMode, adapters: ToolAdapters, memoryOps?: MemoryOperations) {
+export function createAITools(
+  projectId: string,
+  mode: AIChatMode,
+  adapters: ToolAdapters,
+  memoryOps?: MemoryOperations,
+) {
   const readTools = createReadTools(projectId, adapters);
   const memoryTools = memoryOps ? createMemoryTools(memoryOps) : {};
 

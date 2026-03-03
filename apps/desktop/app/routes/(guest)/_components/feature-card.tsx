@@ -1,9 +1,9 @@
 import * as React from 'react';
 
 interface FeatureCardProps {
-  icon: React.ReactNode
-  title: string
-  description: string
+  icon: React.ReactNode;
+  title: string;
+  description: string;
 }
 
 export function FeatureCard({ icon, title, description }: FeatureCardProps) {
@@ -17,5 +17,5 @@ export function FeatureCard({ icon, title, description }: FeatureCardProps) {
         {description}
       </p>
     </div>
-  )
+  );
 }

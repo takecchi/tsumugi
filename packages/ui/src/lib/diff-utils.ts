@@ -10,32 +10,39 @@ export interface DiffSegment {
 /**
  * 2つのテキストの差分を文字レベルで検出
  */
-export function computeCharDiff(oldText: string, newText: string): DiffSegment[] {
+export function computeCharDiff(
+  oldText: string,
+  newText: string,
+): DiffSegment[] {
   const segments: DiffSegment[] = [];
-  
+
   // シンプルなLCS（最長共通部分列）ベースの差分アルゴリズム
   const oldChars = Array.from(oldText);
   const newChars = Array.from(newText);
-  
+
   const lcs = computeLCS(oldChars, newChars);
-  
+
   let oldIndex = 0;
   let newIndex = 0;
   let lcsIndex = 0;
-  
+
   while (oldIndex < oldChars.length || newIndex < newChars.length) {
-    if (lcsIndex < lcs.length && 
-        oldIndex < oldChars.length && 
-        newIndex < newChars.length &&
-        oldChars[oldIndex] === lcs[lcsIndex] && 
-        newChars[newIndex] === lcs[lcsIndex]) {
+    if (
+      lcsIndex < lcs.length &&
+      oldIndex < oldChars.length &&
+      newIndex < newChars.length &&
+      oldChars[oldIndex] === lcs[lcsIndex] &&
+      newChars[newIndex] === lcs[lcsIndex]
+    ) {
       // 共通部分
       segments.push({ type: 'equal', text: oldChars[oldIndex] });
       oldIndex++;
       newIndex++;
       lcsIndex++;
-    } else if (oldIndex < oldChars.length && 
-               (lcsIndex >= lcs.length || oldChars[oldIndex] !== lcs[lcsIndex])) {
+    } else if (
+      oldIndex < oldChars.length &&
+      (lcsIndex >= lcs.length || oldChars[oldIndex] !== lcs[lcsIndex])
+    ) {
       // 削除された文字
       segments.push({ type: 'delete', text: oldChars[oldIndex] });
       oldIndex++;
@@ -45,7 +52,7 @@ export function computeCharDiff(oldText: string, newText: string): DiffSegment[]
       newIndex++;
     }
   }
-  
+
   // 連続する同じタイプのセグメントをマージ
   return mergeSegments(segments);
 }
@@ -53,31 +60,38 @@ export function computeCharDiff(oldText: string, newText: string): DiffSegment[]
 /**
  * 単語レベルの差分を検出（より読みやすい差分のため）
  */
-export function computeWordDiff(oldText: string, newText: string): DiffSegment[] {
+export function computeWordDiff(
+  oldText: string,
+  newText: string,
+): DiffSegment[] {
   // より細かい分割：単語境界、句読点、空白を考慮
   const oldTokens = tokenize(oldText);
   const newTokens = tokenize(newText);
-  
+
   const lcs = computeLCS(oldTokens, newTokens);
   const segments: DiffSegment[] = [];
-  
+
   let oldIndex = 0;
   let newIndex = 0;
   let lcsIndex = 0;
-  
+
   while (oldIndex < oldTokens.length || newIndex < newTokens.length) {
-    if (lcsIndex < lcs.length && 
-        oldIndex < oldTokens.length && 
-        newIndex < newTokens.length &&
-        oldTokens[oldIndex] === lcs[lcsIndex] && 
-        newTokens[newIndex] === lcs[lcsIndex]) {
+    if (
+      lcsIndex < lcs.length &&
+      oldIndex < oldTokens.length &&
+      newIndex < newTokens.length &&
+      oldTokens[oldIndex] === lcs[lcsIndex] &&
+      newTokens[newIndex] === lcs[lcsIndex]
+    ) {
       // 共通部分
       segments.push({ type: 'equal', text: oldTokens[oldIndex] });
       oldIndex++;
       newIndex++;
       lcsIndex++;
-    } else if (oldIndex < oldTokens.length && 
-               (lcsIndex >= lcs.length || oldTokens[oldIndex] !== lcs[lcsIndex])) {
+    } else if (
+      oldIndex < oldTokens.length &&
+      (lcsIndex >= lcs.length || oldTokens[oldIndex] !== lcs[lcsIndex])
+    ) {
       // 削除されたトークン
       segments.push({ type: 'delete', text: oldTokens[oldIndex] });
       oldIndex++;
@@ -87,7 +101,7 @@ export function computeWordDiff(oldText: string, newText: string): DiffSegment[]
       newIndex++;
     }
   }
-  
+
   return mergeSegments(segments);
 }
 
@@ -97,13 +111,14 @@ export function computeWordDiff(oldText: string, newText: string): DiffSegment[]
 function tokenize(text: string): string[] {
   // 日本語文字、英数字、句読点、空白を適切に分割
   const tokens: string[] = [];
-  const regex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+|[a-zA-Z0-9]+|[^\s\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAFa-zA-Z0-9]+|\s+/g;
-  
+  const regex =
+    /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+|[a-zA-Z0-9]+|[^\s\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAFa-zA-Z0-9]+|\s+/g;
+
   let match;
   while ((match = regex.exec(text)) !== null) {
     tokens.push(match[0]);
   }
-  
+
   return tokens;
 }
 
@@ -113,8 +128,10 @@ function tokenize(text: string): string[] {
 function computeLCS<T>(seq1: T[], seq2: T[]): T[] {
   const m = seq1.length;
   const n = seq2.length;
-  const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-  
+  const dp: number[][] = Array(m + 1)
+    .fill(null)
+    .map(() => Array(n + 1).fill(0));
+
   // DPテーブルを構築
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
@@ -125,10 +142,11 @@ function computeLCS<T>(seq1: T[], seq2: T[]): T[] {
       }
     }
   }
-  
+
   // LCSを復元
   const lcs: T[] = [];
-  let i = m, j = n;
+  let i = m,
+    j = n;
   while (i > 0 && j > 0) {
     if (seq1[i - 1] === seq2[j - 1]) {
       lcs.unshift(seq1[i - 1]);
@@ -140,7 +158,7 @@ function computeLCS<T>(seq1: T[], seq2: T[]): T[] {
       j--;
     }
   }
-  
+
   return lcs;
 }
 
@@ -149,10 +167,10 @@ function computeLCS<T>(seq1: T[], seq2: T[]): T[] {
  */
 function mergeSegments(segments: DiffSegment[]): DiffSegment[] {
   if (segments.length === 0) return segments;
-  
+
   const merged: DiffSegment[] = [];
   let current = segments[0];
-  
+
   for (let i = 1; i < segments.length; i++) {
     if (segments[i].type === current.type) {
       current.text += segments[i].text;
@@ -161,7 +179,7 @@ function mergeSegments(segments: DiffSegment[]): DiffSegment[] {
       current = segments[i];
     }
   }
-  
+
   merged.push(current);
   return merged;
 }
@@ -169,30 +187,37 @@ function mergeSegments(segments: DiffSegment[]): DiffSegment[] {
 /**
  * 行レベルの差分を検出
  */
-export function computeLineDiff(oldText: string, newText: string): DiffSegment[] {
+export function computeLineDiff(
+  oldText: string,
+  newText: string,
+): DiffSegment[] {
   const oldLines = oldText.split('\n');
   const newLines = newText.split('\n');
-  
+
   const lcs = computeLCS(oldLines, newLines);
   const segments: DiffSegment[] = [];
-  
+
   let oldIndex = 0;
   let newIndex = 0;
   let lcsIndex = 0;
-  
+
   while (oldIndex < oldLines.length || newIndex < newLines.length) {
-    if (lcsIndex < lcs.length && 
-        oldIndex < oldLines.length && 
-        newIndex < newLines.length &&
-        oldLines[oldIndex] === lcs[lcsIndex] && 
-        newLines[newIndex] === lcs[lcsIndex]) {
+    if (
+      lcsIndex < lcs.length &&
+      oldIndex < oldLines.length &&
+      newIndex < newLines.length &&
+      oldLines[oldIndex] === lcs[lcsIndex] &&
+      newLines[newIndex] === lcs[lcsIndex]
+    ) {
       // 共通行
       segments.push({ type: 'equal', text: oldLines[oldIndex] + '\n' });
       oldIndex++;
       newIndex++;
       lcsIndex++;
-    } else if (oldIndex < oldLines.length && 
-               (lcsIndex >= lcs.length || oldLines[oldIndex] !== lcs[lcsIndex])) {
+    } else if (
+      oldIndex < oldLines.length &&
+      (lcsIndex >= lcs.length || oldLines[oldIndex] !== lcs[lcsIndex])
+    ) {
       // 削除された行
       segments.push({ type: 'delete', text: oldLines[oldIndex] + '\n' });
       oldIndex++;
@@ -202,14 +227,18 @@ export function computeLineDiff(oldText: string, newText: string): DiffSegment[]
       newIndex++;
     }
   }
-  
+
   // 最後の改行を調整
   if (segments.length > 0) {
     const last = segments[segments.length - 1];
-    if (last.text.endsWith('\n') && !oldText.endsWith('\n') && !newText.endsWith('\n')) {
+    if (
+      last.text.endsWith('\n') &&
+      !oldText.endsWith('\n') &&
+      !newText.endsWith('\n')
+    ) {
       last.text = last.text.slice(0, -1);
     }
   }
-  
+
   return segments;
 }

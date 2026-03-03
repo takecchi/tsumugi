@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 
 /**
  * Google "G" ロゴ（公式ブランディングガイドライン準拠）
@@ -28,5 +28,5 @@ export function GoogleLogo({ className }: { className?: string }) {
         fill="#EA4335"
       />
     </svg>
-  )
+  );
 }

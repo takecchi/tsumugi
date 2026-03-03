@@ -29,7 +29,6 @@ export type AIFieldChange =
   | { type: 'replace'; value: unknown }
   | { type: 'line_edits'; edits: AILineEdit[] };
 
-
 /**
  * Node 派生型を Record<string, unknown> に変換する。
  * as unknown as のインライン使用を避けるための専用変換関数。
@@ -93,7 +92,11 @@ export function isProposalMessage(m: MessageJson): m is ProposalMessageJson {
 /**
  * MessageJson → AIMessage 変換
  */
-export function toAIMessage(json: MessageJson, index: number, sessionId: string): AIMessage {
+export function toAIMessage(
+  json: MessageJson,
+  index: number,
+  sessionId: string,
+): AIMessage {
   const base = {
     id: `${sessionId}#${index}`,
     sessionId,
@@ -180,7 +183,9 @@ export function applyLineEdits(text: string, edits: AILineEdit[]): string {
 /**
  * AIFieldChange の proposed から create 用の plain な値を抽出する（replace のみ）。
  */
-export function resolveCreateValues(proposed: Record<string, AIFieldChange>): Record<string, unknown> {
+export function resolveCreateValues(
+  proposed: Record<string, AIFieldChange>,
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, change] of Object.entries(proposed)) {
     if (change.type === 'replace') {
@@ -212,28 +217,52 @@ export function toAISDKMessages(messages: MessageJson[]): ModelMessage[] {
     const m = messages[i];
     const isOldTurn = i < lastUserIndex;
 
-    if (m.messageType === 'text' && (m.role === 'system' || m.role === 'user')) {
+    if (
+      m.messageType === 'text' &&
+      (m.role === 'system' || m.role === 'user')
+    ) {
       result.push({ role: m.role as 'system' | 'user', content: m.content });
     } else if (m.role === 'assistant' && m.messageType === 'text') {
-      result.push({ role: 'assistant', content: [{ type: 'text', text: m.content }] });
+      result.push({
+        role: 'assistant',
+        content: [{ type: 'text', text: m.content }],
+      });
     } else if (m.role === 'assistant' && m.messageType === 'tool_call') {
       // tool_call: content は JSON文字列 [{ toolCallId, toolName, args }]
       // tool_call は古いターンでもそのまま保持（tool_result とペアで必要）
-      const calls = JSON.parse(m.content) as { toolCallId: string; toolName: string; args: unknown }[];
+      const calls = JSON.parse(m.content) as {
+        toolCallId: string;
+        toolName: string;
+        args: unknown;
+      }[];
       const last = result[result.length - 1];
       if (last && last.role === 'assistant' && Array.isArray(last.content)) {
         for (const c of calls) {
-          (last.content as unknown[]).push({ type: 'tool-call', toolCallId: c.toolCallId, toolName: c.toolName, input: c.args });
+          (last.content as unknown[]).push({
+            type: 'tool-call',
+            toolCallId: c.toolCallId,
+            toolName: c.toolName,
+            input: c.args,
+          });
         }
       } else {
         result.push({
           role: 'assistant',
-          content: calls.map((c) => ({ type: 'tool-call' as const, toolCallId: c.toolCallId, toolName: c.toolName, input: c.args })),
+          content: calls.map((c) => ({
+            type: 'tool-call' as const,
+            toolCallId: c.toolCallId,
+            toolName: c.toolName,
+            input: c.args,
+          })),
         });
       }
     } else if (m.role === 'tool' && m.messageType === 'tool_result') {
       // tool_result: content は JSON文字列 [{ toolCallId, toolName, result }]
-      const results = JSON.parse(m.content) as { toolCallId: string; toolName: string; result: unknown }[];
+      const results = JSON.parse(m.content) as {
+        toolCallId: string;
+        toolName: string;
+        result: unknown;
+      }[];
 
       // 古いターンのツール結果は要約に圧縮
       const mappedResults = results.map((r) => {
@@ -242,7 +271,10 @@ export function toAISDKMessages(messages: MessageJson[]): ModelMessage[] {
             type: 'tool-result' as const,
             toolCallId: r.toolCallId,
             toolName: r.toolName,
-            output: { type: 'json' as const, value: `[${r.toolName} の結果は省略。最新データはシステムプロンプトのプロジェクト情報を参照]` },
+            output: {
+              type: 'json' as const,
+              value: `[${r.toolName} の結果は省略。最新データはシステムプロンプトのプロジェクト情報を参照]`,
+            },
           };
         }
         return {
@@ -380,7 +412,9 @@ export function buildSystemPrompt(
   const activeSection = activeTabContent ?? '';
 
   if (mode === 'write') {
-    return base + `
+    return (
+      base +
+      `
 
 ## 書き込みモード
 現在は書き込みモードです。ユーザーの指示に従い、プロット・キャラクター設定・メモ・執筆本文の作成・編集を**提案**できます。
@@ -390,14 +424,26 @@ export function buildSystemPrompt(
 - 提案はユーザーに表示され、ユーザーが承認（Accept）した場合のみ実際に反映されます。
 - 編集前に必ず現在の内容を確認してください。ただし、「現在編集中のコンテンツ」にすでに内容が含まれている場合は、再取得せずにそのまま参照してください。
 - 提案内容をユーザーに簡潔に説明してください。
-- 提案の結果（承認・拒否・コンフリクト）はシステムメッセージで通知されます。コンフリクトの場合は状況を確認して再提案してください。` + summarySection + memoriesStr + contextSection + activeSection;
+- 提案の結果（承認・拒否・コンフリクト）はシステムメッセージで通知されます。コンフリクトの場合は状況を確認して再提案してください。` +
+      summarySection +
+      memoriesStr +
+      contextSection +
+      activeSection
+    );
   }
 
-  return base + `
+  return (
+    base +
+    `
 
 ## 読み取りモード
 現在は読み取り専用モードです。データの参照・分析・アドバイスのみ行えます。データの編集はできません。
-ユーザーからデータの作成・編集・提案・削除を求められた場合は、「現在は読み取りモードのため編集できません。Writeモードに切り替えていただければ、データの作成や編集が可能になります。」と案内してください。` + summarySection + memoriesStr + contextSection + activeSection;
+ユーザーからデータの作成・編集・提案・削除を求められた場合は、「現在は読み取りモードのため編集できません。Writeモードに切り替えていただければ、データの作成や編集が可能になります。」と案内してください。` +
+    summarySection +
+    memoriesStr +
+    contextSection +
+    activeSection
+  );
 }
 
 /**
@@ -437,9 +483,14 @@ export function findProposalInArray(
  * セッション内の全提案が処理済み（pending なし）かどうかをチェックし、
  * 処理済みの場合は全提案のフィードバックサマリーも返す。
  */
-export function checkAllProposalsProcessedInArray(
-  messages: MessageJson[],
-): { allProcessed: boolean; feedbackSummaries: { toolCallId: string; status: string; targetName: string }[] } {
+export function checkAllProposalsProcessedInArray(messages: MessageJson[]): {
+  allProcessed: boolean;
+  feedbackSummaries: {
+    toolCallId: string;
+    status: string;
+    targetName: string;
+  }[];
+} {
   const proposals = messages.filter(isProposalMessage);
   if (proposals.length === 0) {
     return { allProcessed: false, feedbackSummaries: [] };
@@ -459,10 +510,16 @@ export function checkAllProposalsProcessedInArray(
  * 配列内の pending 提案をすべて rejected に更新する。
  * 変更があったかどうかを返す。
  */
-export function rejectAllPendingProposalsInArray(messages: MessageJson[]): boolean {
+export function rejectAllPendingProposalsInArray(
+  messages: MessageJson[],
+): boolean {
   let changed = false;
   for (const m of messages) {
-    if (m.messageType === 'proposal' && m.proposal && m.proposal.status === 'pending') {
+    if (
+      m.messageType === 'proposal' &&
+      m.proposal &&
+      m.proposal.status === 'pending'
+    ) {
       m.proposal.status = 'rejected';
       changed = true;
     }
@@ -488,7 +545,8 @@ export function detectLineEditsConflict(
     const match = key.match(/^line_(\d+)$/);
     if (!match) continue;
     const lineNum = parseInt(match[1], 10);
-    const currentLine = lineNum <= currentLines.length ? currentLines[lineNum - 1] : undefined;
+    const currentLine =
+      lineNum <= currentLines.length ? currentLines[lineNum - 1] : undefined;
     if (currentLine !== expectedValue) {
       conflictFields.push(key);
     }
@@ -505,8 +563,16 @@ export function detectLineEditsConflict(
  */
 export function validateLineEditsConsistency(
   currentLines: string[],
-  edits: { startLine: number; endLine: number; newText: string; expectedText?: string }[],
-): { valid: boolean; mismatches: { line: number; expected: string; actual: string }[] } {
+  edits: {
+    startLine: number;
+    endLine: number;
+    newText: string;
+    expectedText?: string;
+  }[],
+): {
+  valid: boolean;
+  mismatches: { line: number; expected: string; actual: string }[];
+} {
   const mismatches: { line: number; expected: string; actual: string }[] = [];
 
   for (const edit of edits) {
@@ -516,9 +582,16 @@ export function validateLineEditsConsistency(
 
     const expectedLines = edit.expectedText.split('\n');
     let expectedIdx = 0;
-    for (let lineNum = edit.startLine; lineNum <= edit.endLine && lineNum <= currentLines.length; lineNum++) {
+    for (
+      let lineNum = edit.startLine;
+      lineNum <= edit.endLine && lineNum <= currentLines.length;
+      lineNum++
+    ) {
       const actual = currentLines[lineNum - 1];
-      const expected = expectedIdx < expectedLines.length ? expectedLines[expectedIdx] : undefined;
+      const expected =
+        expectedIdx < expectedLines.length
+          ? expectedLines[expectedIdx]
+          : undefined;
       if (expected !== undefined && actual !== expected) {
         mismatches.push({ line: lineNum, expected, actual });
       }

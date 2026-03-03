@@ -1,13 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "./resizable";
+import type { Meta, StoryObj } from '@storybook/react';
+import {
+  ResizablePanel,
+  ResizablePanelGroup,
+  ResizableHandle,
+} from './resizable';
 
 const meta = {
-  title: "UI/Resizable",
+  title: 'UI/Resizable',
   component: ResizablePanelGroup,
   parameters: {
-    layout: "fullscreen",
+    layout: 'fullscreen',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof ResizablePanelGroup>;
 
 export default meta;
@@ -15,7 +19,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
-    <ResizablePanelGroup orientation="horizontal" className="min-h-[200px] max-w-md">
+    <ResizablePanelGroup
+      orientation="horizontal"
+      className="min-h-[200px] max-w-md"
+    >
       <ResizablePanel defaultSize={50}>
         <div className="flex h-full items-center justify-center border rounded-md p-4">
           <p className="text-sm">リサイズ可能なパネル</p>
@@ -33,7 +40,10 @@ export const Default: Story = {
 
 export const WithMinSize: Story = {
   render: () => (
-    <ResizablePanelGroup orientation="horizontal" className="min-h-[200px] max-w-md">
+    <ResizablePanelGroup
+      orientation="horizontal"
+      className="min-h-[200px] max-w-md"
+    >
       <ResizablePanel defaultSize={30} minSize={20}>
         <div className="flex h-full items-center justify-center border rounded-md p-4">
           <p className="text-sm">最小サイズ: 20%</p>
@@ -51,7 +61,10 @@ export const WithMinSize: Story = {
 
 export const WithMaxSize: Story = {
   render: () => (
-    <ResizablePanelGroup orientation="horizontal" className="min-h-[200px] max-w-md">
+    <ResizablePanelGroup
+      orientation="horizontal"
+      className="min-h-[200px] max-w-md"
+    >
       <ResizablePanel defaultSize={25} maxSize={40}>
         <div className="flex h-full items-center justify-center border rounded-md p-4">
           <p className="text-sm">最大サイズ: 40%</p>

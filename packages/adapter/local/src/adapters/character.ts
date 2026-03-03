@@ -1,5 +1,17 @@
-import type { CharacterAdapter, Character, TreeNode, NodeType } from '@tsumugi/adapter';
-import { ensureDir, readJson, writeJson, removeFile, listDir, join } from '@/internal/utils/fs';
+import type {
+  CharacterAdapter,
+  Character,
+  TreeNode,
+  NodeType,
+} from '@tsumugi/adapter';
+import {
+  ensureDir,
+  readJson,
+  writeJson,
+  removeFile,
+  listDir,
+  join,
+} from '@/internal/utils/fs';
 import { generateId, now } from '@/internal/utils/id';
 import { extractParentPath } from '@/internal/utils/path';
 import { getProjectDataDir } from '@/internal/utils/project-index';
@@ -37,7 +49,8 @@ export function createCharacterAdapter(_workDir?: string): CharacterAdapter {
     return join(projectDir, 'characters');
   };
 
-  const toNodeType = (raw: string): NodeType => raw === 'folder' ? 'folder' : 'character';
+  const toNodeType = (raw: string): NodeType =>
+    raw === 'folder' ? 'folder' : 'character';
 
   const toCharacter = (json: CharacterJson, fullPath: string): Character => ({
     id: fullPath,
@@ -75,7 +88,10 @@ export function createCharacterAdapter(_workDir?: string): CharacterAdapter {
     return items.sort((a, b) => a.order - b.order);
   };
 
-  const buildTree = (items: Character[], parentId: string | null): TreeNode[] => {
+  const buildTree = (
+    items: Character[],
+    parentId: string | null,
+  ): TreeNode[] => {
     return items
       .filter((i) => i.parentId === parentId)
       .sort((a, b) => a.order - b.order)
@@ -119,7 +135,9 @@ export function createCharacterAdapter(_workDir?: string): CharacterAdapter {
       return items.filter((i) => i.parentId === parentId);
     },
 
-    async create(data: Omit<Character, 'id' | 'createdAt' | 'updatedAt'>): Promise<Character> {
+    async create(
+      data: Omit<Character, 'id' | 'createdAt' | 'updatedAt'>,
+    ): Promise<Character> {
       const id = generateId();
       const timestamp = now();
       const dir = await getCharactersDir(data.projectId);
@@ -149,7 +167,12 @@ export function createCharacterAdapter(_workDir?: string): CharacterAdapter {
       return toCharacter(json, filePath);
     },
 
-    async update(id: string, data: Partial<Omit<Character, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>): Promise<Character> {
+    async update(
+      id: string,
+      data: Partial<
+        Omit<Character, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>
+      >,
+    ): Promise<Character> {
       const existing = await readJson<CharacterJson>(id);
       if (!existing) throw new Error(`Character not found: ${id}`);
 
@@ -163,11 +186,21 @@ export function createCharacterAdapter(_workDir?: string): CharacterAdapter {
         ...(data.role !== undefined ? { role: data.role } : {}),
         ...(data.gender !== undefined ? { gender: data.gender } : {}),
         ...(data.age !== undefined ? { age: data.age } : {}),
-        ...(data.appearance !== undefined ? { appearance: data.appearance } : {}),
-        ...(data.personality !== undefined ? { personality: data.personality } : {}),
-        ...(data.background !== undefined ? { background: data.background } : {}),
-        ...(data.motivation !== undefined ? { motivation: data.motivation } : {}),
-        ...(data.relationships !== undefined ? { relationships: data.relationships } : {}),
+        ...(data.appearance !== undefined
+          ? { appearance: data.appearance }
+          : {}),
+        ...(data.personality !== undefined
+          ? { personality: data.personality }
+          : {}),
+        ...(data.background !== undefined
+          ? { background: data.background }
+          : {}),
+        ...(data.motivation !== undefined
+          ? { motivation: data.motivation }
+          : {}),
+        ...(data.relationships !== undefined
+          ? { relationships: data.relationships }
+          : {}),
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
         updatedAt: now().toISOString(),
       };
@@ -184,7 +217,11 @@ export function createCharacterAdapter(_workDir?: string): CharacterAdapter {
       await removeFile(id);
     },
 
-    async move(id: string, newParentId: string | null, newOrder: number): Promise<Character> {
+    async move(
+      id: string,
+      newParentId: string | null,
+      newOrder: number,
+    ): Promise<Character> {
       return this.update(id, { parentId: newParentId, order: newOrder });
     },
 

@@ -6,7 +6,6 @@ import type { ContentItemKey, ContentTreeKey } from '~/hooks/keys';
 
 type CharacterTreeKey = ContentTreeKey<'character'>;
 
-
 /**
  * プロジェクト内のキャラクターツリーを取得する
  * @param projectId - プロジェクトID
@@ -26,7 +25,10 @@ type CharacterKey = ContentItemKey<'character'>;
  * @param id - キャラクターID
  * @param config
  */
-export function useCharacter(id: string, config?: SWRConfiguration<Character | null, Error>) {
+export function useCharacter(
+  id: string,
+  config?: SWRConfiguration<Character | null, Error>,
+) {
   const adapter = useAdapter();
   return useSWR<Character | null, Error, CharacterKey>(
     { type: 'character', id },
@@ -122,11 +124,13 @@ interface ReorderCharactersArg {
  */
 export function useReorderCharacters(projectId: string) {
   const adapter = useAdapter();
-  return useSWRMutation<undefined, Error, CharacterTreeKey, ReorderCharactersArg>(
-    { type: 'characterTree', projectId },
-    async (_, { arg }) => {
-      await adapter.characters.reorder(arg.parentId, arg.orderedIds);
-      return undefined;
-    },
-  );
+  return useSWRMutation<
+    undefined,
+    Error,
+    CharacterTreeKey,
+    ReorderCharactersArg
+  >({ type: 'characterTree', projectId }, async (_, { arg }) => {
+    await adapter.characters.reorder(arg.parentId, arg.orderedIds);
+    return undefined;
+  });
 }

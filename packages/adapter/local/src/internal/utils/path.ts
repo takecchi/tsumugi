@@ -14,7 +14,9 @@ export function extractParentPath(fullPath: string, dirName: string): string {
   const parts = fullPath.split(/[\\/]/);
   const dirIndex = parts.lastIndexOf(dirName);
   if (dirIndex === -1) {
-    throw new Error(`Invalid path: directory '${dirName}' not found in '${fullPath}'`);
+    throw new Error(
+      `Invalid path: directory '${dirName}' not found in '${fullPath}'`,
+    );
   }
 
   // 元のパスの区切り文字を保持するため、分割ではなくインデックスで切り出す

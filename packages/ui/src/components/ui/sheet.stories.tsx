@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
-import { Button } from "./button";
+import type { Meta, StoryObj } from '@storybook/react';
+import { useState } from 'react';
+import { Button } from './button';
 import {
   Sheet,
   SheetTrigger,
@@ -10,15 +10,15 @@ import {
   SheetDescription,
   SheetFooter,
   SheetClose,
-} from "./sheet";
+} from './sheet';
 
 const meta = {
-  title: "UI/Sheet",
+  title: 'UI/Sheet',
   component: Sheet,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof Sheet>;
 
 export default meta;
@@ -96,7 +96,9 @@ export const Interactive: Story = {
               </SheetDescription>
             </SheetHeader>
             <div className="px-4 py-2">
-              <label htmlFor="project-name" className="text-sm font-medium">プロジェクト名</label>
+              <label htmlFor="project-name" className="text-sm font-medium">
+                プロジェクト名
+              </label>
               <input
                 id="project-name"
                 className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
@@ -119,9 +121,7 @@ export const Interactive: Story = {
             </SheetFooter>
           </SheetContent>
         </Sheet>
-        {saved && (
-          <p className="text-sm text-green-600">保存しました</p>
-        )}
+        {saved && <p className="text-sm text-green-600">保存しました</p>}
       </div>
     );
   },
@@ -141,7 +141,9 @@ export const NoCloseButton: Story = {
           </SheetDescription>
         </SheetHeader>
         <div className="px-4 py-2">
-          <p className="text-sm">背景のオーバーレイをクリックして閉じてください。</p>
+          <p className="text-sm">
+            背景のオーバーレイをクリックして閉じてください。
+          </p>
         </div>
       </SheetContent>
     </Sheet>

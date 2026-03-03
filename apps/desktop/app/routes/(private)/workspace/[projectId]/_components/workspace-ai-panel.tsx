@@ -6,12 +6,24 @@ import {
   type AiMode,
   type Conversation,
 } from '@tsumugi/ui';
-import { useAISessions, useAIMessages, useCreateAISession, useAIChat, useAcceptProposal, useRejectProposal } from '~/hooks/ai';
+import {
+  useAISessions,
+  useAIMessages,
+  useCreateAISession,
+  useAIChat,
+  useAcceptProposal,
+  useRejectProposal,
+} from '~/hooks/ai';
 import { useProjectSettings, useUpdateProjectSettings } from '~/hooks/settings';
 import { useSWRConfig } from 'swr';
 import type { AIChatContext } from '@tsumugi/adapter';
 import type { EditorTab } from '@tsumugi/ui';
-import { consumeStream, toContentItemKey, toContentTreeKey, buildDisplayMessages } from '../_utils/ai-panel-utils';
+import {
+  consumeStream,
+  toContentItemKey,
+  toContentTreeKey,
+  buildDisplayMessages,
+} from '../_utils/ai-panel-utils';
 import { useAiStreamingState } from '../_hooks/useAiStreamingState';
 
 interface WorkspaceAiPanelProps {
@@ -38,13 +50,25 @@ function NewSessionContent({
 }) {
   const { trigger: triggerCreateSession } = useCreateAISession(projectId);
   const {
-    isLoading, streamingContent, pendingUserMessage, streamingProposals,
-    setIsLoading, setStreamingContent, setPendingUserMessage,
-    handleToolResult, handleProposal,
+    isLoading,
+    streamingContent,
+    pendingUserMessage,
+    streamingProposals,
+    setIsLoading,
+    setStreamingContent,
+    setPendingUserMessage,
+    handleToolResult,
+    handleProposal,
   } = useAiStreamingState(projectId);
 
   const currentMessages = useMemo(
-    () => buildDisplayMessages(undefined, pendingUserMessage, streamingContent, streamingProposals),
+    () =>
+      buildDisplayMessages(
+        undefined,
+        pendingUserMessage,
+        streamingContent,
+        streamingProposals,
+      ),
     [pendingUserMessage, streamingContent, streamingProposals],
   );
 
@@ -61,11 +85,18 @@ function NewSessionContent({
 
     try {
       const result = await triggerCreateSession(request);
-      await consumeStream(result.stream, setStreamingContent, handleToolResult, handleProposal);
+      await consumeStream(
+        result.stream,
+        setStreamingContent,
+        handleToolResult,
+        handleProposal,
+      );
       onSessionCreated(result.session.id);
     } catch (e) {
       console.error('Failed to send message:', e);
-      setStreamingContent(`エラーが発生しました: ${e instanceof Error ? e.message : String(e)}`);
+      setStreamingContent(
+        `エラーが発生しました: ${e instanceof Error ? e.message : String(e)}`,
+      );
     } finally {
       setPendingUserMessage(null);
       setStreamingContent(null);
@@ -86,7 +117,12 @@ function NewSessionContent({
         onRejectProposal={() => {}}
         isLoading={isLoading}
       />
-      <AiPanelInput mode={aiMode} onModeChange={onModeChange} onSend={handleSend} isLoading={isLoading} />
+      <AiPanelInput
+        mode={aiMode}
+        onModeChange={onModeChange}
+        onSend={handleSend}
+        isLoading={isLoading}
+      />
     </>
   );
 }
@@ -113,13 +149,26 @@ function ExistingSessionContent({
   const { trigger: triggerAccept } = useAcceptProposal(sessionId);
   const { trigger: triggerReject } = useRejectProposal(sessionId);
   const {
-    isLoading, streamingContent, pendingUserMessage, streamingProposals,
-    setIsLoading, setStreamingContent, setPendingUserMessage, setStreamingProposals,
-    handleToolResult, handleProposal,
+    isLoading,
+    streamingContent,
+    pendingUserMessage,
+    streamingProposals,
+    setIsLoading,
+    setStreamingContent,
+    setPendingUserMessage,
+    setStreamingProposals,
+    handleToolResult,
+    handleProposal,
   } = useAiStreamingState(projectId);
 
   const currentMessages = useMemo(
-    () => buildDisplayMessages(messages, pendingUserMessage, streamingContent, streamingProposals),
+    () =>
+      buildDisplayMessages(
+        messages,
+        pendingUserMessage,
+        streamingContent,
+        streamingProposals,
+      ),
     [messages, pendingUserMessage, streamingContent, streamingProposals],
   );
 
@@ -127,57 +176,90 @@ function ExistingSessionContent({
    * 提案を承認（サイレント）
    * 全提案処理済みの場合、adapter が自動で AI 応答ストリームを返すのでそれを消費する。
    */
-  const handleAcceptProposal = useCallback(async (proposalId: string) => {
-    const result = await triggerAccept(proposalId);
-    await mutateMessages();
-    if (result.feedback.status === 'accepted' && result.feedback.contentType) {
-      if (result.feedback.contentType === 'project') {
-        void globalMutate({ type: 'project', id: projectId });
-      } else {
-        if (result.feedback.targetId) {
-          void globalMutate(toContentItemKey(result.feedback.contentType, result.feedback.targetId));
+  const handleAcceptProposal = useCallback(
+    async (proposalId: string) => {
+      const result = await triggerAccept(proposalId);
+      await mutateMessages();
+      if (
+        result.feedback.status === 'accepted' &&
+        result.feedback.contentType
+      ) {
+        if (result.feedback.contentType === 'project') {
+          void globalMutate({ type: 'project', id: projectId });
+        } else {
+          if (result.feedback.targetId) {
+            void globalMutate(
+              toContentItemKey(
+                result.feedback.contentType,
+                result.feedback.targetId,
+              ),
+            );
+          }
+          void globalMutate(
+            toContentTreeKey(result.feedback.contentType, projectId),
+          );
         }
-        void globalMutate(toContentTreeKey(result.feedback.contentType, projectId));
       }
-    }
-    if (result.stream) {
-      setIsLoading(true);
-      setStreamingContent('');
-      try {
-        await consumeStream(result.stream, setStreamingContent, handleToolResult, handleProposal);
-        await mutateMessages();
-        setStreamingProposals([]);
-      } catch (e) {
-        console.error('Failed to consume auto feedback stream:', e);
-      } finally {
-        setStreamingContent(null);
-        setIsLoading(false);
+      if (result.stream) {
+        setIsLoading(true);
+        setStreamingContent('');
+        try {
+          await consumeStream(
+            result.stream,
+            setStreamingContent,
+            handleToolResult,
+            handleProposal,
+          );
+          await mutateMessages();
+          setStreamingProposals([]);
+        } catch (e) {
+          console.error('Failed to consume auto feedback stream:', e);
+        } finally {
+          setStreamingContent(null);
+          setIsLoading(false);
+        }
       }
-    }
-  }, [triggerAccept, mutateMessages, globalMutate, projectId, handleToolResult, handleProposal]);
+    },
+    [
+      triggerAccept,
+      mutateMessages,
+      globalMutate,
+      projectId,
+      handleToolResult,
+      handleProposal,
+    ],
+  );
 
   /**
    * 提案を拒否（サイレント）
    * 全提案処理済みの場合、adapter が自動で AI 応答ストリームを返すのでそれを消費する。
    */
-  const handleRejectProposal = useCallback(async (proposalId: string) => {
-    const result = await triggerReject(proposalId);
-    await mutateMessages();
-    if (result.stream) {
-      setIsLoading(true);
-      setStreamingContent('');
-      try {
-        await consumeStream(result.stream, setStreamingContent, handleToolResult, handleProposal);
-        await mutateMessages();
-        setStreamingProposals([]);
-      } catch (e) {
-        console.error('Failed to consume auto feedback stream:', e);
-      } finally {
-        setStreamingContent(null);
-        setIsLoading(false);
+  const handleRejectProposal = useCallback(
+    async (proposalId: string) => {
+      const result = await triggerReject(proposalId);
+      await mutateMessages();
+      if (result.stream) {
+        setIsLoading(true);
+        setStreamingContent('');
+        try {
+          await consumeStream(
+            result.stream,
+            setStreamingContent,
+            handleToolResult,
+            handleProposal,
+          );
+          await mutateMessages();
+          setStreamingProposals([]);
+        } catch (e) {
+          console.error('Failed to consume auto feedback stream:', e);
+        } finally {
+          setStreamingContent(null);
+          setIsLoading(false);
+        }
       }
-    }
-  }, [triggerReject, mutateMessages, handleToolResult, handleProposal]);
+    },
+    [triggerReject, mutateMessages, handleToolResult, handleProposal],
+  );
 
   const handleSend = async (message: string) => {
     const request = {
@@ -192,12 +274,19 @@ function ExistingSessionContent({
 
     try {
       const stream = await triggerChat(request);
-      await consumeStream(stream, setStreamingContent, handleToolResult, handleProposal);
+      await consumeStream(
+        stream,
+        setStreamingContent,
+        handleToolResult,
+        handleProposal,
+      );
       await mutateMessages();
       setStreamingProposals([]);
     } catch (e) {
       console.error('Failed to send message:', e);
-      setStreamingContent(`エラーが発生しました: ${e instanceof Error ? e.message : String(e)}`);
+      setStreamingContent(
+        `エラーが発生しました: ${e instanceof Error ? e.message : String(e)}`,
+      );
     } finally {
       setPendingUserMessage(null);
       setStreamingContent(null);
@@ -218,16 +307,27 @@ function ExistingSessionContent({
         onRejectProposal={handleRejectProposal}
         isLoading={isLoading}
       />
-      <AiPanelInput mode={aiMode} onModeChange={onModeChange} onSend={handleSend} isLoading={isLoading} />
+      <AiPanelInput
+        mode={aiMode}
+        onModeChange={onModeChange}
+        onSend={handleSend}
+        isLoading={isLoading}
+      />
     </>
   );
 }
 
-export function WorkspaceAiPanel({ projectId, openTabs }: WorkspaceAiPanelProps) {
+export function WorkspaceAiPanel({
+  projectId,
+  openTabs,
+}: WorkspaceAiPanelProps) {
   const { data: sessions } = useAISessions(projectId);
   const { data: settings } = useProjectSettings(projectId);
-  const { trigger: triggerUpdateSettings } = useUpdateProjectSettings(projectId);
-  const [currentConversationId, setCurrentConversationId] = useState<string | undefined>();
+  const { trigger: triggerUpdateSettings } =
+    useUpdateProjectSettings(projectId);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | undefined
+  >();
 
   const aiMode: AiMode = settings?.aiChatMode ?? 'ask';
   const handleModeChange = useCallback(
@@ -263,7 +363,12 @@ export function WorkspaceAiPanel({ projectId, openTabs }: WorkspaceAiPanelProps)
           context={
             openTabs?.length
               ? {
-                  openTabs: openTabs.map((t) => ({ id: t.id, name: t.name, contentType: t.type, ...(t.active ? { active: true } : {}) })),
+                  openTabs: openTabs.map((t) => ({
+                    id: t.id,
+                    name: t.name,
+                    contentType: t.type,
+                    ...(t.active ? { active: true } : {}),
+                  })),
                 }
               : undefined
           }
@@ -277,7 +382,12 @@ export function WorkspaceAiPanel({ projectId, openTabs }: WorkspaceAiPanelProps)
           context={
             openTabs?.length
               ? {
-                  openTabs: openTabs.map((t) => ({ id: t.id, name: t.name, contentType: t.type, ...(t.active ? { active: true } : {}) })),
+                  openTabs: openTabs.map((t) => ({
+                    id: t.id,
+                    name: t.name,
+                    contentType: t.type,
+                    ...(t.active ? { active: true } : {}),
+                  })),
                 }
               : undefined
           }

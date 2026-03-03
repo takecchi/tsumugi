@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { ScrollArea } from "./scroll-area";
+import type { Meta, StoryObj } from '@storybook/react';
+import { ScrollArea } from './scroll-area';
 
 const meta = {
-  title: "UI/ScrollArea",
+  title: 'UI/ScrollArea',
   component: ScrollArea,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof ScrollArea>;
 
 export default meta;
@@ -39,7 +39,10 @@ export const Horizontal: Story = {
     <ScrollArea className="h-[100px] w-[400px] rounded-md border">
       <div className="flex space-x-4 p-4">
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex-shrink-0 w-32 h-16 bg-muted rounded flex items-center justify-center">
+          <div
+            key={i}
+            className="flex-shrink-0 w-32 h-16 bg-muted rounded flex items-center justify-center"
+          >
             <span className="text-sm">アイテム {i + 1}</span>
           </div>
         ))}

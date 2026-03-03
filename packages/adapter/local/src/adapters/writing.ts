@@ -1,5 +1,17 @@
-import type { WritingAdapter, Writing, TreeNode, NodeType } from '@tsumugi/adapter';
-import { ensureDir, readJson, writeJson, removeFile, listDir, join } from '@/internal/utils/fs';
+import type {
+  WritingAdapter,
+  Writing,
+  TreeNode,
+  NodeType,
+} from '@tsumugi/adapter';
+import {
+  ensureDir,
+  readJson,
+  writeJson,
+  removeFile,
+  listDir,
+  join,
+} from '@/internal/utils/fs';
 import { generateId, now } from '@/internal/utils/id';
 import { extractParentPath } from '@/internal/utils/path';
 import { getProjectDataDir } from '@/internal/utils/project-index';
@@ -23,7 +35,9 @@ function getProjectIdFromPath(fullPath: string): string {
 }
 
 function countWords(content: string): number {
-  const japaneseChars = content.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/g);
+  const japaneseChars = content.match(
+    /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/g,
+  );
   const englishWords = content.match(/[a-zA-Z]+/g);
   return (japaneseChars?.length ?? 0) + (englishWords?.length ?? 0);
 }
@@ -34,7 +48,8 @@ export function createWritingAdapter(_workDir?: string): WritingAdapter {
     return join(projectDir, 'writings');
   };
 
-  const toNodeType = (raw: string): NodeType => raw === 'folder' ? 'folder' : 'writing';
+  const toNodeType = (raw: string): NodeType =>
+    raw === 'folder' ? 'folder' : 'writing';
 
   const toWriting = (json: WritingJson, fullPath: string): Writing => ({
     id: fullPath,
@@ -108,7 +123,9 @@ export function createWritingAdapter(_workDir?: string): WritingAdapter {
       return items.filter((i) => i.parentId === parentId);
     },
 
-    async create(data: Omit<Writing, 'id' | 'createdAt' | 'updatedAt'>): Promise<Writing> {
+    async create(
+      data: Omit<Writing, 'id' | 'createdAt' | 'updatedAt'>,
+    ): Promise<Writing> {
       const id = generateId();
       const timestamp = now();
       const dir = await getWritingsDir(data.projectId);
@@ -129,7 +146,12 @@ export function createWritingAdapter(_workDir?: string): WritingAdapter {
       return toWriting(json, filePath);
     },
 
-    async update(id: string, data: Partial<Omit<Writing, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>): Promise<Writing> {
+    async update(
+      id: string,
+      data: Partial<
+        Omit<Writing, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>
+      >,
+    ): Promise<Writing> {
       const existing = await readJson<WritingJson>(id);
       if (!existing) throw new Error(`Writing not found: ${id}`);
 
@@ -156,7 +178,11 @@ export function createWritingAdapter(_workDir?: string): WritingAdapter {
       await removeFile(id);
     },
 
-    async move(id: string, newParentId: string | null, newOrder: number): Promise<Writing> {
+    async move(
+      id: string,
+      newParentId: string | null,
+      newOrder: number,
+    ): Promise<Writing> {
       return this.update(id, { parentId: newParentId, order: newOrder });
     },
 

@@ -33,7 +33,9 @@ export async function getWorkDir(workDir?: string): Promise<string> {
 /**
  * workDir 配下のディレクトリをスキャンし、.tsumugi/project.json があるものをプロジェクトとして返す
  */
-export async function scanProjects(workDir?: string): Promise<ProjectWithPath[]> {
+export async function scanProjects(
+  workDir?: string,
+): Promise<ProjectWithPath[]> {
   const baseDir = await getWorkDir(workDir);
   await ensureDir(baseDir);
 

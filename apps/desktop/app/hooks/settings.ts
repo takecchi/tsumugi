@@ -27,8 +27,12 @@ export function useProjectSettings(projectId: string) {
  */
 export function useUpdateProjectSettings(projectId: string) {
   const adapter = useAdapter();
-  return useSWRMutation<ProjectSettings, Error, ProjectSettingKey, Partial<ProjectSettings>>(
-    { type: 'projectSettings', projectId },
-    ({ projectId }, { arg }) => adapter.settings.update(projectId, arg),
+  return useSWRMutation<
+    ProjectSettings,
+    Error,
+    ProjectSettingKey,
+    Partial<ProjectSettings>
+  >({ type: 'projectSettings', projectId }, ({ projectId }, { arg }) =>
+    adapter.settings.update(projectId, arg),
   );
 }

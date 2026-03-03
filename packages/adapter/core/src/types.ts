@@ -268,7 +268,11 @@ export interface AIProposalMessage extends AIMessageBase {
  *
  * messageType で判別可能。型の絞り込みにより各バリアントのフィールドが保証される。
  */
-export type AIMessage = AITextMessage | AIToolCallMessage | AIToolResultMessage | AIProposalMessage;
+export type AIMessage =
+  | AITextMessage
+  | AIToolCallMessage
+  | AIToolResultMessage
+  | AIProposalMessage;
 
 /**
  * AIツール呼び出し
@@ -310,19 +314,19 @@ export interface AIModelConfig {
 export type AIProposalAction = 'create' | 'update';
 
 interface LineNumber {
-  line: number,
-  col: number
+  line: number;
+  col: number;
 }
 
 /**
  * フィールドの変更指示(before/after)
  */
 export interface FieldChange<T extends string | unknown> {
-  fieldName?:string,
-  before: T,
-  after: T,
-  previewStart?:LineNumber,
-  previewEnd?:LineNumber
+  fieldName?: string;
+  before: T;
+  after: T;
+  previewStart?: LineNumber;
+  previewEnd?: LineNumber;
 }
 
 /**
@@ -350,7 +354,7 @@ export interface AIProposal {
   /** 対象コンテンツの表示名 */
   targetName: string;
   /** フィールド毎の差分 */
-  diffs: FieldChange<string | unknown>[]
+  diffs: FieldChange<string | unknown>[];
   /** ステータス */
   status: AIProposalStatus;
 }
@@ -398,7 +402,14 @@ export interface AIProposalResult {
 /**
  * ストリーミングチャンクの種類
  */
-export type AIStreamChunkType = 'text' | 'tool_call' | 'tool_result' | 'proposal' | 'usage' | 'error' | 'done';
+export type AIStreamChunkType =
+  | 'text'
+  | 'tool_call'
+  | 'tool_result'
+  | 'proposal'
+  | 'usage'
+  | 'error'
+  | 'done';
 
 /**
  * ストリーミングチャンク
@@ -496,4 +507,3 @@ export interface GoogleAuthUrl {
   /** Google OAuth認可URL */
   url: string;
 }
-

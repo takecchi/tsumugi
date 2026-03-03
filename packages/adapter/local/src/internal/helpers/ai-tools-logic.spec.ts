@@ -1,4 +1,8 @@
-import { filterUnchangedFields, diffFields, toReplaceFields } from './ai-tools-logic';
+import {
+  filterUnchangedFields,
+  diffFields,
+  toReplaceFields,
+} from './ai-tools-logic';
 
 // ── filterUnchangedFields ──
 
@@ -6,7 +10,9 @@ describe('filterUnchangedFields', () => {
   it('変更されたフィールドのみ返す', () => {
     const data = { name: '新しい名前', synopsis: '同じあらすじ' };
     const current = { name: '古い名前', synopsis: '同じあらすじ' };
-    expect(filterUnchangedFields(data, current)).toEqual({ name: '新しい名前' });
+    expect(filterUnchangedFields(data, current)).toEqual({
+      name: '新しい名前',
+    });
   });
 
   it('全て同じなら空オブジェクト', () => {
@@ -18,7 +24,9 @@ describe('filterUnchangedFields', () => {
   it('undefined のフィールドは除外する', () => {
     const data = { name: '新しい名前', synopsis: undefined };
     const current = { name: '古い名前', synopsis: '旧あらすじ' };
-    expect(filterUnchangedFields(data, current)).toEqual({ name: '新しい名前' });
+    expect(filterUnchangedFields(data, current)).toEqual({
+      name: '新しい名前',
+    });
   });
 
   it('current にないフィールドは変更扱い', () => {

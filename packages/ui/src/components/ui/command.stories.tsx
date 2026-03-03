@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { Button } from "./button";
+import type { Meta, StoryObj } from '@storybook/react';
+import { Button } from './button';
 import {
   Command,
   CommandEmpty,
@@ -7,15 +7,15 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "./command";
+} from './command';
 
 const meta = {
-  title: "UI/Command",
+  title: 'UI/Command',
   component: Command,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof Command>;
 
 export default meta;

@@ -2,7 +2,8 @@ import {
   AIProposalFeedback,
   AIProposalResult,
   AIAdapterConfig,
-  AIProposal, FieldChange
+  AIProposal,
+  FieldChange,
 } from '@tsumugi/adapter';
 import { join, readJson } from '@/internal/utils/fs';
 import {

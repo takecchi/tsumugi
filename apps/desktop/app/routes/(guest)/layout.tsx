@@ -14,7 +14,7 @@ export default function Layout() {
     return <LoadingPage message="ログイン情報を確認しています" />;
   }
   // ログイン状態の場合はホームにリダイレクト
-  if (data && data.isAuthenticated){
+  if (data && data.isAuthenticated) {
     return <Navigate to={PATH_HOME} replace />;
   }
 

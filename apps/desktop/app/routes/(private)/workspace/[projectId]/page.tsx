@@ -1,19 +1,13 @@
 import { useParams, type MetaFunction, Navigate } from 'react-router';
 import { useProject } from '~/hooks/projects';
 import { useEditorTabs } from '~/routes/(private)/workspace/[projectId]/_hooks/useEditorTabs';
-import {
-  WorkspaceLayout,
-  EditorTabs,
-  LoadingPage,
-} from '@tsumugi/ui';
+import { WorkspaceLayout, EditorTabs, LoadingPage } from '@tsumugi/ui';
 import { WorkspaceSidebar } from './_components/workspace-sidebar';
 import { WorkspaceEditor } from './_components/workspace-editor';
 import { WorkspaceAiPanel } from './_components/workspace-ai-panel';
 import { PATH_HOME } from '~/constants/path';
 
-export const meta: MetaFunction = () => [
-  { title: 'Tsumugi - ワークスペース' },
-];
+export const meta: MetaFunction = () => [{ title: 'Tsumugi - ワークスペース' }];
 
 export default function WorkspacePage() {
   const { projectId: encodedProjectId } = useParams<{ projectId: string }>();

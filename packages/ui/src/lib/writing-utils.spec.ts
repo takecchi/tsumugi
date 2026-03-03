@@ -123,7 +123,6 @@ describe('normalizeIndent', () => {
     const result = normalizeIndent(text, 1);
     expect(result.cursorPosition).toBe(0);
   });
-
 });
 
 describe('applyAutoIndentOnEnter', () => {

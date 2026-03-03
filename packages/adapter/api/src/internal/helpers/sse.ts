@@ -1,9 +1,16 @@
 import {
-  Configuration, ProposalStreamChunkFromJSON,
+  Configuration,
+  ProposalStreamChunkFromJSON,
   TextStreamChunkFromJSON,
-  ToolCallStreamChunkFromJSON, ToolResultStreamChunkFromJSON
+  ToolCallStreamChunkFromJSON,
+  ToolResultStreamChunkFromJSON,
 } from '@tsumugi-chan/client';
-import { AIStreamChunk, AIToolCall, AIToolName, FieldChange } from '@tsumugi/adapter';
+import {
+  AIStreamChunk,
+  AIToolCall,
+  AIToolName,
+  FieldChange,
+} from '@tsumugi/adapter';
 
 /**
  * RequestOpts から SSE リクエストを発行する
@@ -144,7 +151,7 @@ export function toAIStreamChunk(raw: unknown): AIStreamChunk {
         toolCall: toolCallChunk.toolCall as AIToolCall,
       };
     }
-    case 'tool_result':{
+    case 'tool_result': {
       const toolResultChunk = ToolResultStreamChunkFromJSON(raw);
       return {
         type: 'tool_result',
@@ -155,18 +162,18 @@ export function toAIStreamChunk(raw: unknown): AIStreamChunk {
         },
       };
     }
-    case 'proposal':{
+    case 'proposal': {
       const proposalChunk = ProposalStreamChunkFromJSON(raw);
       const diffs: FieldChange<string | unknown>[] = [];
-      for (const replacePreview of proposalChunk.proposal.replacePreviews){
+      for (const replacePreview of proposalChunk.proposal.replacePreviews) {
         diffs.push({
           fieldName: replacePreview.fieldName,
           before: replacePreview.before,
           after: replacePreview.after,
         });
       }
-      for (const lineEditsPreview of proposalChunk.proposal.lineEditsPreviews){
-        for(const preview of lineEditsPreview.previews){
+      for (const lineEditsPreview of proposalChunk.proposal.lineEditsPreviews) {
+        for (const preview of lineEditsPreview.previews) {
           diffs.push({
             fieldName: lineEditsPreview.fieldName,
             before: preview.before,
@@ -179,26 +186,26 @@ export function toAIStreamChunk(raw: unknown): AIStreamChunk {
       return {
         type: 'proposal',
         proposal: {
-          id:proposalChunk.proposal.toolCallId??'',
-          action:proposalChunk.proposal.action,
-          targetId:proposalChunk.proposal.targetId??'',
-          contentType:proposalChunk.proposal.contentType,
-          targetName:proposalChunk.proposal.targetName,
-          status:proposalChunk.proposal.proposalStatus,
-          diffs
-        }
-      }
+          id: proposalChunk.proposal.toolCallId ?? '',
+          action: proposalChunk.proposal.action,
+          targetId: proposalChunk.proposal.targetId ?? '',
+          contentType: proposalChunk.proposal.contentType,
+          targetName: proposalChunk.proposal.targetName,
+          status: proposalChunk.proposal.proposalStatus,
+          diffs,
+        },
+      };
     }
 
-      // TextStreamChunk,
-      //   ToolCallStreamChunk,
-      //   ToolResultStreamChunk,
-      //   ProposalStreamChunk,
-      //   UsageStreamChunk,
-      //   ErrorStreamChunk,
-      //   AIProposalFeedback,
-      //   AIProposalResult,
-      //   DoneStreamChunk,
+    // TextStreamChunk,
+    //   ToolCallStreamChunk,
+    //   ToolResultStreamChunk,
+    //   ProposalStreamChunk,
+    //   UsageStreamChunk,
+    //   ErrorStreamChunk,
+    //   AIProposalFeedback,
+    //   AIProposalResult,
+    //   DoneStreamChunk,
   }
   throw new Error('Invalid SSE chunk');
 }

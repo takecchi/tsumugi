@@ -63,7 +63,9 @@ export function Markdown({ children, className }: MarkdownProps) {
             );
           },
           pre: ({ children }) => (
-            <pre className="mb-2 last:mb-0 overflow-x-auto w-0 min-w-full">{children}</pre>
+            <pre className="mb-2 last:mb-0 overflow-x-auto w-0 min-w-full">
+              {children}
+            </pre>
           ),
           blockquote: ({ children }) => (
             <blockquote className="border-l-2 border-muted-foreground/30 pl-3 italic text-muted-foreground mb-2">
@@ -108,4 +110,3 @@ export function Markdown({ children, className }: MarkdownProps) {
     </div>
   );
 }
-

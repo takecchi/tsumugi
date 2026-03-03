@@ -130,7 +130,9 @@ export const Interactive: StoryObj = {
     };
 
     const handleCloseOthers = (id: string) => {
-      setTabs((prev) => prev.filter((t) => t.id === id).map((t) => ({ ...t, active: true })));
+      setTabs((prev) =>
+        prev.filter((t) => t.id === id).map((t) => ({ ...t, active: true })),
+      );
     };
 
     const handleCloseAll = () => {
@@ -166,7 +168,9 @@ export const ManyTabs: StoryObj = {
     const manyTabs: EditorTab[] = Array.from({ length: 15 }, (_, i) => ({
       id: String(i),
       name: `ファイル ${i + 1}`,
-      type: (['writing', 'plot', 'character', 'memo', 'project'] as const)[i % 5],
+      type: (['writing', 'plot', 'character', 'memo', 'project'] as const)[
+        i % 5
+      ],
       ...(i === 0 ? { active: true } : {}),
     }));
     const [tabs, setTabs] = useState(manyTabs);
@@ -189,7 +193,9 @@ export const ManyTabs: StoryObj = {
     };
 
     const handleCloseOthers = (id: string) => {
-      setTabs((prev) => prev.filter((t) => t.id === id).map((t) => ({ ...t, active: true })));
+      setTabs((prev) =>
+        prev.filter((t) => t.id === id).map((t) => ({ ...t, active: true })),
+      );
     };
 
     const handleCloseAll = () => {

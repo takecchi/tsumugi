@@ -1,4 +1,11 @@
-import { X, BookOpen, Users, StickyNote, PenLine, Settings } from 'lucide-react';
+import {
+  X,
+  BookOpen,
+  Users,
+  StickyNote,
+  PenLine,
+  Settings,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   ContextMenu,
@@ -8,7 +15,12 @@ import {
   ContextMenuSeparator,
 } from '@/components/ui/context-menu';
 
-export type EditorContentType = 'plot' | 'character' | 'memo' | 'writing' | 'project';
+export type EditorContentType =
+  | 'plot'
+  | 'character'
+  | 'memo'
+  | 'writing'
+  | 'project';
 
 export interface EditorTab {
   id: string;
@@ -38,7 +50,15 @@ interface TabItemProps {
   tabCount: number;
 }
 
-function TabItem({ tab, isActive, onSelect, onClose, onCloseOthers, onCloseAll, tabCount }: TabItemProps) {
+function TabItem({
+  tab,
+  isActive,
+  onSelect,
+  onClose,
+  onCloseOthers,
+  onCloseAll,
+  tabCount,
+}: TabItemProps) {
   const Icon = contentTypeIcons[tab.type];
 
   const handleClose = (e: React.MouseEvent) => {
@@ -54,7 +74,9 @@ function TabItem({ tab, isActive, onSelect, onClose, onCloseOthers, onCloseAll, 
           tabIndex={0}
           aria-selected={isActive}
           onClick={() => onSelect(tab.id)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(tab.id); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onSelect(tab.id);
+          }}
           className={cn(
             'group/tab flex h-9 shrink-0 cursor-pointer items-center gap-1.5 border-r border-b-2 px-3 text-xs transition-colors',
             isActive
@@ -69,7 +91,9 @@ function TabItem({ tab, isActive, onSelect, onClose, onCloseOthers, onCloseAll, 
             onClick={handleClose}
             className={cn(
               'ml-1 flex size-4 items-center justify-center rounded-sm hover:bg-foreground/10',
-              isActive ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover/tab:opacity-60 group-hover/tab:hover:opacity-100',
+              isActive
+                ? 'opacity-60 hover:opacity-100'
+                : 'opacity-0 group-hover/tab:opacity-60 group-hover/tab:hover:opacity-100',
             )}
           >
             <X className="size-3" />
@@ -80,7 +104,10 @@ function TabItem({ tab, isActive, onSelect, onClose, onCloseOthers, onCloseAll, 
         <ContextMenuItem onSelect={() => onClose(tab.id)}>
           閉じる
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => onCloseOthers(tab.id)} disabled={tabCount <= 1}>
+        <ContextMenuItem
+          onSelect={() => onCloseOthers(tab.id)}
+          disabled={tabCount <= 1}
+        >
           他のタブを閉じる
         </ContextMenuItem>
         <ContextMenuSeparator />
@@ -103,7 +130,14 @@ export interface EditorTabsProps {
   children: React.ReactNode;
 }
 
-export function EditorTabs({ tabs, onSelectTab, onCloseTab, onCloseOtherTabs, onCloseAllTabs, children }: EditorTabsProps) {
+export function EditorTabs({
+  tabs,
+  onSelectTab,
+  onCloseTab,
+  onCloseOtherTabs,
+  onCloseAllTabs,
+  children,
+}: EditorTabsProps) {
   if (tabs.length === 0) {
     return <div className="flex h-full flex-col">{children}</div>;
   }
@@ -128,4 +162,3 @@ export function EditorTabs({ tabs, onSelectTab, onCloseTab, onCloseOtherTabs, on
     </div>
   );
 }
-

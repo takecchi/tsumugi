@@ -21,7 +21,9 @@ export function shouldIndent(
  * 行テキストからインデント（先頭の全角スペース）を除いた本文を返す。
  */
 export function stripIndent(line: string): string {
-  return line.startsWith(FULLWIDTH_SPACE) ? line.slice(FULLWIDTH_SPACE.length) : line;
+  return line.startsWith(FULLWIDTH_SPACE)
+    ? line.slice(FULLWIDTH_SPACE.length)
+    : line;
 }
 
 /**
@@ -87,7 +89,11 @@ export function applyAutoIndentOnEnter(
   const withNewline = before + '\n' + after;
   const cursorAfterNewline = selectionStart + 1;
 
-  const result = normalizeIndent(withNewline, cursorAfterNewline, noIndentMarkers);
+  const result = normalizeIndent(
+    withNewline,
+    cursorAfterNewline,
+    noIndentMarkers,
+  );
 
   // カーソルがある行が空行なら、インデント用の全角スペースを挿入する
   const lines = result.text.split('\n');

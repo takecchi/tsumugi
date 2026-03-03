@@ -1,17 +1,24 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
-import { AiPanel, AiPanelContent, AiPanelInput, type Message, type AiMode, type Conversation } from "./ai-panel";
+import type { Meta, StoryObj } from '@storybook/react';
+import { useState } from 'react';
+import {
+  AiPanel,
+  AiPanelContent,
+  AiPanelInput,
+  type Message,
+  type AiMode,
+  type Conversation,
+} from './ai-panel';
 
 const meta = {
-  title: "Features/AiPanel",
+  title: 'Features/AiPanel',
   component: AiPanel,
   parameters: {
-    layout: "fullscreen",
+    layout: 'fullscreen',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ height: "600px", width: "360px" }}>
+      <div style={{ height: '600px', width: '360px' }}>
         <Story />
       </div>
     ),
@@ -28,15 +35,18 @@ function MockAiPanel({
   initialConversations = [],
   initialConversationId,
   initialMessages = [],
-  initialMode = "write",
+  initialMode = 'write',
 }: {
   initialConversations?: Conversation[];
   initialConversationId?: string;
   initialMessages?: Message[];
   initialMode?: AiMode;
 }) {
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(initialConversationId);
+  const [conversations, setConversations] =
+    useState<Conversation[]>(initialConversations);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | undefined
+  >(initialConversationId);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [mode, setMode] = useState<AiMode>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,30 +54,66 @@ function MockAiPanel({
   const handleSend = (message: string) => {
     if (!currentConversationId) {
       const newId = Date.now().toString();
-      setConversations(prev => [...prev, {
-        id: newId,
-        title: message.slice(0, 20) + (message.length > 20 ? "..." : ""),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }]);
+      setConversations((prev) => [
+        ...prev,
+        {
+          id: newId,
+          title: message.slice(0, 20) + (message.length > 20 ? '...' : ''),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
       setCurrentConversationId(newId);
     }
 
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: "user",
-      content: message,
-    }]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        role: 'user',
+        content: message,
+      },
+    ]);
     setIsLoading(true);
 
     setTimeout(() => {
-      if (mode === "write") {
-        setMessages(prev => [...prev,
-          { id: (Date.now() + 1).toString(), role: "assistant" as const, content: "以下の変更を提案します。" },
-          { id: (Date.now() + 2).toString(), role: "assistant" as const, proposal: { id: "p-" + Date.now(), action: "update" as const, contentType: "writing", targetName: "第1章", diffs: [{ fieldName: "content", before: "元の文章", after: "AIが提案する新しい文章です。より詳細で魅力的な表現になっています。" }], status: "pending" as const } },
+      if (mode === 'write') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant' as const,
+            content: '以下の変更を提案します。',
+          },
+          {
+            id: (Date.now() + 2).toString(),
+            role: 'assistant' as const,
+            proposal: {
+              id: 'p-' + Date.now(),
+              action: 'update' as const,
+              contentType: 'writing',
+              targetName: '第1章',
+              diffs: [
+                {
+                  fieldName: 'content',
+                  before: '元の文章',
+                  after:
+                    'AIが提案する新しい文章です。より詳細で魅力的な表現になっています。',
+                },
+              ],
+              status: 'pending' as const,
+            },
+          },
         ]);
       } else {
-        setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: "assistant" as const, content: "ご質問にお答えします。" }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant' as const,
+            content: 'ご質問にお答えします。',
+          },
+        ]);
       }
       setIsLoading(false);
     }, 1500);
@@ -77,15 +123,21 @@ function MockAiPanel({
     <AiPanel
       conversations={conversations}
       currentConversationId={currentConversationId}
-      onNewConversation={() => { setCurrentConversationId(undefined); setMessages([]); }}
-      onSelectConversation={(id) => { setCurrentConversationId(id); setMessages([]); }}
+      onNewConversation={() => {
+        setCurrentConversationId(undefined);
+        setMessages([]);
+      }}
+      onSelectConversation={(id) => {
+        setCurrentConversationId(id);
+        setMessages([]);
+      }}
     >
       <AiPanelContent
         messages={messages}
         description={
-          mode === "write"
-            ? "文章の執筆をお手伝いします。\n書いてほしい内容を教えてください。"
-            : "質問があればお気軽にどうぞ。"
+          mode === 'write'
+            ? '文章の執筆をお手伝いします。\n書いてほしい内容を教えてください。'
+            : '質問があればお気軽にどうぞ。'
         }
         isLoading={isLoading}
       />
@@ -102,26 +154,26 @@ function MockAiPanel({
 // サンプルメッセージデータ
 const sampleMessages: Message[] = [
   {
-    id: "1",
-    role: "user",
-    content: "主人公が旅立つシーンを書いてください",
+    id: '1',
+    role: 'user',
+    content: '主人公が旅立つシーンを書いてください',
   },
   {
-    id: "2",
-    role: "assistant",
-    content: "以下の変更を提案します。",
+    id: '2',
+    role: 'assistant',
+    content: '以下の変更を提案します。',
   },
   {
-    id: "3",
-    role: "assistant",
+    id: '3',
+    role: 'assistant',
     proposal: {
-      id: "p-1",
-      action: "update",
-      contentType: "writing",
-      targetName: "第1章 旅立ち",
+      id: 'p-1',
+      action: 'update',
+      contentType: 'writing',
+      targetName: '第1章 旅立ち',
       diffs: [
         {
-          fieldName: "content",
+          fieldName: 'content',
           before: `旅に出たい気持ちはある。でも、最初の一歩が踏み出せない。そういう夜。
 
 「こんばんは。呼んだかしら」
@@ -134,57 +186,57 @@ const sampleMessages: Message[] = [
 唐突に話しかけられる。丁寧で、少しだけ女の子っぽい声色`,
         },
       ],
-      status: "pending",
+      status: 'pending',
     },
   },
 ];
 
 const askModeMessages: Message[] = [
   {
-    id: "1",
-    role: "user",
-    content: "この物語の主人公の性格について教えてください",
+    id: '1',
+    role: 'user',
+    content: 'この物語の主人公の性格について教えてください',
   },
   {
-    id: "2",
-    role: "assistant",
+    id: '2',
+    role: 'assistant',
     content:
-      "主人公は内向的で思慮深い性格です。普段は物静かですが、大切な人を守るためなら勇敢に行動します。幼少期の経験から、他人を信じることに慎重ですが、一度信頼した相手には深い絆を築きます。",
+      '主人公は内向的で思慮深い性格です。普段は物静かですが、大切な人を守るためなら勇敢に行動します。幼少期の経験から、他人を信じることに慎重ですが、一度信頼した相手には深い絆を築きます。',
   },
 ];
 
 const sampleConversations: Conversation[] = [
   {
-    id: "1",
-    title: "主人公の旅立ちシーン",
-    createdAt: new Date("2024-01-01"),
-    updatedAt: new Date("2024-01-01"),
+    id: '1',
+    title: '主人公の旅立ちシーン',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
   },
   {
-    id: "2",
-    title: "物語の考察",
-    createdAt: new Date("2024-01-02"),
-    updatedAt: new Date("2024-01-02"),
+    id: '2',
+    title: '物語の考察',
+    createdAt: new Date('2024-01-02'),
+    updatedAt: new Date('2024-01-02'),
   },
 ];
 
 const acceptedMessages: Message[] = [
   {
-    id: "1",
-    role: "user",
-    content: "主人公が旅立つシーンを書いてください",
+    id: '1',
+    role: 'user',
+    content: '主人公が旅立つシーンを書いてください',
   },
   {
-    id: "2",
-    role: "assistant",
+    id: '2',
+    role: 'assistant',
     proposal: {
-      id: "p-2",
-      action: "update",
-      contentType: "writing",
-      targetName: "第1章 旅立ち",
+      id: 'p-2',
+      action: 'update',
+      contentType: 'writing',
+      targetName: '第1章 旅立ち',
       diffs: [
         {
-          fieldName: "content",
+          fieldName: 'content',
           before: `旅に出たい気持ちはある。でも、最初の一歩が踏み出せない。そういう夜。
 
 「こんばんは。呼んだかしら」
@@ -197,28 +249,28 @@ const acceptedMessages: Message[] = [
 唐突に話しかけられる。丁寧で、少しだけ女の子っぽい声色`,
         },
       ],
-      status: "accepted",
+      status: 'accepted',
     },
   },
 ];
 
 const rejectedMessages: Message[] = [
   {
-    id: "1",
-    role: "user",
-    content: "主人公が旅立つシーンを書いてください",
+    id: '1',
+    role: 'user',
+    content: '主人公が旅立つシーンを書いてください',
   },
   {
-    id: "2",
-    role: "assistant",
+    id: '2',
+    role: 'assistant',
     proposal: {
-      id: "p-3",
-      action: "update",
-      contentType: "writing",
-      targetName: "第1章 旅立ち",
+      id: 'p-3',
+      action: 'update',
+      contentType: 'writing',
+      targetName: '第1章 旅立ち',
       diffs: [
         {
-          fieldName: "content",
+          fieldName: 'content',
           before: `旅に出たい気持ちはある。でも、最初の一歩が踏み出せない。そういう夜。
 
 「こんばんは。呼んだかしら」
@@ -231,7 +283,7 @@ const rejectedMessages: Message[] = [
 唐突に話しかけられる。丁寧で、少しだけ女の子っぽい声色`,
         },
       ],
-      status: "rejected",
+      status: 'rejected',
     },
   },
 ];
@@ -286,13 +338,13 @@ export const RejectedSuggestion: Story = {
 
 const markdownMessages: Message[] = [
   {
-    id: "1",
-    role: "user",
-    content: "物語の構成について教えてください",
+    id: '1',
+    role: 'user',
+    content: '物語の構成について教えてください',
   },
   {
-    id: "2",
-    role: "assistant",
+    id: '2',
+    role: 'assistant',
     content: `## 物語の基本構成
 
 物語は一般的に **三幕構成** で組み立てられます。

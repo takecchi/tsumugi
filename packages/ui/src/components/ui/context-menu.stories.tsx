@@ -1,19 +1,19 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from '@storybook/react';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "./context-menu";
+} from './context-menu';
 
 const meta = {
-  title: "UI/ContextMenu",
+  title: 'UI/ContextMenu',
   component: ContextMenu,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof ContextMenu>;
 
 export default meta;
@@ -26,14 +26,14 @@ export const Default: Story = {
         右クリックしてください
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onSelect={() => console.log("閉じる")}>
+        <ContextMenuItem onSelect={() => console.log('閉じる')}>
           閉じる
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => console.log("他のタブを閉じる")}>
+        <ContextMenuItem onSelect={() => console.log('他のタブを閉じる')}>
           他のタブを閉じる
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => console.log("すべてのタブを閉じる")}>
+        <ContextMenuItem onSelect={() => console.log('すべてのタブを閉じる')}>
           すべてのタブを閉じる
         </ContextMenuItem>
       </ContextMenuContent>

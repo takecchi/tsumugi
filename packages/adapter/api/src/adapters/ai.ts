@@ -12,7 +12,8 @@ import {
   AITextMessage,
   AIToolCallMessage,
   AIToolResultMessage,
-  AIProposalMessage, FieldChange
+  AIProposalMessage,
+  FieldChange,
 } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import type {
@@ -82,15 +83,15 @@ function toMessage(api: ClientAIMessage): AdapterAIMessage {
     case 'proposal': {
       if (api.proposal) {
         const diffs: FieldChange<string | unknown>[] = [];
-        for (const replacePreview of api.proposal.replacePreviews){
+        for (const replacePreview of api.proposal.replacePreviews) {
           diffs.push({
             fieldName: replacePreview.fieldName,
             before: replacePreview.before,
             after: replacePreview.after,
           });
         }
-        for (const lineEditsPreview of api.proposal.lineEditsPreviews){
-          for(const preview of lineEditsPreview.previews){
+        for (const lineEditsPreview of api.proposal.lineEditsPreviews) {
+          for (const preview of lineEditsPreview.previews) {
             diffs.push({
               fieldName: lineEditsPreview.fieldName,
               before: preview.before,

@@ -31,14 +31,17 @@ describe('fetchSSE', () => {
 
     const response = await fetchSSE(mockConfiguration, requestOpts);
 
-    expect(global.fetch).toHaveBeenCalledWith('https://api.example.com/api/stream', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer token',
-        Accept: 'text/event-stream',
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.example.com/api/stream',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer token',
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({ message: 'test' }),
       },
-      body: JSON.stringify({ message: 'test' }),
-    });
+    );
     expect(response).toBe(mockResponse);
   });
 
@@ -249,7 +252,9 @@ describe('parseSSEStream', () => {
 
   it('分割されたデータを正しくバッファリングする', async () => {
     const encoder = new TextEncoder();
-    const part1 = encoder.encode('data: {"type":"text","content":"First"}\n\ndata: {"type":"te');
+    const part1 = encoder.encode(
+      'data: {"type":"text","content":"First"}\n\ndata: {"type":"te',
+    );
     const part2 = encoder.encode('xt","content":"Second"}\n\n');
 
     const stream = new ReadableStream({
@@ -287,22 +292,22 @@ describe('parseSSEStream', () => {
     // 文字単位のテキストチャンクを収集
     const textChunks: string[] = [];
     let chunk = await reader.read();
-    
+
     while (!chunk.done && chunk.value.type === 'text') {
       textChunks.push(chunk.value.content as string);
       chunk = await reader.read();
     }
 
     expect(textChunks.join('')).toBe('テスト用に作成したメモです。\n\n');
-    
+
     // usageチャンク
     expect(chunk.value).toEqual({
       type: 'usage',
       usage: {
         promptTokens: 8390,
         completionTokens: 463,
-        totalTokens: 8853
-      }
+        totalTokens: 8853,
+      },
     });
 
     // doneチャンク
@@ -317,7 +322,7 @@ describe('parseSSEStream', () => {
       'data: {"type":"proposal","proposal":{"id":"call_MEMO123","contentType":"memo","action":"create","name":"テストメモ","content":"これはテスト用に作成したメモです。","tags":["テスト","メモ"]}}\n\n',
       'data: {"type":"text","content":"メモの提案を作成しました。承認してください。"}\n\n',
       'data: {"type":"usage","usage":{"prompt_tokens":100,"completion_tokens":50,"total_tokens":150}}\n\n',
-      'data: {"type":"done"}\n\n'
+      'data: {"type":"done"}\n\n',
     ].join('');
 
     const mockResponse = new Response(sseData);
@@ -332,14 +337,18 @@ describe('parseSSEStream', () => {
     }
 
     expect(chunks).toHaveLength(6);
-    expect(chunks[0]).toEqual({ type: 'text', content: 'メモを作成しますね。' });
+    expect(chunks[0]).toEqual({
+      type: 'text',
+      content: 'メモを作成しますね。',
+    });
     expect(chunks[1]).toEqual({
       type: 'tool_call',
       toolCall: {
         id: 'call_MEMO123',
         name: 'propose_memo',
-        arguments: '{"name":"テストメモ","content":"これはテスト用に作成したメモです。","tags":["テスト","メモ"]}'
-      }
+        arguments:
+          '{"name":"テストメモ","content":"これはテスト用に作成したメモです。","tags":["テスト","メモ"]}',
+      },
     });
     expect(chunks[2]).toEqual({
       type: 'proposal',
@@ -349,17 +358,20 @@ describe('parseSSEStream', () => {
         action: 'create',
         name: 'テストメモ',
         content: 'これはテスト用に作成したメモです。',
-        tags: ['テスト', 'メモ']
-      }
+        tags: ['テスト', 'メモ'],
+      },
     });
-    expect(chunks[3]).toEqual({ type: 'text', content: 'メモの提案を作成しました。承認してください。' });
+    expect(chunks[3]).toEqual({
+      type: 'text',
+      content: 'メモの提案を作成しました。承認してください。',
+    });
     expect(chunks[4]).toEqual({
       type: 'usage',
       usage: {
         promptTokens: 100,
         completionTokens: 50,
-        totalTokens: 150
-      }
+        totalTokens: 150,
+      },
     });
     expect(chunks[5]).toEqual({ type: 'done' });
   });

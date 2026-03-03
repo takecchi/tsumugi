@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { Button } from "./button";
+import type { Meta, StoryObj } from '@storybook/react';
+import { Button } from './button';
 import {
   Dialog,
   DialogContent,
@@ -8,15 +8,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./dialog";
+} from './dialog';
 
 const meta = {
-  title: "UI/Dialog",
+  title: 'UI/Dialog',
   component: Dialog,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof Dialog>;
 
 export default meta;
@@ -40,11 +40,7 @@ export const Default: Story = {
             <label htmlFor="name" className="text-right">
               名前
             </label>
-            <input
-              id="name"
-              defaultValue="田中 太郎"
-              className="col-span-3"
-            />
+            <input id="name" defaultValue="田中 太郎" className="col-span-3" />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label htmlFor="username" className="text-right">

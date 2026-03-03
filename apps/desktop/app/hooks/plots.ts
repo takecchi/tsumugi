@@ -6,15 +6,15 @@ import type { ContentItemKey, ContentTreeKey } from '~/hooks/keys';
 
 type PlotTreeKey = ContentTreeKey<'plot'>;
 
-
 /**
  * プロジェクト内のプロットツリーを取得する
  * @param projectId - プロジェクトID
  */
 export function usePlotTree(projectId: string) {
   const adapter = useAdapter();
-  return useSWR<TreeNode[], Error, PlotTreeKey>({ type: 'plotTree', projectId }, ({ projectId }) =>
-    adapter.plots.getTreeByProjectId(projectId),
+  return useSWR<TreeNode[], Error, PlotTreeKey>(
+    { type: 'plotTree', projectId },
+    ({ projectId }) => adapter.plots.getTreeByProjectId(projectId),
   );
 }
 
@@ -25,7 +25,10 @@ type PlotKey = ContentItemKey<'plot'>;
  * @param id - プロットID
  * @param config
  */
-export function usePlot(id: string, config?: SWRConfiguration<Plot | null, Error>) {
+export function usePlot(
+  id: string,
+  config?: SWRConfiguration<Plot | null, Error>,
+) {
   const adapter = useAdapter();
   return useSWR<Plot | null, Error, PlotKey>(
     { type: 'plot', id },
@@ -34,7 +37,10 @@ export function usePlot(id: string, config?: SWRConfiguration<Plot | null, Error
   );
 }
 
-type CreatePlotData = Omit<Plot, 'projectId' | 'id' | 'createdAt' | 'updatedAt'>;
+type CreatePlotData = Omit<
+  Plot,
+  'projectId' | 'id' | 'createdAt' | 'updatedAt'
+>;
 
 /**
  * プロットを作成する
@@ -45,14 +51,17 @@ export function useCreatePlot(projectId: string) {
   const adapter = useAdapter();
   return useSWRMutation<Plot, Error, PlotTreeKey, CreatePlotData>(
     { type: 'plotTree', projectId },
-    ({ projectId }, { arg }) => adapter.plots.create({
-      projectId,
-      ...arg,
-    }),
+    ({ projectId }, { arg }) =>
+      adapter.plots.create({
+        projectId,
+        ...arg,
+      }),
   );
 }
 
-type UpdatePlotData = Partial<Omit<Plot, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>;
+type UpdatePlotData = Partial<
+  Omit<Plot, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>
+>;
 
 /**
  * プロットを更新する

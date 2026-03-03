@@ -1,21 +1,21 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { LoadingPage } from "./loading-page";
+import type { Meta, StoryObj } from '@storybook/react';
+import { LoadingPage } from './loading-page';
 
 const meta = {
-  title: "Layout/LoadingPage",
+  title: 'Layout/LoadingPage',
   component: LoadingPage,
   parameters: {
-    layout: "fullscreen",
+    layout: 'fullscreen',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   argTypes: {
     message: {
-      control: "text",
-      description: "表示するメッセージ",
+      control: 'text',
+      description: '表示するメッセージ',
     },
     className: {
-      control: "text",
-      description: "追加のCSSクラス",
+      control: 'text',
+      description: '追加のCSSクラス',
     },
   },
 } satisfies Meta<typeof LoadingPage>;
@@ -29,25 +29,25 @@ export const Default: Story = {
 
 export const WithCustomMessage: Story = {
   args: {
-    message: "データを読み込んでいます...",
+    message: 'データを読み込んでいます...',
   },
 };
 
 export const AuthenticationLoading: Story = {
   args: {
-    message: "ログイン情報を確認しています",
+    message: 'ログイン情報を確認しています',
   },
 };
 
 export const ProjectLoading: Story = {
   args: {
-    message: "プロジェクトを読み込んでいます",
+    message: 'プロジェクトを読み込んでいます',
   },
 };
 
 export const WithCustomStyling: Story = {
   args: {
-    message: "カスタムスタイル適用中",
-    className: "bg-slate-50 dark:bg-slate-900",
+    message: 'カスタムスタイル適用中',
+    className: 'bg-slate-50 dark:bg-slate-900',
   },
 };

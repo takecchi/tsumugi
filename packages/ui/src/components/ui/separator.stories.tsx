@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { Separator } from "./separator";
+import type { Meta, StoryObj } from '@storybook/react';
+import { Separator } from './separator';
 
 const meta = {
-  title: "UI/Separator",
+  title: 'UI/Separator',
   component: Separator,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof Separator>;
 
 export default meta;
@@ -18,17 +18,23 @@ export const Default: Story = {
     <div className="w-[300px] space-y-4">
       <div>
         <h4 className="text-sm font-medium">コンテンツ1</h4>
-        <p className="text-sm text-muted-foreground">最初のセクションのコンテンツです。</p>
+        <p className="text-sm text-muted-foreground">
+          最初のセクションのコンテンツです。
+        </p>
       </div>
       <Separator />
       <div>
         <h4 className="text-sm font-medium">コンテンツ2</h4>
-        <p className="text-sm text-muted-foreground">2番目のセクションのコンテンツです。</p>
+        <p className="text-sm text-muted-foreground">
+          2番目のセクションのコンテンツです。
+        </p>
       </div>
       <Separator />
       <div>
         <h4 className="text-sm font-medium">コンテンツ3</h4>
-        <p className="text-sm text-muted-foreground">3番目のセクションのコンテンツです。</p>
+        <p className="text-sm text-muted-foreground">
+          3番目のセクションのコンテンツです。
+        </p>
       </div>
     </div>
   ),

@@ -1,19 +1,19 @@
-import * as React from "react"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { X, Plus } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { X, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface MemoEditorProps {
-  name?: string
-  content: string
-  tags?: string[]
-  onNameChange?: (name: string) => void
-  onContentChange?: (content: string) => void
-  onTagsChange?: (tags: string[]) => void
-  className?: string
-  readOnly?: boolean
+  name?: string;
+  content: string;
+  tags?: string[];
+  onNameChange?: (name: string) => void;
+  onContentChange?: (content: string) => void;
+  onTagsChange?: (tags: string[]) => void;
+  className?: string;
+  readOnly?: boolean;
 }
 
 export function MemoEditor({
@@ -26,29 +26,29 @@ export function MemoEditor({
   className,
   readOnly = false,
 }: MemoEditorProps) {
-  const [tagInput, setTagInput] = React.useState("")
+  const [tagInput, setTagInput] = React.useState('');
 
   const handleAddTag = () => {
-    const trimmed = tagInput.trim()
+    const trimmed = tagInput.trim();
     if (trimmed && !tags.includes(trimmed)) {
-      onTagsChange?.([...tags, trimmed])
+      onTagsChange?.([...tags, trimmed]);
     }
-    setTagInput("")
-  }
+    setTagInput('');
+  };
 
   const handleRemoveTag = (tag: string) => {
-    onTagsChange?.(tags.filter((t) => t !== tag))
-  }
+    onTagsChange?.(tags.filter((t) => t !== tag));
+  };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      handleAddTag()
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
     }
-  }
+  };
 
   return (
-    <div className={cn("flex h-full flex-col bg-background", className)}>
+    <div className={cn('flex h-full flex-col bg-background', className)}>
       {name !== undefined && (
         <div className="flex items-center border-b px-6 py-3">
           {onNameChange ? (
@@ -68,7 +68,10 @@ export function MemoEditor({
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="space-y-5 p-6">
           <div className="space-y-1.5">
-            <label htmlFor="memo-tags" className="text-sm font-medium text-muted-foreground">
+            <label
+              htmlFor="memo-tags"
+              className="text-sm font-medium text-muted-foreground"
+            >
               タグ
             </label>
             <div className="flex flex-wrap items-center gap-2">
@@ -113,7 +116,10 @@ export function MemoEditor({
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="memo-content" className="text-sm font-medium text-muted-foreground">
+            <label
+              htmlFor="memo-content"
+              className="text-sm font-medium text-muted-foreground"
+            >
               内容
             </label>
             <Textarea
@@ -122,15 +128,11 @@ export function MemoEditor({
               onChange={(e) => onContentChange?.(e.target.value)}
               placeholder="メモの内容を入力..."
               readOnly={readOnly}
-              className={cn(
-                "resize-none",
-                readOnly && "cursor-default"
-              )}
+              className={cn('resize-none', readOnly && 'cursor-default')}
             />
           </div>
         </div>
       </ScrollArea>
     </div>
-  )
+  );
 }
-

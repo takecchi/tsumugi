@@ -81,9 +81,7 @@ export function createMemoAdapter(clients: ApiClients): MemoAdapter {
 
     async update(
       id: string,
-      data: Partial<
-        Omit<Memo, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>
-      >,
+      data: Partial<Omit<Memo, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>,
     ): Promise<Memo> {
       const memo = await clients.memos.updateMemo({
         memoId: id,

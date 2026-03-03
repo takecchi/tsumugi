@@ -41,7 +41,7 @@ function makeProposalMessage(
     role: 'assistant',
     messageType: 'proposal',
     content: '',
-    proposal: makeProposalJson({status: proposalStatus, ...overrides}),
+    proposal: makeProposalJson({ status: proposalStatus, ...overrides }),
   };
 }
 
@@ -54,12 +54,20 @@ describe('isProposalMessage', () => {
   });
 
   it('テキストメッセージは false', () => {
-    const msg: MessageJson = { role: 'user', messageType: 'text', content: 'hello' };
+    const msg: MessageJson = {
+      role: 'user',
+      messageType: 'text',
+      content: 'hello',
+    };
     expect(isProposalMessage(msg)).toBe(false);
   });
 
   it('proposal が null の場合は false', () => {
-    const msg: MessageJson = { role: 'assistant', messageType: 'proposal', content: '' };
+    const msg: MessageJson = {
+      role: 'assistant',
+      messageType: 'proposal',
+      content: '',
+    };
     expect(isProposalMessage(msg)).toBe(false);
   });
 });
@@ -68,7 +76,11 @@ describe('isProposalMessage', () => {
 
 describe('toAIMessage', () => {
   it('テキストメッセージを変換する', () => {
-    const json: MessageJson = { role: 'user', messageType: 'text', content: 'こんにちは' };
+    const json: MessageJson = {
+      role: 'user',
+      messageType: 'text',
+      content: 'こんにちは',
+    };
     const result = toAIMessage(json, 0, 'session-1');
     expect(result).toEqual({
       id: 'session-1#0',
@@ -216,7 +228,10 @@ describe('resolveCreateValues', () => {
       name: { type: 'replace' as const, value: 'テスト' },
       content: { type: 'replace' as const, value: '本文' },
     };
-    expect(resolveCreateValues(proposed)).toEqual({ name: 'テスト', content: '本文' });
+    expect(resolveCreateValues(proposed)).toEqual({
+      name: 'テスト',
+      content: '本文',
+    });
   });
 
   it('line_edits は無視する', () => {
@@ -242,7 +257,10 @@ describe('toAISDKMessages', () => {
     const result = toAISDKMessages(messages);
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual({ role: 'user', content: 'こんにちは' });
-    expect(result[1]).toEqual({ role: 'assistant', content: [{ type: 'text', text: '返答' }] });
+    expect(result[1]).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: '返答' }],
+    });
   });
 
   it('proposal メッセージはスキップされる', () => {
@@ -252,7 +270,13 @@ describe('toAISDKMessages', () => {
     ];
     const result = toAISDKMessages(messages);
     // user message + no proposal in output
-    expect(result.filter(m => m.role !== 'user' || (m as { content: string }).content !== '[提案の処理結果]')).toHaveLength(1);
+    expect(
+      result.filter(
+        (m) =>
+          m.role !== 'user' ||
+          (m as { content: string }).content !== '[提案の処理結果]',
+      ),
+    ).toHaveLength(1);
   });
 
   it('処理済み提案のフィードバックが注入される', () => {
@@ -261,7 +285,12 @@ describe('toAISDKMessages', () => {
       makeProposalMessage('accepted'),
     ];
     const result = toAISDKMessages(messages);
-    const feedback = result.find(m => m.role === 'user' && typeof m.content === 'string' && m.content.includes('提案の処理結果'));
+    const feedback = result.find(
+      (m) =>
+        m.role === 'user' &&
+        typeof m.content === 'string' &&
+        m.content.includes('提案の処理結果'),
+    );
     expect(feedback).toBeDefined();
     expect((feedback as { content: string }).content).toContain('承認');
   });
@@ -272,12 +301,20 @@ describe('toAISDKMessages', () => {
       {
         role: 'assistant',
         messageType: 'tool_call',
-        content: JSON.stringify([{ toolCallId: 'tc1', toolName: 'get_plot', args: { id: 'p1' } }]),
+        content: JSON.stringify([
+          { toolCallId: 'tc1', toolName: 'get_plot', args: { id: 'p1' } },
+        ]),
       },
       {
         role: 'tool',
         messageType: 'tool_result',
-        content: JSON.stringify([{ toolCallId: 'tc1', toolName: 'get_plot', result: { id: 'p1', name: 'プロット1' } }]),
+        content: JSON.stringify([
+          {
+            toolCallId: 'tc1',
+            toolName: 'get_plot',
+            result: { id: 'p1', name: 'プロット1' },
+          },
+        ]),
       },
       { role: 'assistant', messageType: 'text', content: '回答1' },
       { role: 'user', messageType: 'text', content: '2番目の質問' },
@@ -285,7 +322,7 @@ describe('toAISDKMessages', () => {
     ];
     const result = toAISDKMessages(messages);
     // 古いターンのtool resultは省略テキストになるはず
-    const toolMsg = result.find(m => m.role === 'tool');
+    const toolMsg = result.find((m) => m.role === 'tool');
     expect(toolMsg).toBeDefined();
     const toolContent = (toolMsg as { content: unknown[] }).content;
     expect(toolContent).toHaveLength(1);
@@ -337,19 +374,38 @@ describe('buildSystemPrompt', () => {
   });
 
   it('activeTabContent が注入される', () => {
-    const result = buildSystemPrompt('write', undefined, undefined, 'アクティブタブ内容');
+    const result = buildSystemPrompt(
+      'write',
+      undefined,
+      undefined,
+      'アクティブタブ内容',
+    );
     expect(result).toContain('アクティブタブ内容');
   });
 
   it('memoriesSection が注入される', () => {
-    const result = buildSystemPrompt('ask', undefined, undefined, undefined, '\n\n## AIメモリ\nテスト記憶');
+    const result = buildSystemPrompt(
+      'ask',
+      undefined,
+      undefined,
+      undefined,
+      '\n\n## AIメモリ\nテスト記憶',
+    );
     expect(result).toContain('AIメモリ');
     expect(result).toContain('テスト記憶');
   });
 
   it('固定部分（projectSummary, memoriesSection）が変動部分（contextSection, activeTabContent）より前に配置される', () => {
-    const context = { openTabs: [{ id: '1', name: 'テスト', contentType: 'writing' as const }] };
-    const result = buildSystemPrompt('write', context, 'プロジェクトサマリー', 'アクティブタブ内容', '\n\nメモリ内容');
+    const context = {
+      openTabs: [{ id: '1', name: 'テスト', contentType: 'writing' as const }],
+    };
+    const result = buildSystemPrompt(
+      'write',
+      context,
+      'プロジェクトサマリー',
+      'アクティブタブ内容',
+      '\n\nメモリ内容',
+    );
     const summaryIndex = result.indexOf('プロジェクトサマリー');
     const memoriesIndex = result.indexOf('メモリ内容');
     const contextIndex = result.indexOf('ユーザーの作業状況');
@@ -376,7 +432,11 @@ describe('updateProposalStatusInArray', () => {
 
   it('存在しない提案IDの場合は false', () => {
     const messages: MessageJson[] = [makeProposalMessage('pending')];
-    const result = updateProposalStatusInArray(messages, 'nonexistent', 'accepted');
+    const result = updateProposalStatusInArray(
+      messages,
+      'nonexistent',
+      'accepted',
+    );
     expect(result).toBe(false);
   });
 });
@@ -386,7 +446,10 @@ describe('updateProposalStatusInArray', () => {
 describe('findProposalInArray', () => {
   it('提案を検索して AIProposal に変換する', () => {
     const messages: MessageJson[] = [
-      makeProposalMessage('pending', { id: 'prop-42', updatedAt: '2025-01-01T00:00:00.000Z' }),
+      makeProposalMessage('pending', {
+        id: 'prop-42',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      }),
     ];
     const result = findProposalInArray(messages, 'prop-42');
     expect(result).toBeDefined();
@@ -506,14 +569,16 @@ describe('validateLineEditsConsistency', () => {
     const result = validateLineEditsConsistency(lines, edits);
     expect(result.valid).toBe(false);
     expect(result.mismatches).toHaveLength(1);
-    expect(result.mismatches[0]).toEqual({ line: 2, expected: 'ホゲ', actual: '変更済み' });
+    expect(result.mismatches[0]).toEqual({
+      line: 2,
+      expected: 'ホゲ',
+      actual: '変更済み',
+    });
   });
 
   it('expectedText がなければスキップ', () => {
     const lines = ['テスト', 'ホゲ', 'ホガ'];
-    const edits = [
-      { startLine: 2, endLine: 2, newText: 'フガ' },
-    ];
+    const edits = [{ startLine: 2, endLine: 2, newText: 'フガ' }];
     const result = validateLineEditsConsistency(lines, edits);
     expect(result.valid).toBe(true);
   });
@@ -530,7 +595,12 @@ describe('validateLineEditsConsistency', () => {
   it('複数行の expectedText を検証', () => {
     const lines = ['テスト', 'ホゲ', 'ホガ', '最終行'];
     const edits = [
-      { startLine: 2, endLine: 3, newText: '新2\n新3', expectedText: 'ホゲ\nホガ' },
+      {
+        startLine: 2,
+        endLine: 3,
+        newText: '新2\n新3',
+        expectedText: 'ホゲ\nホガ',
+      },
     ];
     const result = validateLineEditsConsistency(lines, edits);
     expect(result.valid).toBe(true);
@@ -539,7 +609,12 @@ describe('validateLineEditsConsistency', () => {
   it('複数行の expectedText で一部不一致', () => {
     const lines = ['テスト', '変更済み', 'ホガ', '最終行'];
     const edits = [
-      { startLine: 2, endLine: 3, newText: '新2\n新3', expectedText: 'ホゲ\nホガ' },
+      {
+        startLine: 2,
+        endLine: 3,
+        newText: '新2\n新3',
+        expectedText: 'ホゲ\nホガ',
+      },
     ];
     const result = validateLineEditsConsistency(lines, edits);
     expect(result.valid).toBe(false);

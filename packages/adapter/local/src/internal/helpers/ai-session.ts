@@ -7,7 +7,8 @@ import {
   findProposalInArray,
   checkAllProposalsProcessedInArray,
   rejectAllPendingProposalsInArray,
-  type MessageJson, ProposalJson
+  type MessageJson,
+  ProposalJson,
 } from './ai-logic';
 
 /**
@@ -58,9 +59,14 @@ export async function findProposalInMessages(
  * セッション内の全提案が処理済み（pending なし）かどうかをチェックし、
  * 処理済みの場合は全提案のフィードバックサマリーも返す。
  */
-export async function checkAllProposalsProcessed(
-  sessionId: string,
-): Promise<{ allProcessed: boolean; feedbackSummaries: { toolCallId: string; status: string; targetName: string }[] }> {
+export async function checkAllProposalsProcessed(sessionId: string): Promise<{
+  allProcessed: boolean;
+  feedbackSummaries: {
+    toolCallId: string;
+    status: string;
+    targetName: string;
+  }[];
+}> {
   const messagesPath = await join(sessionId, 'messages.json');
   const messages = (await readJson<MessageJson[]>(messagesPath)) ?? [];
   return checkAllProposalsProcessedInArray(messages);
@@ -70,7 +76,9 @@ export async function checkAllProposalsProcessed(
  * セッション内の pending 提案をすべて rejected に更新する。
  * ユーザーがメッセージを送信した時に未処理の提案を自動拒否するために使用。
  */
-export async function rejectAllPendingProposals(sessionId: string): Promise<void> {
+export async function rejectAllPendingProposals(
+  sessionId: string,
+): Promise<void> {
   const messagesPath = await join(sessionId, 'messages.json');
   const messages = (await readJson<MessageJson[]>(messagesPath)) ?? [];
   if (rejectAllPendingProposalsInArray(messages)) {

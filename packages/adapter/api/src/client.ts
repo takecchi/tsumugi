@@ -21,8 +21,11 @@ export interface ApiClients {
   readonly configuration: Configuration;
 }
 
-export function createApiClients(baseUrl: string, tokenManager: TokenManager): ApiClients {
-  const configuration = new Configuration({ 
+export function createApiClients(
+  baseUrl: string,
+  tokenManager: TokenManager,
+): ApiClients {
+  const configuration = new Configuration({
     basePath: baseUrl,
     accessToken: () => tokenManager.getAccessToken(),
   });

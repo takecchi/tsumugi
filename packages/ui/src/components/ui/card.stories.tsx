@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from '@storybook/react';
 import {
   Card,
   CardHeader,
@@ -7,19 +7,19 @@ import {
   CardAction,
   CardContent,
   CardFooter,
-} from "./card";
-import { Button } from "./button";
+} from './card';
+import { Button } from './button';
 
 const meta = {
-  title: "UI/Card",
+  title: 'UI/Card',
   component: Card,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ width: "380px" }}>
+      <div style={{ width: '380px' }}>
         <Story />
       </div>
     ),
@@ -55,7 +55,9 @@ export const WithFooter: Story = {
       </CardContent>
       <CardFooter className="gap-2">
         <Button size="sm">保存</Button>
-        <Button size="sm" variant="outline">キャンセル</Button>
+        <Button size="sm" variant="outline">
+          キャンセル
+        </Button>
       </CardFooter>
     </Card>
   ),
@@ -68,11 +70,15 @@ export const WithAction: Story = {
         <CardTitle>アクション付きカード</CardTitle>
         <CardDescription>右上にアクションボタンを配置。</CardDescription>
         <CardAction>
-          <Button size="sm" variant="outline">編集</Button>
+          <Button size="sm" variant="outline">
+            編集
+          </Button>
         </CardAction>
       </CardHeader>
       <CardContent>
-        <p className="text-sm">CardAction を使うとヘッダー右上にボタンを置けます。</p>
+        <p className="text-sm">
+          CardAction を使うとヘッダー右上にボタンを置けます。
+        </p>
       </CardContent>
     </Card>
   ),
@@ -81,7 +87,9 @@ export const WithAction: Story = {
 export const Simple: Story = {
   render: () => (
     <Card className="p-6">
-      <p className="text-sm">シンプルなカード。CardHeader 等を使わず直接コンテンツを配置。</p>
+      <p className="text-sm">
+        シンプルなカード。CardHeader 等を使わず直接コンテンツを配置。
+      </p>
     </Card>
   ),
 };

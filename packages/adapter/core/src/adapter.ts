@@ -103,19 +103,22 @@ export interface ProjectAdapter {
   getAll(): Promise<Project[]>;
   getById(id: string): Promise<Project | null>;
   create(data: Omit<Project, CreateOmit>): Promise<Project>;
-  update(id: string, data: Partial<Omit<Project, CreateOmit>>): Promise<Project>;
+  update(
+    id: string,
+    data: Partial<Omit<Project, CreateOmit>>,
+  ): Promise<Project>;
   delete(id: string): Promise<void>;
 }
 
 /**
  * プロット操作のインターフェース
  */
-export type PlotAdapter = NodeAdapterBase<Plot>
+export type PlotAdapter = NodeAdapterBase<Plot>;
 
 /**
  * キャラクター操作のインターフェース
  */
-export type CharacterAdapter = NodeAdapterBase<Character>
+export type CharacterAdapter = NodeAdapterBase<Character>;
 
 /**
  * メモ操作のインターフェース
@@ -139,7 +142,10 @@ export interface AIAdapter {
    * チャット（ストリーミング）
    * ReadableStream<AIStreamChunk> を返す
    */
-  chat(sessionId: string, request: AIChatRequest): Promise<ReadableStream<AIStreamChunk>>;
+  chat(
+    sessionId: string,
+    request: AIChatRequest,
+  ): Promise<ReadableStream<AIStreamChunk>>;
 
   /**
    * チャットセッション一覧取得
@@ -159,19 +165,28 @@ export interface AIAdapter {
   /**
    * チャットセッション作成（初回メッセージ送信）
    */
-  createSession(projectId: string, request: AIChatMessageRequest): Promise<{ session: AIChatSession; stream: ReadableStream<AIStreamChunk> }>;
+  createSession(
+    projectId: string,
+    request: AIChatMessageRequest,
+  ): Promise<{ session: AIChatSession; stream: ReadableStream<AIStreamChunk> }>;
 
   /**
    * 提案を承認（コンフリクト検出 + データ更新 + ステータス更新）
    * 全提案が処理済みになった場合、自動的に AI へフィードバックを送信しその応答ストリームを含む result.stream を返す。
    */
-  acceptProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult>;
+  acceptProposal(
+    sessionId: string,
+    toolCallId: string,
+  ): Promise<AIProposalResult>;
 
   /**
    * 提案を拒否（ステータス更新のみ）
    * 全提案が処理済みになった場合、自動的に AI へフィードバックを送信しその応答ストリームを含む result.stream を返す。
    */
-  rejectProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult>;
+  rejectProposal(
+    sessionId: string,
+    toolCallId: string,
+  ): Promise<AIProposalResult>;
 
   /**
    * チャットセッション削除
@@ -199,7 +214,10 @@ export interface AIAdapter {
  */
 export interface ProjectSettingsAdapter {
   get(projectId: string): Promise<ProjectSettings>;
-  update(projectId: string, data: Partial<ProjectSettings>): Promise<ProjectSettings>;
+  update(
+    projectId: string,
+    data: Partial<ProjectSettings>,
+  ): Promise<ProjectSettings>;
 }
 
 /**

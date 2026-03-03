@@ -6,15 +6,15 @@ import type { ContentItemKey, ContentTreeKey } from '~/hooks/keys';
 
 type WritingTreeKey = ContentTreeKey<'writing'>;
 
-
 /**
  * プロジェクト内の執筆ツリーを取得する
  * @param projectId - プロジェクトID
  */
 export function useWritingTree(projectId: string) {
   const adapter = useAdapter();
-  return useSWR<TreeNode[], Error, WritingTreeKey>({ type: 'writingTree', projectId }, ({ projectId }) =>
-    adapter.writings.getTreeByProjectId(projectId),
+  return useSWR<TreeNode[], Error, WritingTreeKey>(
+    { type: 'writingTree', projectId },
+    ({ projectId }) => adapter.writings.getTreeByProjectId(projectId),
   );
 }
 
@@ -25,7 +25,10 @@ type WritingKey = ContentItemKey<'writing'>;
  * @param id - 執筆ID
  * @param config
  */
-export function useWriting(id: string, config?: SWRConfiguration<Writing | null, Error>) {
+export function useWriting(
+  id: string,
+  config?: SWRConfiguration<Writing | null, Error>,
+) {
   const adapter = useAdapter();
   return useSWR<Writing | null, Error, WritingKey>(
     { type: 'writing', id },
@@ -34,7 +37,10 @@ export function useWriting(id: string, config?: SWRConfiguration<Writing | null,
   );
 }
 
-type CreateWritingData = Omit<Writing, 'projectId' | 'id' | 'createdAt' | 'updatedAt'>;
+type CreateWritingData = Omit<
+  Writing,
+  'projectId' | 'id' | 'createdAt' | 'updatedAt'
+>;
 
 /**
  * 執筆を作成する
@@ -45,14 +51,17 @@ export function useCreateWriting(projectId: string) {
   const adapter = useAdapter();
   return useSWRMutation<Writing, Error, WritingTreeKey, CreateWritingData>(
     { type: 'writingTree', projectId },
-    ({ projectId }, { arg }) => adapter.writings.create({
-      projectId,
-      ...arg,
-    }),
+    ({ projectId }, { arg }) =>
+      adapter.writings.create({
+        projectId,
+        ...arg,
+      }),
   );
 }
 
-type UpdateWritingData = Partial<Omit<Writing, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>;
+type UpdateWritingData = Partial<
+  Omit<Writing, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>
+>;
 
 /**
  * 執筆を更新する
@@ -132,7 +141,8 @@ interface TotalWordCountKey {
  */
 export function useTotalWordCount(projectId: string) {
   const adapter = useAdapter();
-  return useSWR<number, Error, TotalWordCountKey>({ type: 'totalWordCount', projectId }, ({ projectId }) =>
-    adapter.writings.getTotalWordCount(projectId),
+  return useSWR<number, Error, TotalWordCountKey>(
+    { type: 'totalWordCount', projectId },
+    ({ projectId }) => adapter.writings.getTotalWordCount(projectId),
   );
 }

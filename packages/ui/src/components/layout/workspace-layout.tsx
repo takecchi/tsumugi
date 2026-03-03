@@ -1,40 +1,42 @@
-import * as React from "react"
+import * as React from 'react';
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "@/components/ui/resizable"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import { PanelLeft, BotMessageSquare } from "lucide-react"
-import { cn } from "@/lib/utils"
+} from '@/components/ui/resizable';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { PanelLeft, BotMessageSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const MOBILE_BREAKPOINT = 768
+const MOBILE_BREAKPOINT = 768;
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(
+    undefined,
+  );
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => setIsMobile(mql.matches)
-    onChange()
-    mql.addEventListener("change", onChange)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const onChange = () => setIsMobile(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
 
-  return isMobile
+  return isMobile;
 }
 
 export interface WorkspaceLayoutProps {
-  sidebar: React.ReactNode
-  editor: React.ReactNode
-  aiPanel: React.ReactNode
-  className?: string
-  defaultSidebarSize?: number
-  defaultAiPanelSize?: number
-  minSidebarSize?: number
-  minEditorSize?: number
-  minAiPanelSize?: number
+  sidebar: React.ReactNode;
+  editor: React.ReactNode;
+  aiPanel: React.ReactNode;
+  className?: string;
+  defaultSidebarSize?: number;
+  defaultAiPanelSize?: number;
+  minSidebarSize?: number;
+  minEditorSize?: number;
+  minAiPanelSize?: number;
 }
 
 function MobileLayout({
@@ -42,12 +44,14 @@ function MobileLayout({
   editor,
   aiPanel,
   className,
-}: Pick<WorkspaceLayoutProps, "sidebar" | "editor" | "aiPanel" | "className">) {
-  const [sidebarOpen, setSidebarOpen] = React.useState(false)
-  const [aiPanelOpen, setAiPanelOpen] = React.useState(false)
+}: Pick<WorkspaceLayoutProps, 'sidebar' | 'editor' | 'aiPanel' | 'className'>) {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = React.useState(false);
 
   return (
-    <div className={cn("flex h-dvh w-screen flex-col overflow-hidden", className)}>
+    <div
+      className={cn('flex h-dvh w-screen flex-col overflow-hidden', className)}
+    >
       {/* Mobile Header */}
       <div className="flex items-center justify-between border-b bg-sidebar px-2 py-1.5">
         <Button
@@ -69,9 +73,7 @@ function MobileLayout({
       </div>
 
       {/* Main: Editor */}
-      <div className="flex-1 min-h-0">
-        {editor}
-      </div>
+      <div className="flex-1 min-h-0">{editor}</div>
 
       {/* Sidebar Drawer (left) */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -95,7 +97,7 @@ function MobileLayout({
         </SheetContent>
       </Sheet>
     </div>
-  )
+  );
 }
 
 function DesktopLayout({
@@ -110,7 +112,7 @@ function DesktopLayout({
   minAiPanelSize = 20,
 }: WorkspaceLayoutProps) {
   return (
-    <div className={cn("h-screen w-screen overflow-hidden", className)}>
+    <div className={cn('h-screen w-screen overflow-hidden', className)}>
       <ResizablePanelGroup orientation="horizontal" className="h-full">
         {/* Left: Sidebar (File Tree) */}
         <ResizablePanel
@@ -124,7 +126,10 @@ function DesktopLayout({
         <ResizableHandle />
 
         {/* Center: Editor */}
-        <ResizablePanel defaultSize={100 - defaultSidebarSize - defaultAiPanelSize} minSize={minEditorSize}>
+        <ResizablePanel
+          defaultSize={100 - defaultSidebarSize - defaultAiPanelSize}
+          minSize={minEditorSize}
+        >
           {editor}
         </ResizablePanel>
 
@@ -140,21 +145,20 @@ function DesktopLayout({
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
-  )
+  );
 }
 
 export function WorkspaceLayout(props: WorkspaceLayoutProps) {
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile();
 
   // SSR / 初回レンダリングではちらつき防止のため何も表示しない
   if (isMobile === undefined) {
-    return null
+    return null;
   }
 
   if (isMobile) {
-    return <MobileLayout {...props} />
+    return <MobileLayout {...props} />;
   }
 
-  return <DesktopLayout {...props} />
+  return <DesktopLayout {...props} />;
 }
-

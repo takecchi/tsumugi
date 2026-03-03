@@ -54,4 +54,3 @@ export async function listSubDirs(path: string): Promise<string[]> {
   const entries = await readDir(path);
   return entries.filter((e) => e.isDirectory).map((e) => e.name);
 }
-
