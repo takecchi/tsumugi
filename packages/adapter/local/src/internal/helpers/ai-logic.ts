@@ -1,13 +1,34 @@
 import type {
-  AIFieldChange,
-  AILineEdit,
   AIMessage,
-  AIProposal,
   AIProposalStatus,
   AIChatContext,
   Node,
 } from '@tsumugi/adapter';
 import type { ModelMessage, ToolContent } from 'ai';
+import { jsonToAIProposal } from '@/internal/helpers/ai-proposal';
+
+/**
+ * 行単位の編集指示
+ */
+export interface AILineEdit {
+  /** 変更開始行（1-indexed） */
+  startLine: number;
+  /** 変更終了行（1-indexed, inclusive）。startLine > endLine なら挿入 */
+  endLine: number;
+  /** 置換後のテキスト（空文字列なら削除） */
+  newText: string;
+}
+
+/**
+ * フィールドの変更指示
+ *
+ * - replace: フィールド全体を置換する（短文フィールド向け）
+ * - line_edits: 行単位で部分的に編集する（長文フィールド向け）
+ */
+export type AIFieldChange =
+  | { type: 'replace'; value: unknown }
+  | { type: 'line_edits'; edits: AILineEdit[] };
+
 
 /**
  * Node 派生型を Record<string, unknown> に変換する。
@@ -42,8 +63,9 @@ export interface ProposalJson {
   id: string;
   action: 'create' | 'update';
   targetId: string;
-  contentType: 'plot' | 'character' | 'memo' | 'writing';
+  contentType: 'plot' | 'character' | 'memo' | 'writing' | 'project';
   targetName: string;
+  status: AIProposalStatus;
   updatedAt?: string;
   original?: Record<string, unknown>;
   proposed: Record<string, AIFieldChange>;
@@ -58,7 +80,6 @@ export interface MessageJson {
   messageType: string;
   content: string;
   proposal?: ProposalJson;
-  proposalStatus?: AIProposalStatus;
 }
 
 export interface ProposalMessageJson extends MessageJson {
@@ -80,22 +101,10 @@ export function toAIMessage(json: MessageJson, index: number, sessionId: string)
   };
 
   if (json.messageType === 'proposal' && json.proposal) {
-    const p = json.proposal;
-    const proposal: AIProposal = {
-      id: p.id,
-      action: p.action,
-      targetId: p.targetId,
-      contentType: p.contentType,
-      targetName: p.targetName,
-      updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
-      original: p.original,
-      proposed: p.proposed,
-    };
     return {
       ...base,
       messageType: 'proposal',
-      proposal,
-      proposalStatus: json.proposalStatus ?? 'pending',
+      proposal: jsonToAIProposal(json.proposal),
     };
   }
 
@@ -262,7 +271,7 @@ export function toAISDKMessages(messages: MessageJson[]): ModelMessage[] {
   // 処理済み提案（accepted/rejected/conflict）をフィードバックとしてユーザーメッセージに注入
   const processedProposals = messages
     .filter(isProposalMessage)
-    .filter((m) => m.proposalStatus && m.proposalStatus !== 'pending');
+    .filter((m) => m.proposal && m.proposal.status !== 'pending');
   if (processedProposals.length > 0) {
     const statusLabels: Record<string, string> = {
       accepted: '承認',
@@ -270,7 +279,7 @@ export function toAISDKMessages(messages: MessageJson[]): ModelMessage[] {
       conflict: 'コンフリクト',
     };
     const feedbackLines = processedProposals.map((m) => {
-      const label = statusLabels[m.proposalStatus ?? ''] ?? m.proposalStatus;
+      const label = statusLabels[m.proposal.status ?? ''] ?? m.proposal.status;
       return `- ${m.proposal.targetName} の提案を${label}しました`;
     });
     result.push({
@@ -402,7 +411,7 @@ export function updateProposalStatusInArray(
 ): boolean {
   for (const m of messages) {
     if (m.messageType === 'proposal' && m.proposal?.id === toolCallId) {
-      m.proposalStatus = status;
+      m.proposal.status = status;
       return true;
     }
   }
@@ -415,20 +424,10 @@ export function updateProposalStatusInArray(
 export function findProposalInArray(
   messages: MessageJson[],
   toolCallId: string,
-): AIProposal | undefined {
+): ProposalJson | undefined {
   for (const m of messages) {
     if (m.messageType === 'proposal' && m.proposal?.id === toolCallId) {
-      const p = m.proposal;
-      return {
-        id: p.id,
-        action: p.action,
-        targetId: p.targetId,
-        contentType: p.contentType,
-        targetName: p.targetName,
-        updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
-        original: p.original,
-        proposed: p.proposed,
-      };
+      return m.proposal;
     }
   }
   return undefined;
@@ -446,10 +445,10 @@ export function checkAllProposalsProcessedInArray(
     return { allProcessed: false, feedbackSummaries: [] };
   }
 
-  const hasPending = proposals.some((m) => m.proposalStatus === 'pending');
+  const hasPending = proposals.some((m) => m.proposal.status === 'pending');
   const feedbackSummaries = proposals.map((m) => ({
     toolCallId: m.proposal.id,
-    status: m.proposalStatus ?? 'pending',
+    status: m.proposal.status ?? 'pending',
     targetName: m.proposal.targetName,
   }));
 
@@ -463,8 +462,8 @@ export function checkAllProposalsProcessedInArray(
 export function rejectAllPendingProposalsInArray(messages: MessageJson[]): boolean {
   let changed = false;
   for (const m of messages) {
-    if (m.messageType === 'proposal' && m.proposalStatus === 'pending') {
-      m.proposalStatus = 'rejected';
+    if (m.messageType === 'proposal' && m.proposal && m.proposal.status === 'pending') {
+      m.proposal.status = 'rejected';
       changed = true;
     }
   }

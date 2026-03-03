@@ -1,7 +1,8 @@
-import type {
+import {
   AIProposalFeedback,
   AIProposalResult,
   AIAdapterConfig,
+  AIProposal, FieldChange
 } from '@tsumugi/adapter';
 import { join, readJson } from '@/internal/utils/fs';
 import {
@@ -12,6 +13,7 @@ import {
   resolveCreateValues,
   type SessionJson,
   type MessageJson,
+  ProposalJson,
 } from './ai-logic';
 import type { ToolAdapters } from '@/adapters/ai-tools';
 import {
@@ -51,7 +53,15 @@ export async function buildProposalResult(
   const projectId = getProjectIdFromSessionPath(sessionId);
 
   // request を undefined で渡すことでユーザーメッセージなしの自動応答
-  const stream = await createChatStream(config, undefined, sessionDir, sessionJson, messages, projectId, getToolAdapters());
+  const stream = await createChatStream(
+    config,
+    undefined,
+    sessionDir,
+    sessionJson,
+    messages,
+    projectId,
+    getToolAdapters(),
+  );
   return { feedback, stream };
 }
 
@@ -81,7 +91,10 @@ export async function executeAcceptProposal(
         }
 
         // updatedAt チェック + コンフリクト検出
-        if (raw.updatedAt && project.updatedAt.getTime() !== raw.updatedAt.getTime()) {
+        if (
+          raw.updatedAt &&
+          project.updatedAt.getTime() !== new Date(raw.updatedAt).getTime()
+        ) {
           if (raw.original) {
             const currentRecord: Record<string, unknown> = {
               synopsis: project.synopsis,
@@ -90,15 +103,27 @@ export async function executeAcceptProposal(
               targetWordCount: project.targetWordCount,
               targetAudience: project.targetAudience,
             };
-            const conflictFields = detectConflictFields(raw.original, currentRecord);
+            const conflictFields = detectConflictFields(
+              raw.original,
+              currentRecord,
+            );
             if (conflictFields.length > 0) {
-              await updateProposalStatusInMessages(sessionId, toolCallId, 'conflict');
+              await updateProposalStatusInMessages(
+                sessionId,
+                toolCallId,
+                'conflict',
+              );
               feedback = {
                 toolCallId,
                 status: 'conflict',
                 conflictDetails: `以下のフィールドが提案後に変更されています: ${conflictFields.join(', ')}`,
               };
-              return await buildProposalResult(sessionId, feedback, getConfig, getToolAdapters);
+              return await buildProposalResult(
+                sessionId,
+                feedback,
+                getConfig,
+                getToolAdapters,
+              );
             }
           }
         }
@@ -127,39 +152,68 @@ export async function executeAcceptProposal(
         }
 
         // updatedAt チェック + コンフリクト検出
-        if (raw.updatedAt && current.updatedAt.getTime() !== raw.updatedAt.getTime()) {
+        if (
+          raw.updatedAt &&
+          current.updatedAt.getTime() !== new Date(raw.updatedAt).getTime()
+        ) {
           if (raw.original) {
             // line_edits の場合は行内容ベースでコンフリクト検出
-            const hasLineEdits = Object.values(raw.proposed).some((c) => c.type === 'line_edits');
+            const hasLineEdits = Object.values(raw.proposed).some(
+              (c) => c.type === 'line_edits',
+            );
             let conflictFields: string[];
             if (hasLineEdits) {
-              const currentText = toRecord(current).content as string ?? '';
-              conflictFields = detectLineEditsConflict(raw.original, currentText);
+              const currentText = (toRecord(current).content as string) ?? '';
+              conflictFields = detectLineEditsConflict(
+                raw.original,
+                currentText,
+              );
             } else {
-              conflictFields = detectConflictFields(raw.original, toRecord(current));
+              conflictFields = detectConflictFields(
+                raw.original,
+                toRecord(current),
+              );
             }
             if (conflictFields.length > 0) {
-              await updateProposalStatusInMessages(sessionId, toolCallId, 'conflict');
+              await updateProposalStatusInMessages(
+                sessionId,
+                toolCallId,
+                'conflict',
+              );
               feedback = {
                 toolCallId,
                 status: 'conflict',
                 conflictDetails: hasLineEdits
-                  ? `以下の行が提案後に変更されています: ${conflictFields.map(k => k.replace('line_', '行')).join(', ')}`
+                  ? `以下の行が提案後に変更されています: ${conflictFields.map((k) => k.replace('line_', '行')).join(', ')}`
                   : `以下のフィールドが提案後に変更されています: ${conflictFields.join(', ')}`,
               };
-              return await buildProposalResult(sessionId, feedback, getConfig, getToolAdapters);
+              return await buildProposalResult(
+                sessionId,
+                feedback,
+                getConfig,
+                getToolAdapters,
+              );
             }
           }
         }
 
         // コンフリクトなし → proposed を解決して更新実行
-        const updateData = resolveProposedValues(raw.proposed, toRecord(current));
+        const updateData = resolveProposedValues(
+          raw.proposed,
+          toRecord(current),
+        );
         await adapterForType.update(raw.targetId, updateData);
       }
     } else {
       // create
       const plainValues = resolveCreateValues(raw.proposed);
-      const { parentId, name, ...fields } = plainValues as Record<string, unknown> & { parentId?: string | null; name?: string };
+      const { parentId, name, ...fields } = plainValues as Record<
+        string,
+        unknown
+      > & {
+        parentId?: string | null;
+        name?: string;
+      };
       const projectId = getProjectIdFromSessionPath(sessionId);
       const commonBase = {
         projectId,
@@ -170,22 +224,46 @@ export async function executeAcceptProposal(
 
       switch (raw.contentType) {
         case 'plot':
-          await getToolAdapters().plots.create({ ...commonBase, nodeType: 'plot', ...fields });
+          await getToolAdapters().plots.create({
+            ...commonBase,
+            nodeType: 'plot',
+            ...fields,
+          });
           break;
         case 'character':
-          await getToolAdapters().characters.create({ ...commonBase, nodeType: 'character', ...fields });
+          await getToolAdapters().characters.create({
+            ...commonBase,
+            nodeType: 'character',
+            ...fields,
+          });
           break;
         case 'memo':
-          await getToolAdapters().memos.create({ ...commonBase, nodeType: 'memo', content: (fields.content as string) ?? '', ...fields });
+          await getToolAdapters().memos.create({
+            ...commonBase,
+            nodeType: 'memo',
+            content: (fields.content as string) ?? '',
+            ...fields,
+          });
           break;
         case 'writing':
-          await getToolAdapters().writings.create({ ...commonBase, nodeType: 'writing', content: (fields.content as string) ?? '', wordCount: ((fields.content as string) ?? '').length, ...fields });
+          await getToolAdapters().writings.create({
+            ...commonBase,
+            nodeType: 'writing',
+            content: (fields.content as string) ?? '',
+            wordCount: ((fields.content as string) ?? '').length,
+            ...fields,
+          });
           break;
       }
     }
 
     await updateProposalStatusInMessages(sessionId, toolCallId, 'accepted');
-    feedback = { toolCallId, status: 'accepted', contentType: raw.contentType, targetId: raw.targetId };
+    feedback = {
+      toolCallId,
+      status: 'accepted',
+      contentType: raw.contentType,
+      targetId: raw.targetId,
+    };
   } catch (e) {
     await updateProposalStatusInMessages(sessionId, toolCallId, 'conflict');
     feedback = {
@@ -197,5 +275,56 @@ export async function executeAcceptProposal(
     };
   }
 
-  return await buildProposalResult(sessionId, feedback, getConfig, getToolAdapters);
+  return await buildProposalResult(
+    sessionId,
+    feedback,
+    getConfig,
+    getToolAdapters,
+  );
+}
+
+export function jsonToAIProposal(json: ProposalJson): AIProposal {
+  const diffs: FieldChange<string | unknown>[] = [];
+
+  for (const [fieldName, change] of Object.entries(json.proposed)) {
+    if (change.type === 'line_edits') {
+      // 行編集の場合：各編集を個別の diff として追加
+      for (const edit of change.edits) {
+        // 元の行内容を original から取得
+        const originalLines: string[] = [];
+        for (let i = edit.startLine; i <= edit.endLine; i++) {
+          const lineKey = `line_${i}`;
+          const lineContent = json.original?.[lineKey];
+          originalLines.push(String(lineContent ?? ''));
+        }
+        const beforeText = originalLines.join('\n');
+
+        diffs.push({
+          fieldName,
+          before: beforeText,
+          after: edit.newText,
+          previewStart: { line: edit.startLine, col: 0 },
+          previewEnd: { line: edit.endLine, col: 0 },
+        });
+      }
+    } else if (change.type === 'replace') {
+      // 置換の場合
+      const beforeValue = json.original?.[fieldName];
+      diffs.push({
+        fieldName,
+        before: beforeValue ?? '',
+        after: change.value ?? '',
+      });
+    }
+  }
+
+  return {
+    id: json.id,
+    action: json.action,
+    targetId: json.targetId,
+    contentType: json.contentType,
+    targetName: json.targetName,
+    status: json.status,
+    diffs,
+  };
 }

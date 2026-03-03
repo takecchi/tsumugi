@@ -1,4 +1,4 @@
-import type { AIProposal, AIProposalStatus } from '@tsumugi/adapter';
+import type { AIProposalStatus } from '@tsumugi/adapter';
 import { join, readJson, writeJson } from '@/internal/utils/fs';
 import { getProjectDataDir } from '@/internal/utils/project-index';
 import { extractParentPath } from '@/internal/utils/path';
@@ -7,7 +7,7 @@ import {
   findProposalInArray,
   checkAllProposalsProcessedInArray,
   rejectAllPendingProposalsInArray,
-  type MessageJson,
+  type MessageJson, ProposalJson
 } from './ai-logic';
 
 /**
@@ -48,7 +48,7 @@ export async function updateProposalStatusInMessages(
 export async function findProposalInMessages(
   sessionId: string,
   toolCallId: string,
-): Promise<AIProposal | undefined> {
+): Promise<ProposalJson | undefined> {
   const messagesPath = await join(sessionId, 'messages.json');
   const messages = (await readJson<MessageJson[]>(messagesPath)) ?? [];
   return findProposalInArray(messages, toolCallId);
