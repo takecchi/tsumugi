@@ -196,16 +196,6 @@ export function toAIStreamChunk(raw: unknown): AIStreamChunk {
         },
       };
     }
-
-    // TextStreamChunk,
-    //   ToolCallStreamChunk,
-    //   ToolResultStreamChunk,
-    //   ProposalStreamChunk,
-    //   UsageStreamChunk,
-    //   ErrorStreamChunk,
-    //   AIProposalFeedback,
-    //   AIProposalResult,
-    //   DoneStreamChunk,
   }
   throw new Error('Invalid SSE chunk');
 }
