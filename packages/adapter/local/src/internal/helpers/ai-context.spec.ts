@@ -73,13 +73,15 @@ function mockWriting(overrides: Partial<Writing> = {}): Writing {
   };
 }
 
-function createMockAdapters(overrides: {
-  project?: Project | null;
-  plots?: Plot[];
-  characters?: Character[];
-  memos?: Memo[];
-  writings?: Writing[];
-} = {}): ToolAdapters {
+function createMockAdapters(
+  overrides: {
+    project?: Project | null;
+    plots?: Plot[];
+    characters?: Character[];
+    memos?: Memo[];
+    writings?: Writing[];
+  } = {},
+): ToolAdapters {
   return {
     projects: {
       getAll: jest.fn(),
@@ -148,7 +150,11 @@ function createMockAdapters(overrides: {
 describe('buildProjectSummary', () => {
   it('プロジェクト情報が含まれる', async () => {
     const adapters = createMockAdapters({
-      project: mockProject({ name: '異世界物語', synopsis: 'あらすじテキスト', theme: 'ファンタジー' }),
+      project: mockProject({
+        name: '異世界物語',
+        synopsis: 'あらすじテキスト',
+        theme: 'ファンタジー',
+      }),
     });
     const result = await buildProjectSummary('proj-1', adapters);
     expect(result).toContain('## プロジェクト情報');
@@ -233,18 +239,30 @@ describe('fetchActiveTabContent', () => {
 
   it('active フラグがないタブのみのとき空文字を返す', async () => {
     const adapters = createMockAdapters();
-    const result = await fetchActiveTabContent({
-      openTabs: [{ id: 'other', name: 'other', contentType: 'plot' }],
-    }, adapters);
+    const result = await fetchActiveTabContent(
+      {
+        openTabs: [{ id: 'other', name: 'other', contentType: 'plot' }],
+      },
+      adapters,
+    );
     expect(result).toBe('');
   });
 
   it('プロットの全文を取得して返す', async () => {
-    const plot = mockPlot({ id: 'p1', synopsis: '物語の始まり', setting: '中世ヨーロッパ' });
+    const plot = mockPlot({
+      id: 'p1',
+      synopsis: '物語の始まり',
+      setting: '中世ヨーロッパ',
+    });
     const adapters = createMockAdapters({ plots: [plot] });
-    const result = await fetchActiveTabContent({
-      openTabs: [{ id: 'p1', name: 'プロットA', contentType: 'plot', active: true }],
-    }, adapters);
+    const result = await fetchActiveTabContent(
+      {
+        openTabs: [
+          { id: 'p1', name: 'プロットA', contentType: 'plot', active: true },
+        ],
+      },
+      adapters,
+    );
     expect(result).toContain('## 現在編集中のコンテンツ');
     expect(result).toContain('[プロット] プロットA');
     expect(result).toContain('物語の始まり');
@@ -252,22 +270,41 @@ describe('fetchActiveTabContent', () => {
   });
 
   it('キャラクターの全フィールドを取得して返す', async () => {
-    const char = mockCharacter({ id: 'c1', name: '太郎', role: '勇者', personality: '明るい' });
+    const char = mockCharacter({
+      id: 'c1',
+      name: '太郎',
+      role: '勇者',
+      personality: '明るい',
+    });
     const adapters = createMockAdapters({ characters: [char] });
-    const result = await fetchActiveTabContent({
-      openTabs: [{ id: 'c1', name: '太郎', contentType: 'character', active: true }],
-    }, adapters);
+    const result = await fetchActiveTabContent(
+      {
+        openTabs: [
+          { id: 'c1', name: '太郎', contentType: 'character', active: true },
+        ],
+      },
+      adapters,
+    );
     expect(result).toContain('[キャラクター] 太郎');
     expect(result).toContain('役職・立場: 勇者');
     expect(result).toContain('性格: 明るい');
   });
 
   it('メモの内容とタグを返す', async () => {
-    const memo = mockMemo({ id: 'm1', content: 'メモ本文', tags: ['重要', '設定'] });
+    const memo = mockMemo({
+      id: 'm1',
+      content: 'メモ本文',
+      tags: ['重要', '設定'],
+    });
     const adapters = createMockAdapters({ memos: [memo] });
-    const result = await fetchActiveTabContent({
-      openTabs: [{ id: 'm1', name: 'テストメモ', contentType: 'memo', active: true }],
-    }, adapters);
+    const result = await fetchActiveTabContent(
+      {
+        openTabs: [
+          { id: 'm1', name: 'テストメモ', contentType: 'memo', active: true },
+        ],
+      },
+      adapters,
+    );
     expect(result).toContain('[メモ] テストメモ');
     expect(result).toContain('タグ: 重要, 設定');
     expect(result).toContain('メモ本文');
@@ -276,18 +313,33 @@ describe('fetchActiveTabContent', () => {
   it('執筆の本文を返す', async () => {
     const writing = mockWriting({ id: 'w1', content: '昔々あるところに' });
     const adapters = createMockAdapters({ writings: [writing] });
-    const result = await fetchActiveTabContent({
-      openTabs: [{ id: 'w1', name: '第一章', contentType: 'writing', active: true }],
-    }, adapters);
+    const result = await fetchActiveTabContent(
+      {
+        openTabs: [
+          { id: 'w1', name: '第一章', contentType: 'writing', active: true },
+        ],
+      },
+      adapters,
+    );
     expect(result).toContain('[執筆] 第一章');
     expect(result).toContain('昔々あるところに');
   });
 
   it('コンテンツが見つからないとき空文字を返す', async () => {
     const adapters = createMockAdapters();
-    const result = await fetchActiveTabContent({
-      openTabs: [{ id: 'missing-id', name: 'ない', contentType: 'writing', active: true }],
-    }, adapters);
+    const result = await fetchActiveTabContent(
+      {
+        openTabs: [
+          {
+            id: 'missing-id',
+            name: 'ない',
+            contentType: 'writing',
+            active: true,
+          },
+        ],
+      },
+      adapters,
+    );
     expect(result).toBe('');
   });
 });

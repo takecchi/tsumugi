@@ -1,6 +1,18 @@
-import type { Configuration } from '@tsumugi-chan/client';
-import type { RawAIStreamChunk } from '../types/raw-sse.types';
-import { AIStreamChunk } from '@tsumugi/adapter';
+import {
+  Configuration,
+  ErrorStreamChunkFromJSON,
+  ProposalStreamChunkFromJSON,
+  TextStreamChunkFromJSON,
+  ToolCallStreamChunkFromJSON,
+  ToolResultStreamChunkFromJSON,
+  UsageStreamChunkFromJSON,
+} from '@tsumugi-chan/client';
+import {
+  AIStreamChunk,
+  AIToolCall,
+  AIToolName,
+  FieldChange,
+} from '@tsumugi/adapter';
 
 /**
  * RequestOpts から SSE リクエストを発行する
@@ -12,7 +24,7 @@ export async function fetchSSE(
     method: string;
     headers: Record<string, string>;
     body?: unknown;
-  }
+  },
 ): Promise<Response> {
   const url = `${configuration.basePath}${requestOpts.path}`;
 
@@ -20,15 +32,15 @@ export async function fetchSSE(
     method: requestOpts.method,
     headers: {
       ...requestOpts.headers,
-      Accept: 'text/event-stream'
+      Accept: 'text/event-stream',
     },
     body:
-      requestOpts.body != null ? JSON.stringify(requestOpts.body) : undefined
+      requestOpts.body != null ? JSON.stringify(requestOpts.body) : undefined,
   });
 
   if (!response.ok) {
     throw new Error(
-      `SSE request failed: ${response.status} ${response.statusText}`
+      `SSE request failed: ${response.status} ${response.statusText}`,
     );
   }
 
@@ -39,7 +51,7 @@ export async function fetchSSE(
  * SSE レスポンスの body を ReadableStream<AIStreamChunk> に変換する
  */
 export function parseSSEStream(
-  response: Response
+  response: Response,
 ): ReadableStream<AIStreamChunk> {
   const body = response.body;
   if (!body) {
@@ -47,7 +59,7 @@ export function parseSSEStream(
       start(controller) {
         controller.enqueue({ type: 'error', error: 'No response body' });
         controller.close();
-      }
+      },
     });
   }
 
@@ -82,7 +94,7 @@ export function parseSSEStream(
         } catch (err) {
           controller.enqueue({
             type: 'error',
-            error: err instanceof Error ? err.message : String(err)
+            error: err instanceof Error ? err.message : String(err),
           });
           controller.close();
         }
@@ -97,7 +109,7 @@ export function parseSSEStream(
       reader.cancel().catch((e) => {
         console.error('[adapter-api] Failed to cancel SSE stream reader:', e);
       });
-    }
+    },
   });
 }
 
@@ -106,56 +118,105 @@ function parseSSEEvent(raw: string): AIStreamChunk | null {
   if (!dataLine) return null;
 
   try {
-    const data = JSON.parse(dataLine.slice(6)) as RawAIStreamChunk;
+    const data = JSON.parse(dataLine.slice(6));
     return toAIStreamChunk(data);
   } catch {
     return null;
   }
 }
 
-export function toAIStreamChunk(raw: RawAIStreamChunk): AIStreamChunk {
-  const type = raw.type;
-  const chunk: AIStreamChunk = { type };
+export function hasType(raw: unknown): raw is { type: string } {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return false;
+  }
+  return 'type' in raw && typeof raw.type === 'string';
+}
 
-  switch (type) {
-    case 'text':
-      chunk.content = raw.content;
-      break;
-    case 'tool_call':
-      if (raw.tool_call) {
-        chunk.toolCall = raw.tool_call as AIStreamChunk['toolCall'];
+/**
+ * AIStreamChunkとして返す
+ * @param raw
+ */
+export function toAIStreamChunk(raw: unknown): AIStreamChunk {
+  if (!hasType(raw)) throw new Error('Invalid SSE chunk');
+  switch (raw.type) {
+    case 'text': {
+      const textChunk = TextStreamChunkFromJSON(raw);
+      return {
+        type: 'text',
+        content: textChunk.content,
+      };
+    }
+    case 'tool_call': {
+      const toolCallChunk = ToolCallStreamChunkFromJSON(raw);
+      return {
+        type: 'tool_call',
+        toolCall: toolCallChunk.toolCall as AIToolCall,
+      };
+    }
+    case 'tool_result': {
+      const toolResultChunk = ToolResultStreamChunkFromJSON(raw);
+      return {
+        type: 'tool_result',
+        toolResult: toolResultChunk.toolResult as {
+          toolCallId: string;
+          toolName: AIToolName;
+          result: string;
+        },
+      };
+    }
+    case 'proposal': {
+      const proposalChunk = ProposalStreamChunkFromJSON(raw);
+      const diffs: FieldChange<string | unknown>[] = [];
+      for (const replacePreview of proposalChunk.proposal.replacePreviews) {
+        diffs.push({
+          fieldName: replacePreview.fieldName,
+          before: replacePreview.before,
+          after: replacePreview.after,
+        });
       }
-      break;
-    case 'tool_result':
-      if (raw.tool_result) {
-        chunk.toolResult = raw.tool_result as unknown as AIStreamChunk['toolResult'];
-      }
-      break;
-    case 'proposal':
-      if (raw.proposal) {
-        chunk.proposal = raw.proposal as unknown as AIStreamChunk['proposal'];
-      }
-      break;
-    case 'usage':
-      if (raw.usage) {
-        const usage = raw.usage as {
-          prompt_tokens: number,
-          completion_tokens: number,
-          total_tokens: number,
-        };
-        chunk.usage = {
-          promptTokens: usage.prompt_tokens,
-          completionTokens: usage.completion_tokens,
-          totalTokens: usage.total_tokens,
+      for (const lineEditsPreview of proposalChunk.proposal.lineEditsPreviews) {
+        for (const preview of lineEditsPreview.previews) {
+          diffs.push({
+            fieldName: lineEditsPreview.fieldName,
+            before: preview.before,
+            after: preview.after,
+            previewStart: preview.previewStart,
+            previewEnd: preview.previewEnd,
+          });
         }
       }
-      break;
-    case 'error':
-      chunk.error = raw.error;
-      break;
-    case 'done':
-      break;
+      return {
+        type: 'proposal',
+        proposal: {
+          id: proposalChunk.proposal.toolCallId ?? '',
+          action: proposalChunk.proposal.action,
+          targetId: proposalChunk.proposal.targetId ?? '',
+          contentType: proposalChunk.proposal.contentType,
+          targetName: proposalChunk.proposal.targetName,
+          status: proposalChunk.proposal.proposalStatus,
+          diffs,
+        },
+      };
+    }
+    case 'usage': {
+      const usageChunk = UsageStreamChunkFromJSON(raw);
+      return {
+        type: 'usage',
+        usage: usageChunk.usage,
+      };
+    }
+    case 'error': {
+      const errorChunk = ErrorStreamChunkFromJSON(raw);
+      return {
+        type: 'error',
+        error: errorChunk.error,
+      };
+    }
+    case 'done': {
+      return {
+        type: 'done',
+      };
+    }
   }
-
-  return chunk;
+  throw new Error('Invalid SSE chunk');
 }

@@ -50,7 +50,8 @@ export async function getOrCreateSummary(
 
   // 直近 RECENT_TURNS_TO_KEEP ターン分の開始インデックスを特定
   const keepFromUserIndex = userMessageIndices.length - RECENT_TURNS_TO_KEEP;
-  const recentStartIndex = keepFromUserIndex > 0 ? userMessageIndices[keepFromUserIndex] : 0;
+  const recentStartIndex =
+    keepFromUserIndex > 0 ? userMessageIndices[keepFromUserIndex] : 0;
 
   if (recentStartIndex === 0) {
     return { summary: '', recentStartIndex: 0 };
@@ -68,7 +69,10 @@ export async function getOrCreateSummary(
   const toSummarize = messages.slice(0, recentStartIndex);
   const conversationLines: string[] = [];
   for (const m of toSummarize) {
-    if (m.messageType === 'text' && (m.role === 'user' || m.role === 'assistant')) {
+    if (
+      m.messageType === 'text' &&
+      (m.role === 'user' || m.role === 'assistant')
+    ) {
       const label = m.role === 'user' ? 'ユーザー' : 'アシスタント';
       conversationLines.push(`${label}: ${m.content}`);
     }
@@ -86,7 +90,8 @@ export async function getOrCreateSummary(
       messages: [
         {
           role: 'system',
-          content: '以下の会話履歴を簡潔に要約してください。重要な決定事項、ユーザーの要望、議論の結論を中心に、300文字程度でまとめてください。要約のみを返してください。',
+          content:
+            '以下の会話履歴を簡潔に要約してください。重要な決定事項、ユーザーの要望、議論の結論を中心に、300文字程度でまとめてください。要約のみを返してください。',
         },
         { role: 'user', content: conversationLines.join('\n') },
       ],
@@ -96,7 +101,10 @@ export async function getOrCreateSummary(
     const summary = text.trim();
     if (summary) {
       // キャッシュに保存
-      await writeJson(summaryPath, { summary, summarizedUpTo: recentStartIndex } satisfies SummaryJson);
+      await writeJson(summaryPath, {
+        summary,
+        summarizedUpTo: recentStartIndex,
+      } satisfies SummaryJson);
       return { summary, recentStartIndex };
     }
   } catch (e) {
@@ -109,7 +117,11 @@ export async function getOrCreateSummary(
 /**
  * 軽量モデルでセッションタイトルを生成し session.json を更新
  */
-export async function generateTitle(config: AIAdapterConfig, userMessage: string, sessionDir: string): Promise<void> {
+export async function generateTitle(
+  config: AIAdapterConfig,
+  userMessage: string,
+  sessionDir: string,
+): Promise<void> {
   const titleModel = createTitleModel(config);
 
   const { text } = await generateText({
@@ -117,7 +129,8 @@ export async function generateTitle(config: AIAdapterConfig, userMessage: string
     messages: [
       {
         role: 'system',
-        content: 'ユーザーのメッセージから会話のタイトルを生成してください。15文字程度の簡潔な日本語で、タイトルのみを返してください。',
+        content:
+          'ユーザーのメッセージから会話のタイトルを生成してください。15文字程度の簡潔な日本語で、タイトルのみを返してください。',
       },
       { role: 'user', content: userMessage },
     ],

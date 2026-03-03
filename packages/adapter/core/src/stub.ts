@@ -3,7 +3,7 @@ import type { Adapter, AdapterConfig } from './adapter';
 const notImplemented = (): never => {
   throw new Error(
     '@tsumugi/adapter: This is a stub implementation. ' +
-    'Replace with @tsumugi/adapter-local or @tsumugi/adapter-api at build time.'
+      'Replace with @tsumugi/adapter-local or @tsumugi/adapter-api at build time.',
   );
 };
 

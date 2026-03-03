@@ -1,1 +1,1 @@
-export * from "./ai-panel";
+export * from './ai-panel';

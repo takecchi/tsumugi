@@ -1,16 +1,16 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { Markdown } from "./markdown";
+import type { Meta, StoryObj } from '@storybook/react';
+import { Markdown } from './markdown';
 
 const meta = {
-  title: "UI/Markdown",
+  title: 'UI/Markdown',
   component: Markdown,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: "600px", width: "100%" }}>
+      <div style={{ maxWidth: '600px', width: '100%' }}>
         <Story />
       </div>
     ),

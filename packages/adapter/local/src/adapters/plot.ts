@@ -1,5 +1,12 @@
 import type { PlotAdapter, Plot, TreeNode, NodeType } from '@tsumugi/adapter';
-import { ensureDir, readJson, writeJson, removeFile, listDir, join } from '@/internal/utils/fs';
+import {
+  ensureDir,
+  readJson,
+  writeJson,
+  removeFile,
+  listDir,
+  join,
+} from '@/internal/utils/fs';
 import { generateId, now } from '@/internal/utils/id';
 import { extractParentPath } from '@/internal/utils/path';
 import { getProjectDataDir } from '@/internal/utils/project-index';
@@ -34,7 +41,8 @@ export function createPlotAdapter(_workDir?: string): PlotAdapter {
     return join(projectDir, 'plots');
   };
 
-  const toNodeType = (raw: string): NodeType => raw === 'folder' ? 'folder' : 'plot';
+  const toNodeType = (raw: string): NodeType =>
+    raw === 'folder' ? 'folder' : 'plot';
 
   const toPlot = (json: PlotJson, fullPath: string): Plot => ({
     id: fullPath,
@@ -113,7 +121,9 @@ export function createPlotAdapter(_workDir?: string): PlotAdapter {
       return items.filter((i) => i.parentId === parentId);
     },
 
-    async create(data: Omit<Plot, 'id' | 'createdAt' | 'updatedAt'>): Promise<Plot> {
+    async create(
+      data: Omit<Plot, 'id' | 'createdAt' | 'updatedAt'>,
+    ): Promise<Plot> {
       const id = generateId();
       const timestamp = now();
       const dir = await getPlotsDir(data.projectId);
@@ -140,7 +150,10 @@ export function createPlotAdapter(_workDir?: string): PlotAdapter {
       return toPlot(json, filePath);
     },
 
-    async update(id: string, data: Partial<Omit<Plot, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>): Promise<Plot> {
+    async update(
+      id: string,
+      data: Partial<Omit<Plot, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>,
+    ): Promise<Plot> {
       const existing = await readJson<PlotJson>(id);
       if (!existing) throw new Error(`Plot not found: ${id}`);
 
@@ -155,7 +168,9 @@ export function createPlotAdapter(_workDir?: string): PlotAdapter {
         ...(data.theme !== undefined ? { theme: data.theme } : {}),
         ...(data.structure !== undefined ? { structure: data.structure } : {}),
         ...(data.conflict !== undefined ? { conflict: data.conflict } : {}),
-        ...(data.resolution !== undefined ? { resolution: data.resolution } : {}),
+        ...(data.resolution !== undefined
+          ? { resolution: data.resolution }
+          : {}),
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
         updatedAt: now().toISOString(),
       };
@@ -172,7 +187,11 @@ export function createPlotAdapter(_workDir?: string): PlotAdapter {
       await removeFile(id);
     },
 
-    async move(id: string, newParentId: string | null, newOrder: number): Promise<Plot> {
+    async move(
+      id: string,
+      newParentId: string | null,
+      newOrder: number,
+    ): Promise<Plot> {
       return this.update(id, { parentId: newParentId, order: newOrder });
     },
 

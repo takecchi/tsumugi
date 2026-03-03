@@ -4,7 +4,10 @@ import type { ToolAdapters } from '@/adapters/ai-tools';
 /**
  * プロジェクトの全コンテンツ名一覧を取得してシステムプロンプト用テキストに変換
  */
-export async function buildProjectSummary(projectId: string, adapters: ToolAdapters): Promise<string> {
+export async function buildProjectSummary(
+  projectId: string,
+  adapters: ToolAdapters,
+): Promise<string> {
   const [project, plots, characters, memos, writings] = await Promise.all([
     adapters.projects.getById(projectId),
     adapters.plots.getByProjectId(projectId),
@@ -20,8 +23,12 @@ export async function buildProjectSummary(projectId: string, adapters: ToolAdapt
     if (project.synopsis) lines.push(`- あらすじ: ${project.synopsis}`);
     if (project.theme) lines.push(`- テーマ: ${project.theme}`);
     if (project.goal) lines.push(`- 終着点: ${project.goal}`);
-    if (project.targetWordCount != null) lines.push(`- 執筆予定文字数: ${project.targetWordCount.toLocaleString()}字`);
-    if (project.targetAudience) lines.push(`- ターゲット層: ${project.targetAudience}`);
+    if (project.targetWordCount != null)
+      lines.push(
+        `- 執筆予定文字数: ${project.targetWordCount.toLocaleString()}字`,
+      );
+    if (project.targetAudience)
+      lines.push(`- ターゲット層: ${project.targetAudience}`);
   }
 
   const plotFiles = plots.filter((p) => p.nodeType !== 'folder');
@@ -33,7 +40,9 @@ export async function buildProjectSummary(projectId: string, adapters: ToolAdapt
     lines.push('');
     lines.push(`### プロット一覧（${plotFiles.length}件）`);
     for (const plot of plotFiles) {
-      lines.push(`- ${plot.name} (id: ${plot.id})${plot.synopsis ? ` — ${plot.synopsis.slice(0, 80)}` : ''}`);
+      lines.push(
+        `- ${plot.name} (id: ${plot.id})${plot.synopsis ? ` — ${plot.synopsis.slice(0, 80)}` : ''}`,
+      );
     }
   }
 
@@ -41,7 +50,9 @@ export async function buildProjectSummary(projectId: string, adapters: ToolAdapt
     lines.push('');
     lines.push(`### キャラクター一覧（${charFiles.length}件）`);
     for (const char of charFiles) {
-      lines.push(`- ${char.name} (id: ${char.id})${char.role ? ` — ${char.role}` : ''}`);
+      lines.push(
+        `- ${char.name} (id: ${char.id})${char.role ? ` — ${char.role}` : ''}`,
+      );
     }
   }
 
@@ -49,7 +60,9 @@ export async function buildProjectSummary(projectId: string, adapters: ToolAdapt
     lines.push('');
     lines.push(`### メモ一覧（${memoFiles.length}件）`);
     for (const memo of memoFiles) {
-      lines.push(`- ${memo.name} (id: ${memo.id})${memo.tags?.length ? ` [${memo.tags.join(', ')}]` : ''}`);
+      lines.push(
+        `- ${memo.name} (id: ${memo.id})${memo.tags?.length ? ` [${memo.tags.join(', ')}]` : ''}`,
+      );
     }
   }
 
@@ -57,7 +70,9 @@ export async function buildProjectSummary(projectId: string, adapters: ToolAdapt
     lines.push('');
     lines.push(`### 執筆一覧（${writingFiles.length}件）`);
     for (const writing of writingFiles) {
-      lines.push(`- ${writing.name} (id: ${writing.id}) — ${writing.wordCount}文字`);
+      lines.push(
+        `- ${writing.name} (id: ${writing.id}) — ${writing.wordCount}文字`,
+      );
     }
   }
 
@@ -122,7 +137,8 @@ export async function fetchActiveTabContent(
       const memo = await adapters.memos.getById(activeTab.id);
       if (memo) {
         content = memo.content;
-        if (memo.tags?.length) content = `タグ: ${memo.tags.join(', ')}\n\n${content}`;
+        if (memo.tags?.length)
+          content = `タグ: ${memo.tags.join(', ')}\n\n${content}`;
       }
       break;
     }
@@ -137,6 +153,7 @@ export async function fetchActiveTabContent(
 
   if (!content) return '';
 
-  const label = contentTypeLabels[activeTab.contentType] ?? activeTab.contentType;
+  const label =
+    contentTypeLabels[activeTab.contentType] ?? activeTab.contentType;
   return `\n\n## 現在編集中のコンテンツ\n[${label}] ${activeTab.name} (id: ${activeTab.id})\n\n\`\`\`\n${content}\n\`\`\``;
 }

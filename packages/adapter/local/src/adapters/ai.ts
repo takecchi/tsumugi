@@ -11,20 +11,44 @@ import type {
   AITokenUsage,
   AIStreamChunk,
 } from '@tsumugi/adapter';
-import { ensureDir, join, listDir, readJson, removeDir, writeJson } from '@/internal/utils/fs';
+import {
+  ensureDir,
+  join,
+  listDir,
+  readJson,
+  removeDir,
+  writeJson,
+} from '@/internal/utils/fs';
 import { now } from '@/internal/utils/id';
-import { toAIMessage, type SessionJson, type MessageJson } from '@/internal/helpers/ai-logic';
+import {
+  toAIMessage,
+  type SessionJson,
+  type MessageJson,
+} from '@/internal/helpers/ai-logic';
 import type { ToolAdapters } from './ai-tools';
 import { generateTitle } from '@/internal/helpers/ai-summary';
 import { readMemories, removeMemory } from '@/internal/helpers/ai-memory';
-import { getSessionsDir, getProjectIdFromSessionPath, rejectAllPendingProposals, updateProposalStatusInMessages } from '@/internal/helpers/ai-session';
+import {
+  getSessionsDir,
+  getProjectIdFromSessionPath,
+  rejectAllPendingProposals,
+  updateProposalStatusInMessages,
+} from '@/internal/helpers/ai-session';
 import { createChatStream } from '@/internal/helpers/ai-stream';
-import { executeAcceptProposal, buildProposalResult } from '@/internal/helpers/ai-proposal';
+import {
+  executeAcceptProposal,
+  buildProposalResult,
+} from '@/internal/helpers/ai-proposal';
 
-export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolAdapters): AIAdapter {
+export function createAIAdapter(
+  aiConfig?: AIAdapterConfig,
+  toolAdapters?: ToolAdapters,
+): AIAdapter {
   const getConfig = (): AIAdapterConfig => {
     if (!aiConfig) {
-      throw new Error('AI adapter config is not provided. Pass ai config via AdapterConfig.local.ai.');
+      throw new Error(
+        'AI adapter config is not provided. Pass ai config via AdapterConfig.local.ai.',
+      );
     }
     return aiConfig;
   };
@@ -37,7 +61,10 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
   };
 
   return {
-    async chat(sessionId: string, request: AIChatRequest): Promise<ReadableStream<AIStreamChunk>> {
+    async chat(
+      sessionId: string,
+      request: AIChatRequest,
+    ): Promise<ReadableStream<AIStreamChunk>> {
       const config = getConfig();
       const sessionDir = sessionId;
       const sessionPath = await join(sessionDir, 'session.json');
@@ -52,9 +79,13 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
 
       // リバート処理
       if (request.revertToMessageId) {
-        const revertIndex = messages.findIndex((_, i) => `${sessionId}#${i}` === request.revertToMessageId);
+        const revertIndex = messages.findIndex(
+          (_, i) => `${sessionId}#${i}` === request.revertToMessageId,
+        );
         if (revertIndex === -1) {
-          throw new Error(`Message not found for revert: ${request.revertToMessageId}`);
+          throw new Error(
+            `Message not found for revert: ${request.revertToMessageId}`,
+          );
         }
         messages = messages.slice(0, revertIndex + 1);
       }
@@ -62,7 +93,15 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
       // pending 提案が残っていれば自動的にすべて拒否する
       await rejectAllPendingProposals(sessionId);
 
-      return await createChatStream(config, request, sessionDir, sessionJson, messages, getProjectIdFromSessionPath(sessionId), getToolAdapters());
+      return await createChatStream(
+        config,
+        request,
+        sessionDir,
+        sessionJson,
+        messages,
+        getProjectIdFromSessionPath(sessionId),
+        getToolAdapters(),
+      );
     },
 
     async getSessions(projectId: string): Promise<AIChatSession[]> {
@@ -88,7 +127,9 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
         }
       }
 
-      return sessions.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      return sessions.sort(
+        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+      );
     },
 
     async getSession(sessionId: string): Promise<AIChatSession | null> {
@@ -112,13 +153,21 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
       return messages.map((m, i) => toAIMessage(m, i, sessionId));
     },
 
-    async createSession(projectId: string, request: AIChatMessageRequest): Promise<{ session: AIChatSession; stream: ReadableStream<AIStreamChunk> }> {
+    async createSession(
+      projectId: string,
+      request: AIChatMessageRequest,
+    ): Promise<{
+      session: AIChatSession;
+      stream: ReadableStream<AIStreamChunk>;
+    }> {
       const config = getConfig();
       const dirName = crypto.randomUUID();
       const timestamp = now();
 
       // 仮タイトル（軽量モデルで並行生成し後から更新）
-      const placeholderTitle = request.message.slice(0, 20) + (request.message.length > 20 ? '...' : '');
+      const placeholderTitle =
+        request.message.slice(0, 20) +
+        (request.message.length > 20 ? '...' : '');
 
       const sessionsDir = await getSessionsDir(projectId);
       const sessionDir = await join(sessionsDir, dirName);
@@ -144,7 +193,15 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
         updatedAt: timestamp,
       };
 
-      const stream = await createChatStream(config, request, sessionDir, sessionJson, [], projectId, getToolAdapters());
+      const stream = await createChatStream(
+        config,
+        request,
+        sessionDir,
+        sessionJson,
+        [],
+        projectId,
+        getToolAdapters(),
+      );
 
       // 軽量モデルでタイトルを並行生成（fire-and-forget）
       generateTitle(config, request.message, sessionDir).catch((e) =>
@@ -154,14 +211,30 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
       return { session, stream };
     },
 
-    async acceptProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult> {
-      return await executeAcceptProposal(sessionId, toolCallId, getConfig, getToolAdapters);
+    async acceptProposal(
+      sessionId: string,
+      toolCallId: string,
+    ): Promise<AIProposalResult> {
+      return await executeAcceptProposal(
+        sessionId,
+        toolCallId,
+        getConfig,
+        getToolAdapters,
+      );
     },
 
-    async rejectProposal(sessionId: string, toolCallId: string): Promise<AIProposalResult> {
+    async rejectProposal(
+      sessionId: string,
+      toolCallId: string,
+    ): Promise<AIProposalResult> {
       await updateProposalStatusInMessages(sessionId, toolCallId, 'rejected');
       const feedback: AIProposalFeedback = { toolCallId, status: 'rejected' };
-      return await buildProposalResult(sessionId, feedback, getConfig, getToolAdapters);
+      return await buildProposalResult(
+        sessionId,
+        feedback,
+        getConfig,
+        getToolAdapters,
+      );
     },
 
     async deleteSession(sessionId: string): Promise<void> {
@@ -190,7 +263,11 @@ export function createAIAdapter(aiConfig?: AIAdapterConfig, toolAdapters?: ToolA
 
       const dirs = await listDir(sessionsDir);
       const sessionUsages: AIProjectUsage['sessions'] = [];
-      const total: AITokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      const total: AITokenUsage = {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      };
 
       for (const dirName of dirs) {
         const sessionDir = await join(sessionsDir, dirName);

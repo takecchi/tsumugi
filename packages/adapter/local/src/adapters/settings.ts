@@ -1,4 +1,9 @@
-import type { ProjectSettingsAdapter, ProjectSettings, SavedEditorTab, EditorTabType } from '@tsumugi/adapter';
+import type {
+  ProjectSettingsAdapter,
+  ProjectSettings,
+  SavedEditorTab,
+  EditorTabType,
+} from '@tsumugi/adapter';
 import { readJson, writeJson, ensureDir, join } from '@/internal/utils/fs';
 import { getProjectDataDir } from '@/internal/utils/project-index';
 
@@ -14,19 +19,38 @@ interface SettingsJson {
   openTabs?: SavedEditorTabJson[];
 }
 
-const VALID_TAB_TYPES: EditorTabType[] = ['plot', 'character', 'memo', 'writing', 'project'];
+const VALID_TAB_TYPES: EditorTabType[] = [
+  'plot',
+  'character',
+  'memo',
+  'writing',
+  'project',
+];
 
 function isValidTabType(value: unknown): value is EditorTabType {
-  return typeof value === 'string' && VALID_TAB_TYPES.includes(value as EditorTabType);
+  return (
+    typeof value === 'string' &&
+    VALID_TAB_TYPES.includes(value as EditorTabType)
+  );
 }
 
 function toSavedEditorTabs(json: SavedEditorTabJson[]): SavedEditorTab[] {
   return json
     .filter(
-      (t): t is Required<Pick<SavedEditorTabJson, 'id' | 'name' | 'type'>> & SavedEditorTabJson =>
-        typeof t.id === 'string' && typeof t.name === 'string' && isValidTabType(t.type),
+      (
+        t,
+      ): t is Required<Pick<SavedEditorTabJson, 'id' | 'name' | 'type'>> &
+        SavedEditorTabJson =>
+        typeof t.id === 'string' &&
+        typeof t.name === 'string' &&
+        isValidTabType(t.type),
     )
-    .map((t) => ({ id: t.id, name: t.name, type: t.type as EditorTabType, ...(t.active ? { active: true } : {}) }));
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      type: t.type as EditorTabType,
+      ...(t.active ? { active: true } : {}),
+    }));
 }
 
 const DEFAULT_SETTINGS: ProjectSettings = {
@@ -56,7 +80,10 @@ export function createSettingsAdapter(): ProjectSettingsAdapter {
       return toProjectSettings(json);
     },
 
-    async update(projectId: string, data: Partial<ProjectSettings>): Promise<ProjectSettings> {
+    async update(
+      projectId: string,
+      data: Partial<ProjectSettings>,
+    ): Promise<ProjectSettings> {
       const path = await getSettingsPath(projectId);
       const existing = (await readJson<SettingsJson>(path)) ?? {};
 

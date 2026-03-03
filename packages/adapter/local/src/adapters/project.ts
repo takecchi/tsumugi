@@ -1,5 +1,12 @@
 import type { ProjectAdapter, Project } from '@tsumugi/adapter';
-import { ensureDir, writeJson, readJson, removeDir, join, exists } from '@/internal/utils/fs';
+import {
+  ensureDir,
+  writeJson,
+  readJson,
+  removeDir,
+  join,
+  exists,
+} from '@/internal/utils/fs';
 import { now } from '@/internal/utils/id';
 import {
   ProjectJson,
@@ -44,7 +51,9 @@ export function createProjectAdapter(workDir?: string): ProjectAdapter {
       return toProject({ ...json, path: id });
     },
 
-    async create(data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project> {
+    async create(
+      data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>,
+    ): Promise<Project> {
       // name をそのままディレクトリ名として使用
       const baseDir = await getWorkDir(workDir);
       const projectPath = await join(baseDir, data.name);
@@ -73,7 +82,10 @@ export function createProjectAdapter(workDir?: string): ProjectAdapter {
       return toProject({ ...json, path: projectPath });
     },
 
-    async update(id: string, data: Partial<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Project> {
+    async update(
+      id: string,
+      data: Partial<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>>,
+    ): Promise<Project> {
       // id = fullPath
       const metaPath = await join(id, '.tsumugi', 'project.json');
       const existing = await readJson<ProjectJson>(metaPath);

@@ -91,9 +91,7 @@ export function createPlotAdapter(clients: ApiClients): PlotAdapter {
 
     async update(
       id: string,
-      data: Partial<
-        Omit<Plot, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>
-      >,
+      data: Partial<Omit<Plot, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>,
     ): Promise<Plot> {
       const plot = await clients.plots.updatePlot({
         plotId: id,

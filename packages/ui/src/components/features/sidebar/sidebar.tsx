@@ -78,7 +78,16 @@ interface TreeNodeProps {
   isLast?: boolean;
 }
 
-function TreeNode({ node, level, onSelect, onDelete, onMoveUp, onMoveDown, isFirst, isLast }: TreeNodeProps) {
+function TreeNode({
+  node,
+  level,
+  onSelect,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+}: TreeNodeProps) {
   const { selectedId, expandedIds, onToggleExpand } = useSidebarContext();
   const isExpanded = expandedIds.has(node.id);
   const isSelected = selectedId === node.id;
@@ -144,7 +153,10 @@ function TreeNode({ node, level, onSelect, onDelete, onMoveUp, onMoveDown, isFir
             <Button
               variant="ghost"
               size="icon-xs"
-              onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveUp();
+              }}
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowUp className="size-3" />
@@ -154,7 +166,10 @@ function TreeNode({ node, level, onSelect, onDelete, onMoveUp, onMoveDown, isFir
             <Button
               variant="ghost"
               size="icon-xs"
-              onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveDown();
+              }}
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowDown className="size-3" />
@@ -196,7 +211,10 @@ function TreeNode({ node, level, onSelect, onDelete, onMoveUp, onMoveDown, isFir
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
               キャンセル
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
@@ -220,7 +238,11 @@ export interface SidebarSectionProps {
   onReorder?: (parentId: string | null, orderedIds: string[]) => void;
 }
 
-function swapNodes(nodes: TreeNodeData[], index: number, direction: 'up' | 'down'): string[] {
+function swapNodes(
+  nodes: TreeNodeData[],
+  index: number,
+  direction: 'up' | 'down',
+): string[] {
   const ids = nodes.map((n) => n.id);
   const targetIndex = direction === 'up' ? index - 1 : index + 1;
   if (targetIndex < 0 || targetIndex >= ids.length) return ids;
@@ -279,7 +301,9 @@ export function SidebarSection({
               onSelect={onSelect}
               onDelete={onDelete}
               onMoveUp={onReorder ? () => handleMove(index, 'up') : undefined}
-              onMoveDown={onReorder ? () => handleMove(index, 'down') : undefined}
+              onMoveDown={
+                onReorder ? () => handleMove(index, 'down') : undefined
+              }
               isFirst={index === 0}
               isLast={index === nodes.length - 1}
             />
@@ -304,7 +328,12 @@ export interface SidebarProps {
   children?: React.ReactNode;
 }
 
-export function Sidebar({ selectedId, header, className, children }: SidebarProps) {
+export function Sidebar({
+  selectedId,
+  header,
+  className,
+  children,
+}: SidebarProps) {
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
 
   const handleToggleExpand = React.useCallback((id: string) => {
@@ -337,4 +366,3 @@ export function Sidebar({ selectedId, header, className, children }: SidebarProp
     </SidebarContext.Provider>
   );
 }
-

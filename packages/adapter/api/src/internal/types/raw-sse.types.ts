@@ -2,11 +2,7 @@
  * バックエンドから受信する生のSSEデータの型定義
  * snake_caseのフィールド名を持つ
  */
-import {
-  AIStreamChunk,
-  AIProposalFeedback,
-  AIProposalResult,
-} from '@tsumugi-chan/client';
+import { AIProposalFeedback, AIProposalResult } from '@tsumugi-chan/client';
 
 // 文字列をcamelCaseからsnake_caseに変換する型
 type CamelToSnakeCase<S extends string> = S extends `${infer T}${infer U}`
@@ -23,17 +19,6 @@ type Raw<T> = T extends object
           [K in keyof T as CamelToSnakeCase<string & K>]: Raw<T[K]>;
         }
   : T;
-
-/** 生のAIStreamChunk */
-export interface RawAIStreamChunk {
-  type: AIStreamChunk['type'];
-  content: AIStreamChunk['content'];
-  tool_call: AIStreamChunk['toolCall'];
-  tool_result: AIStreamChunk['toolResult'];
-  proposal: AIStreamChunk['proposal'];
-  usage: AIStreamChunk['usage'];
-  error: AIStreamChunk['error'];
-}
 
 /** 生のAIProposalResult */
 export type RawAIProposalResult = Raw<AIProposalResult>;

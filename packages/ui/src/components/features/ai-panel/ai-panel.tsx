@@ -1,66 +1,82 @@
-import * as React from "react"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { Send, PenLine, MessageCircle, Plus, Search, ChevronDown, Check, XCircle } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { isIMEActive } from "@/lib/keyboard-utils"
-import { Markdown } from "@/components/ui/markdown"
+import * as React from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import {
+  Send,
+  PenLine,
+  MessageCircle,
+  Plus,
+  Search,
+  ChevronDown,
+  Check,
+  XCircle,
+} from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { isIMEActive } from '@/lib/keyboard-utils';
+import { Markdown } from '@/components/ui/markdown';
+import { DiffInline } from '@/components/ui/diff-highlight';
 
-export type AiMode = "write" | "ask"
+export type AiMode = 'write' | 'ask';
 
-interface LineEdit {
-  startLine: number
-  endLine: number
-  newText: string
+interface LineNumber {
+  line: number;
+  col: number;
 }
 
-type FieldChange =
-  | { type: "replace"; value: unknown }
-  | { type: "line_edits"; edits: LineEdit[] }
+interface FieldChange<T extends string | unknown> {
+  fieldName?: string;
+  before: T;
+  after: T;
+  previewStart?: LineNumber;
+  previewEnd?: LineNumber;
+}
 
 export interface Proposal {
-  id: string
-  action: "create" | "update"
-  contentType: string
-  targetName: string
-  original?: Record<string, unknown>
-  proposed: Record<string, FieldChange>
-  status: "pending" | "accepted" | "rejected" | "conflict"
+  id: string;
+  action: 'create' | 'update';
+  contentType: string;
+  targetName: string;
+  diffs: FieldChange<string | unknown>[];
+  status: 'pending' | 'accepted' | 'rejected' | 'conflict';
 }
 
 interface TextMessage {
-  id: string
-  role: "user" | "assistant"
-  content: string
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 interface ProposalMessage {
-  id: string
-  role: "assistant"
-  proposal: Proposal
+  id: string;
+  role: 'assistant';
+  proposal: Proposal;
 }
 
-export type Message = TextMessage | ProposalMessage
+export type Message = TextMessage | ProposalMessage;
 
 export interface Conversation {
-  id: string
-  title: string
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // --- AiPanel (シェル) ---
 
 export interface AiPanelProps {
-  conversations?: Conversation[]
-  currentConversationId?: string
-  onNewConversation?: () => void
-  onSelectConversation?: (conversationId: string) => void
-  children?: React.ReactNode
-  className?: string
+  conversations?: Conversation[];
+  currentConversationId?: string;
+  onNewConversation?: () => void;
+  onSelectConversation?: (conversationId: string) => void;
+  children?: React.ReactNode;
+  className?: string;
 }
 
 function ConversationSelector({
@@ -68,23 +84,30 @@ function ConversationSelector({
   currentConversationId,
   onSelectConversation,
 }: {
-  conversations?: Conversation[]
-  currentConversationId?: string
-  onSelectConversation?: (conversationId: string) => void
+  conversations?: Conversation[];
+  currentConversationId?: string;
+  onSelectConversation?: (conversationId: string) => void;
 }) {
-  const [searchQuery, setSearchQuery] = React.useState("")
-  
-  const currentConversation = conversations?.find(c => c.id === currentConversationId)
-  
-  const filteredConversations = conversations?.filter(conv => 
-    conv.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const currentConversation = conversations?.find(
+    (c) => c.id === currentConversationId,
+  );
+
+  const filteredConversations = conversations?.filter((conv) =>
+    conv.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="flex-1 w-0 min-w-0 justify-start h-7">
-          <span className="truncate">{currentConversation ? currentConversation.title : "新しいチャット"}</span>
+        <Button
+          variant="ghost"
+          className="flex-1 w-0 min-w-0 justify-start h-7"
+        >
+          <span className="truncate">
+            {currentConversation ? currentConversation.title : '新しいチャット'}
+          </span>
           <ChevronDown className="size-4 ml-1 shrink-0" />
         </Button>
       </PopoverTrigger>
@@ -111,12 +134,18 @@ function ConversationSelector({
                 filteredConversations?.map((conversation) => (
                   <Button
                     key={conversation.id}
-                    variant={conversation.id === currentConversationId ? "secondary" : "ghost"}
+                    variant={
+                      conversation.id === currentConversationId
+                        ? 'secondary'
+                        : 'ghost'
+                    }
                     className="w-full justify-start text-left h-auto p-2"
                     onClick={() => onSelectConversation?.(conversation.id)}
                   >
                     <div className="flex flex-col min-w-0">
-                      <span className="font-medium text-sm truncate">{conversation.title}</span>
+                      <span className="font-medium text-sm truncate">
+                        {conversation.title}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         {conversation.updatedAt.toLocaleDateString()}
                       </span>
@@ -129,7 +158,7 @@ function ConversationSelector({
         </div>
       </PopoverContent>
     </Popover>
-  )
+  );
 }
 
 export function AiPanel({
@@ -141,7 +170,7 @@ export function AiPanel({
   className,
 }: AiPanelProps) {
   return (
-    <div className={cn("flex h-full flex-col", className)}>
+    <div className={cn('flex h-full flex-col', className)}>
       {/* ヘッダー */}
       <div className="flex items-center justify-between border-b px-3 py-1.5">
         <ConversationSelector
@@ -162,51 +191,49 @@ export function AiPanel({
       </div>
 
       {/* children（コンテンツ + 入力欄） */}
-      <div className="flex flex-1 flex-col min-h-0">
-        {children}
-      </div>
+      <div className="flex flex-1 flex-col min-h-0">{children}</div>
     </div>
-  )
+  );
 }
 
 // --- AiPanelContent (メッセージ表示 or 空状態) ---
 
 export interface AiPanelContentProps {
-  messages?: Message[]
-  description?: string
-  onAcceptProposal?: (proposalId: string) => void
-  onRejectProposal?: (proposalId: string) => void
-  isLoading?: boolean
+  messages?: Message[];
+  description?: string;
+  onAcceptProposal?: (proposalId: string) => void;
+  onRejectProposal?: (proposalId: string) => void;
+  isLoading?: boolean;
 }
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
-  plot: "プロット",
-  character: "キャラクター",
-  memo: "メモ",
-  writing: "執筆",
-}
+  plot: 'プロット',
+  character: 'キャラクター',
+  memo: 'メモ',
+  writing: '執筆',
+};
 
 const FIELD_LABELS: Record<string, string> = {
-  name: "名前",
-  content: "内容",
-  synopsis: "あらすじ",
-  setting: "舞台設定",
-  theme: "テーマ",
-  structure: "構成",
-  conflict: "対立・葛藤",
-  resolution: "結末",
-  notes: "備考",
-  aliases: "別名",
-  role: "役職",
-  gender: "性別",
-  age: "年齢",
-  appearance: "外見",
-  personality: "性格",
-  background: "経歴",
-  motivation: "動機",
-  relationships: "人間関係",
-  tags: "タグ",
-}
+  name: '名前',
+  content: '内容',
+  synopsis: 'あらすじ',
+  setting: '舞台設定',
+  theme: 'テーマ',
+  structure: '構成',
+  conflict: '対立・葛藤',
+  resolution: '結末',
+  notes: '備考',
+  aliases: '別名',
+  role: '役職',
+  gender: '性別',
+  age: '年齢',
+  appearance: '外見',
+  personality: '性格',
+  background: '経歴',
+  motivation: '動機',
+  relationships: '人間関係',
+  tags: 'タグ',
+};
 
 function ProposalDiff({
   proposal,
@@ -214,23 +241,22 @@ function ProposalDiff({
   onReject,
   isLoading = false,
 }: {
-  proposal: Proposal
-  onAccept?: () => void
-  onReject?: () => void
-  isLoading?: boolean
+  proposal: Proposal;
+  onAccept?: () => void;
+  onReject?: () => void;
+  isLoading?: boolean;
 }) {
-  const typeLabel = CONTENT_TYPE_LABELS[proposal.contentType] ?? proposal.contentType
-  const actionLabel = proposal.action === "create" ? "作成" : "変更"
-  const status = proposal.status
+  const typeLabel =
+    CONTENT_TYPE_LABELS[proposal.contentType] ?? proposal.contentType;
+  const actionLabel = proposal.action === 'create' ? '作成' : '変更';
+  const status = proposal.status;
 
   const statusBadge = {
-    accepted: { label: "承認済み", className: "text-green-600" },
-    rejected: { label: "拒否済み", className: "text-muted-foreground" },
-    conflict: { label: "コンフリクト", className: "text-destructive" },
+    accepted: { label: '承認済み', className: 'text-green-600' },
+    rejected: { label: '拒否済み', className: 'text-muted-foreground' },
+    conflict: { label: 'コンフリクト', className: 'text-destructive' },
     pending: null,
-  }[status]
-
-  const fields = Object.keys(proposal.proposed).filter((k) => k !== "parentId")
+  }[status];
 
   return (
     <div className="rounded-md border p-3 space-y-3">
@@ -239,81 +265,89 @@ function ProposalDiff({
           [{typeLabel}] {proposal.targetName} の{actionLabel}提案
         </p>
         {statusBadge && (
-          <span className={cn("text-xs font-medium", statusBadge.className)}>
+          <span className={cn('text-xs font-medium', statusBadge.className)}>
             {statusBadge.label}
           </span>
         )}
       </div>
 
-      {fields.map((field) => {
-        const label = FIELD_LABELS[field] ?? field
-        const change = proposal.proposed[field]
+      {proposal.diffs.map((diff, index) => {
+        const label =
+          FIELD_LABELS[diff.fieldName || ''] ??
+          diff.fieldName ??
+          `変更${index + 1}`;
 
-        if (change.type === "line_edits") {
+        // 行編集の場合（previewStartとpreviewEndがある場合）
+        if (diff.previewStart && diff.previewEnd) {
+          const beforeText = String(diff.before || '');
+          const afterText = String(diff.after || '');
+
           return (
-            <div key={field} className="space-y-1">
-              <p className="text-xs text-muted-foreground font-medium">{label}（行編集）</p>
-              {change.edits.map((edit, i) => (
-                <div key={i} className="rounded border p-2 space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    {edit.startLine > edit.endLine
-                      ? `${edit.startLine}行目の前に挿入`
-                      : edit.newText === ""
-                        ? `${edit.startLine}–${edit.endLine}行を削除`
-                        : `${edit.startLine}–${edit.endLine}行を置換`}
-                  </p>
-                  {edit.startLine <= edit.endLine && proposal.original && (
-                    <div className="text-sm whitespace-pre-wrap bg-destructive/10 rounded p-1.5 line-through text-muted-foreground">
-                      {Array.from({ length: edit.endLine - edit.startLine + 1 }, (_, j) => {
-                        const lineKey = `line_${edit.startLine + j}`
-                        return String(proposal.original?.[lineKey] ?? "")
-                      }).join("\n") || "（空）"}
-                    </div>
-                  )}
-                  {edit.newText !== "" && (
-                    <div className="text-sm whitespace-pre-wrap bg-green-500/10 rounded p-1.5">
-                      {edit.newText}
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div key={index} className="space-y-1">
+              <div className="rounded border p-2 space-y-1">
+                <DiffInline
+                  label={`${label} ${diff.previewStart.line}-${diff.previewEnd.line}行を変更`}
+                  oldText={beforeText}
+                  newText={afterText}
+                  className="text-sm"
+                />
+              </div>
             </div>
-          )
+          );
         }
 
-        // replace
-        const proposedVal = String(change.value ?? "")
-        const originalVal = proposal.original ? String(proposal.original[field] ?? "") : undefined
+        // 通常の置換
+        const beforeText = String(diff.before || '');
+        const afterText = String(diff.after || '');
 
+        // 差分がある場合はハイライト表示
+        if (
+          proposal.action === 'update' &&
+          diff.before != null &&
+          beforeText !== afterText
+        ) {
+          return (
+            <div key={index} className="space-y-1">
+              <DiffInline
+                label={label}
+                oldText={beforeText}
+                newText={afterText}
+                className="text-sm"
+              />
+            </div>
+          );
+        }
+
+        // 新規作成または差分がない場合は通常表示
         return (
-          <div key={field} className="space-y-1">
+          <div key={index} className="space-y-1">
             <p className="text-xs text-muted-foreground font-medium">{label}</p>
-            {proposal.action === "update" && originalVal !== undefined && originalVal !== proposedVal && (
-              <div className="text-sm whitespace-pre-wrap bg-destructive/10 rounded p-2 line-through text-muted-foreground">
-                {originalVal || "（空）"}
-              </div>
-            )}
             <div className="text-sm whitespace-pre-wrap bg-green-500/10 rounded p-2">
-              {proposedVal || "（空）"}
+              {afterText || '（空）'}
             </div>
           </div>
-        )
+        );
       })}
 
-      {status === "pending" && (
+      {status === 'pending' && (
         <div className="flex gap-2">
           <Button size="sm" onClick={onAccept} disabled={isLoading}>
             <Check className="size-3 mr-1" />
-            {isLoading ? "処理中..." : "承認"}
+            {isLoading ? '処理中...' : '承認'}
           </Button>
-          <Button size="sm" variant="outline" onClick={onReject} disabled={isLoading}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onReject}
+            disabled={isLoading}
+          >
             <XCircle className="size-3 mr-1" />
-            {isLoading ? "処理中..." : "拒否"}
+            {isLoading ? '処理中...' : '拒否'}
           </Button>
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function MessageBubble({
@@ -322,12 +356,12 @@ function MessageBubble({
   onRejectProposal,
   isLoading = false,
 }: {
-  message: Message
-  onAcceptProposal?: (proposalId: string) => void
-  onRejectProposal?: (proposalId: string) => void
-  isLoading?: boolean
+  message: Message;
+  onAcceptProposal?: (proposalId: string) => void;
+  onRejectProposal?: (proposalId: string) => void;
+  isLoading?: boolean;
 }) {
-  if ("proposal" in message) {
+  if ('proposal' in message) {
     return (
       <div className="w-full">
         <ProposalDiff
@@ -337,19 +371,14 @@ function MessageBubble({
           isLoading={isLoading}
         />
       </div>
-    )
+    );
   }
 
-  const isUser = message.role === "user"
+  const isUser = message.role === 'user';
 
   return (
     <div
-      className={cn(
-        "w-full",
-        isUser
-          ? "rounded-lg border px-3 py-1.5"
-          : ""
-      )}
+      className={cn('w-full', isUser ? 'rounded-lg border px-3 py-1.5' : '')}
     >
       {isUser ? (
         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -357,47 +386,48 @@ function MessageBubble({
         <Markdown className="text-sm">{message.content}</Markdown>
       )}
     </div>
-  )
+  );
 }
 
 /**
  * 最下部にいるときだけ自動スクロールするフック
  */
 function useAutoScroll(deps: React.DependencyList) {
-  const viewportRef = React.useRef<HTMLDivElement>(null)
-  const isAtBottomRef = React.useRef(true)
+  const viewportRef = React.useRef<HTMLDivElement>(null);
+  const isAtBottomRef = React.useRef(true);
 
-  const THRESHOLD = 30
+  const THRESHOLD = 30;
 
   const handleScroll = React.useCallback(() => {
-    const el = viewportRef.current
-    if (!el) return
-    isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= THRESHOLD
-  }, [])
+    const el = viewportRef.current;
+    if (!el) return;
+    isAtBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight <= THRESHOLD;
+  }, []);
 
   React.useEffect(() => {
-    const el = viewportRef.current
-    if (!el) return
-    el.addEventListener("scroll", handleScroll, { passive: true })
-    return () => el.removeEventListener("scroll", handleScroll)
-  }, [handleScroll])
+    const el = viewportRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   React.useEffect(() => {
-    const el = viewportRef.current
+    const el = viewportRef.current;
     if (el && isAtBottomRef.current) {
-      el.scrollTop = el.scrollHeight
+      el.scrollTop = el.scrollHeight;
     }
-  }, deps)
+  }, deps);
 
   const scrollToBottom = React.useCallback(() => {
-    const el = viewportRef.current
+    const el = viewportRef.current;
     if (el) {
-      el.scrollTop = el.scrollHeight
-      isAtBottomRef.current = true
+      el.scrollTop = el.scrollHeight;
+      isAtBottomRef.current = true;
     }
-  }, [])
+  }, []);
 
-  return { viewportRef, scrollToBottom }
+  return { viewportRef, scrollToBottom };
 }
 
 export function AiPanelContent({
@@ -407,16 +437,16 @@ export function AiPanelContent({
   onRejectProposal,
   isLoading = false,
 }: AiPanelContentProps) {
-  const { viewportRef, scrollToBottom } = useAutoScroll([messages, isLoading])
+  const { viewportRef, scrollToBottom } = useAutoScroll([messages, isLoading]);
 
   // 送信時（メッセージ数が増えたとき）は強制スクロール
-  const prevMessageCountRef = React.useRef(messages.length)
+  const prevMessageCountRef = React.useRef(messages.length);
   React.useEffect(() => {
     if (messages.length > prevMessageCountRef.current) {
-      scrollToBottom()
+      scrollToBottom();
     }
-    prevMessageCountRef.current = messages.length
-  }, [messages.length, scrollToBottom])
+    prevMessageCountRef.current = messages.length;
+  }, [messages.length, scrollToBottom]);
 
   return (
     <ScrollArea className="flex-1 min-h-0" viewportRef={viewportRef}>
@@ -424,7 +454,9 @@ export function AiPanelContent({
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             <p className="text-lg font-medium mb-2">始めましょう</p>
-            {description && <p className="text-sm whitespace-pre-wrap">{description}</p>}
+            {description && (
+              <p className="text-sm whitespace-pre-wrap">{description}</p>
+            )}
           </div>
         ) : (
           messages.map((message) => (
@@ -444,24 +476,24 @@ export function AiPanelContent({
         )}
       </div>
     </ScrollArea>
-  )
+  );
 }
 
 // --- AiPanelInput (入力欄 + モード切替) ---
 
 export interface AiPanelInputProps {
-  mode: AiMode
-  onModeChange?: (mode: AiMode) => void
-  onSend?: (message: string) => void
-  isLoading?: boolean
+  mode: AiMode;
+  onModeChange?: (mode: AiMode) => void;
+  onSend?: (message: string) => void;
+  isLoading?: boolean;
 }
 
 function ModeToggleFooter({
   mode,
   onModeChange,
 }: {
-  mode: AiMode
-  onModeChange?: (mode: AiMode) => void
+  mode: AiMode;
+  onModeChange?: (mode: AiMode) => void;
 }) {
   return (
     <Popover>
@@ -471,7 +503,7 @@ function ModeToggleFooter({
           size="sm"
           className="h-8 px-2 text-xs font-medium"
         >
-          {mode === "write" ? (
+          {mode === 'write' ? (
             <>
               <PenLine className="size-3 mr-1" />
               Write
@@ -489,19 +521,19 @@ function ModeToggleFooter({
       <PopoverContent className="w-32 p-1" align="start">
         <div className="space-y-1">
           <Button
-            variant={mode === "write" ? "secondary" : "ghost"}
+            variant={mode === 'write' ? 'secondary' : 'ghost'}
             size="sm"
             className="w-full justify-start h-7 text-xs"
-            onClick={() => onModeChange?.("write")}
+            onClick={() => onModeChange?.('write')}
           >
             <PenLine className="size-3 mr-1" />
             Write
           </Button>
           <Button
-            variant={mode === "ask" ? "secondary" : "ghost"}
+            variant={mode === 'ask' ? 'secondary' : 'ghost'}
             size="sm"
             className="w-full justify-start h-7 text-xs"
-            onClick={() => onModeChange?.("ask")}
+            onClick={() => onModeChange?.('ask')}
           >
             <MessageCircle className="size-3 mr-1" />
             Ask
@@ -509,7 +541,7 @@ function ModeToggleFooter({
         </div>
       </PopoverContent>
     </Popover>
-  )
+  );
 }
 
 export function AiPanelInput({
@@ -518,15 +550,15 @@ export function AiPanelInput({
   onSend,
   isLoading = false,
 }: AiPanelInputProps) {
-  const [input, setInput] = React.useState("")
+  const [input, setInput] = React.useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (input.trim() && !isLoading) {
-      onSend?.(input.trim())
-      setInput("")
+      onSend?.(input.trim());
+      setInput('');
     }
-  }
+  };
 
   return (
     <div className="p-2">
@@ -535,16 +567,14 @@ export function AiPanelInput({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={
-            mode === "write"
-              ? "どのような文章を書きますか？"
-              : "質問を入力..."
+            mode === 'write' ? 'どのような文章を書きますか？' : '質問を入力...'
           }
           className="resize-none border-0 rounded-t-lg rounded-b-none focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[80px]"
           rows={3}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !isIMEActive(e)) {
-              e.preventDefault()
-              handleSubmit(e)
+            if (e.key === 'Enter' && !e.shiftKey && !isIMEActive(e)) {
+              e.preventDefault();
+              handleSubmit(e);
             }
           }}
         />
@@ -562,6 +592,5 @@ export function AiPanelInput({
         </div>
       </div>
     </div>
-  )
+  );
 }
-

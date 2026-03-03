@@ -6,15 +6,15 @@ import type { ContentItemKey, ContentTreeKey } from '~/hooks/keys';
 
 type MemoTreeKey = ContentTreeKey<'memo'>;
 
-
 /**
  * プロジェクト内のメモツリーを取得する
  * @param projectId - プロジェクトID
  */
 export function useMemoTree(projectId: string) {
   const adapter = useAdapter();
-  return useSWR<TreeNode[], Error, MemoTreeKey>({ type: 'memoTree', projectId }, ({ projectId }) =>
-    adapter.memos.getTreeByProjectId(projectId),
+  return useSWR<TreeNode[], Error, MemoTreeKey>(
+    { type: 'memoTree', projectId },
+    ({ projectId }) => adapter.memos.getTreeByProjectId(projectId),
   );
 }
 
@@ -25,7 +25,10 @@ type MemoKey = ContentItemKey<'memo'>;
  * @param id - メモID
  * @param config
  */
-export function useMemo(id: string, config?: SWRConfiguration<Memo | null, Error>) {
+export function useMemo(
+  id: string,
+  config?: SWRConfiguration<Memo | null, Error>,
+) {
   const adapter = useAdapter();
   return useSWR<Memo | null, Error, MemoKey>(
     { type: 'memo', id },
@@ -34,7 +37,10 @@ export function useMemo(id: string, config?: SWRConfiguration<Memo | null, Error
   );
 }
 
-type CreateMemoData = Omit<Memo, 'projectId' | 'id' | 'createdAt' | 'updatedAt'>;
+type CreateMemoData = Omit<
+  Memo,
+  'projectId' | 'id' | 'createdAt' | 'updatedAt'
+>;
 
 /**
  * メモを作成する
@@ -45,14 +51,17 @@ export function useCreateMemo(projectId: string) {
   const adapter = useAdapter();
   return useSWRMutation<Memo, Error, MemoTreeKey, CreateMemoData>(
     { type: 'memoTree', projectId },
-    ({ projectId }, { arg }) => adapter.memos.create({
-      projectId,
-      ...arg,
-    }),
+    ({ projectId }, { arg }) =>
+      adapter.memos.create({
+        projectId,
+        ...arg,
+      }),
   );
 }
 
-type UpdateMemoData = Partial<Omit<Memo, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>;
+type UpdateMemoData = Partial<
+  Omit<Memo, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>
+>;
 
 /**
  * メモを更新する
@@ -134,7 +143,8 @@ interface MemosByTagKey {
  */
 export function useMemosByTag(projectId: string, tag: string) {
   const adapter = useAdapter();
-  return useSWR<Memo[], Error, MemosByTagKey>({ type: 'memosByTag', projectId, tag }, ({ projectId, tag }) =>
-    adapter.memos.getByTag(projectId, tag),
+  return useSWR<Memo[], Error, MemosByTagKey>(
+    { type: 'memosByTag', projectId, tag },
+    ({ projectId, tag }) => adapter.memos.getByTag(projectId, tag),
   );
 }

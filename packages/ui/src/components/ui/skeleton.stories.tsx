@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { Skeleton } from "./skeleton";
+import type { Meta, StoryObj } from '@storybook/react';
+import { Skeleton } from './skeleton';
 
 const meta = {
-  title: "UI/Skeleton",
+  title: 'UI/Skeleton',
   component: Skeleton,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof Skeleton>;
 
 export default meta;
@@ -15,13 +15,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    className: "h-4 w-[200px]",
+    className: 'h-4 w-[200px]',
   },
 };
 
 export const Circle: Story = {
   args: {
-    className: "size-10 rounded-full",
+    className: 'size-10 rounded-full',
   },
 };
 

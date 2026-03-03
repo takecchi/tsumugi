@@ -1,8 +1,6 @@
 import type {
   AIAdapterConfig,
   AIChatRequest,
-  AIFieldChange,
-  AIProposal,
   AIStreamChunk,
   AIToolName,
   ContentType,
@@ -17,12 +15,14 @@ import {
   type SessionUsageJson,
   type ProposalJson,
   type MessageJson,
+  AIFieldChange,
 } from './ai-logic';
 import { createAITools, type ToolAdapters } from '@/adapters/ai-tools';
 import { createModel } from './ai-model';
 import { getOrCreateSummary } from './ai-summary';
 import { buildProjectSummary, fetchActiveTabContent } from './ai-context';
 import { addMemory, removeMemory, buildMemoriesSection } from './ai-memory';
+import { jsonToAIProposal } from '@/internal/helpers/ai-proposal';
 
 /**
  * ストリーミングチャットを実行し ReadableStream<AIStreamChunk> を返す
@@ -50,27 +50,40 @@ export async function createChatStream(
   }
 
   // プロジェクトサマリー、アクティブタブ内容、会話要約、AIメモリを並行取得
-  const [projectSummary, activeTabContent, summaryResult, memoriesSection] = await Promise.all([
-    buildProjectSummary(projectId, toolAdapters),
-    fetchActiveTabContent(request?.context, toolAdapters),
-    getOrCreateSummary(config, sessionDir, messages),
-    buildMemoriesSection(projectId),
-  ]);
+  const [projectSummary, activeTabContent, summaryResult, memoriesSection] =
+    await Promise.all([
+      buildProjectSummary(projectId, toolAdapters),
+      fetchActiveTabContent(request?.context, toolAdapters),
+      getOrCreateSummary(config, sessionDir, messages),
+      buildMemoriesSection(projectId),
+    ]);
 
   // 要約がある場合は古いメッセージを除外し、要約を注入
-  const recentMessages = summaryResult.recentStartIndex > 0
-    ? messages.slice(summaryResult.recentStartIndex)
-    : messages;
+  const recentMessages =
+    summaryResult.recentStartIndex > 0
+      ? messages.slice(summaryResult.recentStartIndex)
+      : messages;
 
   // フィードバック自動応答時（request undefined）は write モード
   const mode = request?.mode ?? 'write';
 
-  const systemPrompt = buildSystemPrompt(mode, request?.context, projectSummary, activeTabContent, memoriesSection);
+  const systemPrompt = buildSystemPrompt(
+    mode,
+    request?.context,
+    projectSummary,
+    activeTabContent,
+    memoriesSection,
+  );
 
   const aiMessages: ModelMessage[] = [
     { role: 'system', content: systemPrompt },
     ...(summaryResult.summary
-      ? [{ role: 'system' as const, content: `## これまでの会話の要約\n${summaryResult.summary}` }]
+      ? [
+          {
+            role: 'system' as const,
+            content: `## これまでの会話の要約\n${summaryResult.summary}`,
+          },
+        ]
       : []),
     ...toAISDKMessages(recentMessages),
   ];
@@ -91,8 +104,12 @@ export async function createChatStream(
     messages: aiMessages,
     tools,
     stopWhen: stepCountIs(mode === 'write' ? 8 : 5),
-    ...(request?.config?.temperature !== undefined ? { temperature: request.config.temperature } : {}),
-    ...(request?.config?.maxTokens !== undefined ? { maxOutputTokens: request.config.maxTokens } : {}),
+    ...(request?.config?.temperature !== undefined
+      ? { temperature: request.config.temperature }
+      : {}),
+    ...(request?.config?.maxTokens !== undefined
+      ? { maxOutputTokens: request.config.maxTokens }
+      : {}),
   });
 
   let fullTextContent = '';
@@ -121,11 +138,13 @@ export async function createChatStream(
               messages.push({
                 role: 'assistant',
                 messageType: 'tool_call',
-                content: JSON.stringify([{
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  args: part.input,
-                }]),
+                content: JSON.stringify([
+                  {
+                    toolCallId: part.toolCallId,
+                    toolName: part.toolName,
+                    args: part.input,
+                  },
+                ]),
               });
               break;
             }
@@ -140,21 +159,19 @@ export async function createChatStream(
                   targetId: output.targetId as string,
                   contentType: output.contentType as ContentType,
                   targetName: output.targetName as string,
-                  ...(output.updatedAt ? { updatedAt: output.updatedAt as string } : {}),
-                  ...(output.original ? { original: output.original as Record<string, unknown> } : {}),
+                  ...(output.updatedAt
+                    ? { updatedAt: output.updatedAt as string }
+                    : {}),
+                  ...(output.original
+                    ? { original: output.original as Record<string, unknown> }
+                    : {}),
                   proposed: output.proposed as Record<string, AIFieldChange>,
+                  status: 'pending',
                 };
-                const proposal: AIProposal = {
-                  id: proposalJson.id,
-                  action: proposalJson.action,
-                  targetId: proposalJson.targetId,
-                  contentType: proposalJson.contentType,
-                  targetName: proposalJson.targetName,
-                  updatedAt: proposalJson.updatedAt ? new Date(proposalJson.updatedAt) : undefined,
-                  original: proposalJson.original,
-                  proposed: proposalJson.proposed,
-                };
-                controller.enqueue({ type: 'proposal', proposal });
+                controller.enqueue({
+                  type: 'proposal',
+                  proposal: jsonToAIProposal(proposalJson),
+                });
 
                 // 提案をメッセージとして保存（JSON形式）
                 messages.push({
@@ -162,7 +179,6 @@ export async function createChatStream(
                   messageType: 'proposal',
                   content: '',
                   proposal: proposalJson,
-                  proposalStatus: 'pending',
                 });
               } else {
                 // 通常のツール結果
@@ -180,11 +196,13 @@ export async function createChatStream(
               messages.push({
                 role: 'tool',
                 messageType: 'tool_result',
-                content: JSON.stringify([{
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  result: part.output,
-                }]),
+                content: JSON.stringify([
+                  {
+                    toolCallId: part.toolCallId,
+                    toolName: part.toolName,
+                    result: part.output,
+                  },
+                ]),
               });
               break;
             }
@@ -216,12 +234,18 @@ export async function createChatStream(
 
         // セッションのupdatedAtとusageを更新（タイトル生成との競合を避けるため最新を読み直す）
         const sessionPath = await join(sessionDir, 'session.json');
-        const latestSessionJson = await readJson<SessionJson>(sessionPath) ?? sessionJson;
+        const latestSessionJson =
+          (await readJson<SessionJson>(sessionPath)) ?? sessionJson;
         latestSessionJson.updatedAt = now().toISOString();
-        const prevUsage = latestSessionJson.usage ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+        const prevUsage = latestSessionJson.usage ?? {
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        };
         latestSessionJson.usage = {
           promptTokens: prevUsage.promptTokens + usageData.promptTokens,
-          completionTokens: prevUsage.completionTokens + usageData.completionTokens,
+          completionTokens:
+            prevUsage.completionTokens + usageData.completionTokens,
           totalTokens: prevUsage.totalTokens + usageData.totalTokens,
         };
         await writeJson(sessionPath, latestSessionJson);
@@ -232,7 +256,8 @@ export async function createChatStream(
         controller.enqueue({ type: 'done' });
         controller.close();
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         controller.enqueue({ type: 'error', error: errorMessage });
         controller.close();
       }

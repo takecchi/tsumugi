@@ -25,6 +25,12 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
     characters,
     memos,
     writings,
-    ai: createAIAdapter(config.local?.ai, { projects, plots, characters, memos, writings }),
+    ai: createAIAdapter(config.local?.ai, {
+      projects,
+      plots,
+      characters,
+      memos,
+      writings,
+    }),
   };
 }

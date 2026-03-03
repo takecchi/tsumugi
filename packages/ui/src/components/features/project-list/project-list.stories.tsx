@@ -1,45 +1,45 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
-import { ProjectList, type ProjectItem } from "./project-list";
+import type { Meta, StoryObj } from '@storybook/react';
+import { useState } from 'react';
+import { ProjectList, type ProjectItem } from './project-list';
 
 const mockProjects: ProjectItem[] = [
   {
-    id: "1",
-    name: "hoge",
-    path: "~/TsumugiProjects/hoge",
+    id: '1',
+    name: 'hoge',
+    path: '~/TsumugiProjects/hoge',
   },
   {
-    id: "2",
-    name: "test",
-    path: "~/TsumugiProjects/test",
+    id: '2',
+    name: 'test',
+    path: '~/TsumugiProjects/test',
   },
   {
-    id: "3",
-    name: "私の小説",
-    path: "~/TsumugiProjects/my-novel",
+    id: '3',
+    name: '私の小説',
+    path: '~/TsumugiProjects/my-novel',
   },
   {
-    id: "4",
-    name: "短編集",
-    path: "~/TsumugiProjects/short-stories",
+    id: '4',
+    name: '短編集',
+    path: '~/TsumugiProjects/short-stories',
   },
   {
-    id: "5",
-    name: "ファンタジー長編",
-    path: "~/TsumugiProjects/fantasy",
+    id: '5',
+    name: 'ファンタジー長編',
+    path: '~/TsumugiProjects/fantasy',
   },
 ];
 
 const meta = {
-  title: "Features/ProjectList",
+  title: 'Features/ProjectList',
   component: ProjectList,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ width: "360px" }}>
+      <div style={{ width: '360px' }}>
         <Story />
       </div>
     ),
@@ -59,7 +59,7 @@ export const Default: Story = {
 export const WithSelection: Story = {
   args: {
     projects: mockProjects,
-    selectedId: "2",
+    selectedId: '2',
   },
 };
 
@@ -90,7 +90,7 @@ export const Interactive: StoryObj = {
 
     const handleSelect = (project: ProjectItem) => {
       setSelectedId(project.id);
-      console.log("Selected project:", project);
+      console.log('Selected project:', project);
     };
 
     return (

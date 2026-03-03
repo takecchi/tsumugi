@@ -1,5 +1,12 @@
 import type { MemoAdapter, Memo, TreeNode, NodeType } from '@tsumugi/adapter';
-import { ensureDir, readJson, writeJson, removeFile, listDir, join } from '@/internal/utils/fs';
+import {
+  ensureDir,
+  readJson,
+  writeJson,
+  removeFile,
+  listDir,
+  join,
+} from '@/internal/utils/fs';
 import { generateId, now } from '@/internal/utils/id';
 import { extractParentPath } from '@/internal/utils/path';
 import { getProjectDataDir } from '@/internal/utils/project-index';
@@ -29,7 +36,8 @@ export function createMemoAdapter(_workDir?: string): MemoAdapter {
     return join(projectDir, 'memos');
   };
 
-  const toNodeType = (raw: string): NodeType => raw === 'folder' ? 'folder' : 'memo';
+  const toNodeType = (raw: string): NodeType =>
+    raw === 'folder' ? 'folder' : 'memo';
 
   const toMemo = (json: MemoJson, fullPath: string): Memo => ({
     id: fullPath,
@@ -103,7 +111,9 @@ export function createMemoAdapter(_workDir?: string): MemoAdapter {
       return items.filter((i) => i.parentId === parentId);
     },
 
-    async create(data: Omit<Memo, 'id' | 'createdAt' | 'updatedAt'>): Promise<Memo> {
+    async create(
+      data: Omit<Memo, 'id' | 'createdAt' | 'updatedAt'>,
+    ): Promise<Memo> {
       const id = generateId();
       const timestamp = now();
       const dir = await getMemosDir(data.projectId);
@@ -125,7 +135,10 @@ export function createMemoAdapter(_workDir?: string): MemoAdapter {
       return toMemo(json, filePath);
     },
 
-    async update(id: string, data: Partial<Omit<Memo, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>): Promise<Memo> {
+    async update(
+      id: string,
+      data: Partial<Omit<Memo, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>,
+    ): Promise<Memo> {
       const existing = await readJson<MemoJson>(id);
       if (!existing) throw new Error(`Memo not found: ${id}`);
 
@@ -152,7 +165,11 @@ export function createMemoAdapter(_workDir?: string): MemoAdapter {
       await removeFile(id);
     },
 
-    async move(id: string, newParentId: string | null, newOrder: number): Promise<Memo> {
+    async move(
+      id: string,
+      newParentId: string | null,
+      newOrder: number,
+    ): Promise<Memo> {
       return this.update(id, { parentId: newParentId, order: newOrder });
     },
 

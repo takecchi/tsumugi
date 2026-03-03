@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import type { Meta, StoryObj } from '@storybook/react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 
 const meta = {
-  title: "UI/Tabs",
+  title: 'UI/Tabs',
   component: Tabs,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof Tabs>;
 
 export default meta;
@@ -51,19 +51,25 @@ export const Vertical: Story = {
       <TabsContent value="account" className="mt-4">
         <div className="space-y-2">
           <h3 className="text-lg font-medium">アカウント設定</h3>
-          <p className="text-sm text-muted-foreground">アカウント情報を管理します。</p>
+          <p className="text-sm text-muted-foreground">
+            アカウント情報を管理します。
+          </p>
         </div>
       </TabsContent>
       <TabsContent value="password" className="mt-4">
         <div className="space-y-2">
           <h3 className="text-lg font-medium">パスワード設定</h3>
-          <p className="text-sm text-muted-foreground">パスワードを変更します。</p>
+          <p className="text-sm text-muted-foreground">
+            パスワードを変更します。
+          </p>
         </div>
       </TabsContent>
       <TabsContent value="notifications" className="mt-4">
         <div className="space-y-2">
           <h3 className="text-lg font-medium">通知設定</h3>
-          <p className="text-sm text-muted-foreground">通知の設定を管理します。</p>
+          <p className="text-sm text-muted-foreground">
+            通知の設定を管理します。
+          </p>
         </div>
       </TabsContent>
     </Tabs>

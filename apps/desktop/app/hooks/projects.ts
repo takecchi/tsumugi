@@ -27,7 +27,10 @@ interface ProjectKey {
  * @param id - プロジェクトID
  * @param config
  */
-export function useProject(id: string, config?: SWRConfiguration<Project | null, Error>) {
+export function useProject(
+  id: string,
+  config?: SWRConfiguration<Project | null, Error>,
+) {
   const adapter = useAdapter();
   return useSWR<Project | null, Error, ProjectKey>(
     { type: 'project', id },
@@ -50,7 +53,9 @@ export function useCreateProject() {
   );
 }
 
-type UpdateProjectData = Partial<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>>;
+type UpdateProjectData = Partial<
+  Omit<Project, 'id' | 'createdAt' | 'updatedAt'>
+>;
 
 /**
  * プロジェクトを更新する

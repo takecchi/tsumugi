@@ -31,7 +31,10 @@ export async function readMemories(projectId: string): Promise<AIMemoryJson[]> {
 /**
  * AIメモリを追加する
  */
-export async function addMemory(projectId: string, content: string): Promise<AIMemoryJson> {
+export async function addMemory(
+  projectId: string,
+  content: string,
+): Promise<AIMemoryJson> {
   const memories = await readMemories(projectId);
   const memory: AIMemoryJson = {
     id: crypto.randomUUID(),
@@ -47,7 +50,10 @@ export async function addMemory(projectId: string, content: string): Promise<AIM
 /**
  * AIメモリを削除する
  */
-export async function removeMemory(projectId: string, memoryId: string): Promise<boolean> {
+export async function removeMemory(
+  projectId: string,
+  memoryId: string,
+): Promise<boolean> {
   const memories = await readMemories(projectId);
   const index = memories.findIndex((m) => m.id === memoryId);
   if (index === -1) return false;

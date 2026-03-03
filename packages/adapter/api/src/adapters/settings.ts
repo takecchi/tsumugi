@@ -32,7 +32,10 @@ export function createSettingsAdapter(): ProjectSettingsAdapter {
   function saveToStorage(projectId: string, settings: ProjectSettings): void {
     if (typeof globalThis.localStorage === 'undefined') return;
     try {
-      globalThis.localStorage.setItem(storageKey(projectId), JSON.stringify(settings));
+      globalThis.localStorage.setItem(
+        storageKey(projectId),
+        JSON.stringify(settings),
+      );
     } catch {
       // ignore quota errors etc.
     }
@@ -52,8 +55,12 @@ export function createSettingsAdapter(): ProjectSettingsAdapter {
       return { ...DEFAULT_SETTINGS };
     },
 
-    async update(projectId: string, data: Partial<ProjectSettings>): Promise<ProjectSettings> {
-      const existing = cache.get(projectId) ?? loadFromStorage(projectId) ?? { ...DEFAULT_SETTINGS };
+    async update(
+      projectId: string,
+      data: Partial<ProjectSettings>,
+    ): Promise<ProjectSettings> {
+      const existing = cache.get(projectId) ??
+        loadFromStorage(projectId) ?? { ...DEFAULT_SETTINGS };
       const updated: ProjectSettings = { ...existing, ...data };
       cache.set(projectId, updated);
       saveToStorage(projectId, updated);
