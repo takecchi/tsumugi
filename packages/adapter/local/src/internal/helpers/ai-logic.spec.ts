@@ -454,7 +454,7 @@ describe('findProposalInArray', () => {
     const result = findProposalInArray(messages, 'prop-42');
     expect(result).toBeDefined();
     expect(result?.id).toBe('prop-42');
-    expect(result?.updatedAt).toEqual(new Date('2025-01-01T00:00:00.000Z'));
+    expect(result?.updatedAt).toEqual('2025-01-01T00:00:00.000Z');
   });
 
   it('見つからない場合は undefined', () => {
