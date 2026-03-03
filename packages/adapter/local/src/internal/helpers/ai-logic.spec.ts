@@ -28,6 +28,7 @@ function makeProposalJson(overrides?: Partial<ProposalJson>): ProposalJson {
     contentType: 'writing',
     targetName: 'テスト執筆',
     proposed: { content: { type: 'replace', value: '新しい内容' } },
+    status: 'pending',
     ...overrides,
   };
 }
@@ -40,8 +41,7 @@ function makeProposalMessage(
     role: 'assistant',
     messageType: 'proposal',
     content: '',
-    proposal: makeProposalJson(overrides),
-    proposalStatus,
+    proposal: makeProposalJson({status: proposalStatus, ...overrides}),
   };
 }
 
@@ -77,25 +77,6 @@ describe('toAIMessage', () => {
       messageType: 'text',
       content: 'こんにちは',
     });
-  });
-
-  it('proposal メッセージを変換する（updatedAt あり）', () => {
-    const json = makeProposalMessage('pending', { updatedAt: '2025-01-01T00:00:00.000Z' });
-    const result = toAIMessage(json, 2, 'session-1');
-    expect(result.messageType).toBe('proposal');
-    if (result.messageType === 'proposal') {
-      expect(result.proposal.updatedAt).toEqual(new Date('2025-01-01T00:00:00.000Z'));
-      expect(result.proposalStatus).toBe('pending');
-    }
-  });
-
-  it('proposal メッセージを変換する（updatedAt なし）', () => {
-    const json = makeProposalMessage('accepted');
-    const result = toAIMessage(json, 1, 'session-1');
-    if (result.messageType === 'proposal') {
-      expect(result.proposal.updatedAt).toBeUndefined();
-      expect(result.proposalStatus).toBe('accepted');
-    }
   });
 });
 
@@ -390,7 +371,7 @@ describe('updateProposalStatusInArray', () => {
     ];
     const result = updateProposalStatusInArray(messages, 'prop-1', 'accepted');
     expect(result).toBe(true);
-    expect(messages[1].proposalStatus).toBe('accepted');
+    expect(messages[1].proposal?.status).toBe('accepted');
   });
 
   it('存在しない提案IDの場合は false', () => {
@@ -463,9 +444,9 @@ describe('rejectAllPendingProposalsInArray', () => {
     ];
     const changed = rejectAllPendingProposalsInArray(messages);
     expect(changed).toBe(true);
-    expect(messages[0].proposalStatus).toBe('rejected');
-    expect(messages[1].proposalStatus).toBe('accepted');
-    expect(messages[2].proposalStatus).toBe('rejected');
+    expect(messages[0].proposal?.status).toBe('rejected');
+    expect(messages[1].proposal?.status).toBe('accepted');
+    expect(messages[2].proposal?.status).toBe('rejected');
   });
 
   it('pending がなければ false', () => {
