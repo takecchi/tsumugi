@@ -190,7 +190,7 @@ export function DiffInline({
             <DiffHighlight
               oldText={oldText}
               newText={newText}
-              showOld={true}
+              showOld
               showNew={false}
             />
           </div>
@@ -204,7 +204,7 @@ export function DiffInline({
               oldText={oldText}
               newText={newText}
               showOld={false}
-              showNew={true}
+              showNew
             />
           </div>
         </div>

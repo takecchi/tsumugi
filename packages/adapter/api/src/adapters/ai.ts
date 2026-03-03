@@ -1,4 +1,4 @@
-import type {
+import {
   AIAdapter,
   AIChatRequest,
   AIChatMessageRequest,
@@ -8,9 +8,11 @@ import type {
   AIProposalResult,
   AIMemory as AdapterAIMemory,
   AIProjectUsage as AdapterAIProjectUsage,
-  AIProposal,
-  AIProposalStatus,
   AIProposalFeedback,
+  AITextMessage,
+  AIToolCallMessage,
+  AIToolResultMessage,
+  AIProposalMessage, FieldChange
 } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import type {
@@ -57,35 +59,64 @@ function toMessage(api: ClientAIMessage): AdapterAIMessage {
         .filter((c) => c.type === 'text')
         .map((c) => c.text)
         .join('');
-      return { ...base, messageType: 'text', content: textContent };
+      return {
+        ...base,
+        messageType: 'text',
+        content: textContent,
+      } satisfies AITextMessage;
     }
     case 'tool_call': {
       return {
         ...base,
         messageType: 'tool_call',
         content: JSON.stringify(api.content),
-      };
+      } satisfies AIToolCallMessage;
     }
     case 'tool_result': {
       return {
         ...base,
         messageType: 'tool_result',
         content: JSON.stringify(api.content),
-      };
+      } satisfies AIToolResultMessage;
     }
     case 'proposal': {
-      const rawProposal = (api.proposal ?? {}) as Record<string, unknown>;
-      const toolCallId = (rawProposal.toolCallId as string) ?? api.id;
-      return {
-        ...base,
-        messageType: 'proposal',
-        proposal: { ...rawProposal, id: toolCallId } as unknown as AIProposal,
-        proposalStatus: (api.proposalStatus ?? 'pending') as AIProposalStatus,
-      };
+      if (api.proposal) {
+        const diffs: FieldChange<string | unknown>[] = [];
+        for (const replacePreview of api.proposal.replacePreviews){
+          diffs.push({
+            fieldName: replacePreview.fieldName,
+            before: replacePreview.before,
+            after: replacePreview.after,
+          });
+        }
+        for (const lineEditsPreview of api.proposal.lineEditsPreviews){
+          for(const preview of lineEditsPreview.previews){
+            diffs.push({
+              fieldName: lineEditsPreview.fieldName,
+              before: preview.before,
+              after: preview.after,
+              previewStart: preview.previewStart,
+              previewEnd: preview.previewEnd,
+            });
+          }
+        }
+        return {
+          ...base,
+          messageType: 'proposal',
+          proposal: {
+            id: api.proposal.toolCallId ?? '',
+            action: api.proposal.action,
+            targetId: api.proposal.targetId ?? '',
+            contentType: api.proposal.contentType,
+            targetName: api.proposal.targetName,
+            diffs: diffs,
+            status: api.proposal.proposalStatus,
+          },
+        } satisfies AIProposalMessage;
+      }
     }
-    default:
-      return { ...base, messageType: 'text', content: '' };
   }
+  return { ...base, messageType: 'text', content: '' };
 }
 
 function toMemory(api: ClientAIMemory): AdapterAIMemory {
@@ -133,7 +164,11 @@ function toChatRequest(request: AIChatRequest): ClientChatRequest {
     revertToMessageId: request.revertToMessageId,
     config: request.config
       ? {
-          model: request.config.model as ClientChatRequest['config'] extends { model?: infer M } ? M : never,
+          model: request.config.model as ClientChatRequest['config'] extends {
+            model?: infer M;
+          }
+            ? M
+            : never,
           temperature: request.config.temperature,
           maxTokens: request.config.maxTokens,
         }

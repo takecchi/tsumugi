@@ -7,7 +7,7 @@ import pluginPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['build', 'node_modules', '.react-router', 'src-tauri/target/**'],
+    ignores: ['build', 'node_modules', '.react-router', 'src-tauri/target/**','.vercel'],
   },
   js.configs.recommended,
   tseslint.configs.recommended,

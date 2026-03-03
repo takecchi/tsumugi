@@ -219,8 +219,8 @@ export const AllViews: Story = {
           <DiffHighlight 
             oldText={sampleTexts.longText.old} 
             newText={sampleTexts.longText.new}
-            showOld={true}
-            showNew={true}
+            showOld
+            showNew
           />
         </div>
         
