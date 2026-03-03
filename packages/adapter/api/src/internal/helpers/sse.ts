@@ -1,9 +1,11 @@
 import {
   Configuration,
+  ErrorStreamChunkFromJSON,
   ProposalStreamChunkFromJSON,
   TextStreamChunkFromJSON,
   ToolCallStreamChunkFromJSON,
   ToolResultStreamChunkFromJSON,
+  UsageStreamChunkFromJSON,
 } from '@tsumugi-chan/client';
 import {
   AIStreamChunk,
@@ -194,6 +196,25 @@ export function toAIStreamChunk(raw: unknown): AIStreamChunk {
           status: proposalChunk.proposal.proposalStatus,
           diffs,
         },
+      };
+    }
+    case 'usage': {
+      const usageChunk = UsageStreamChunkFromJSON(raw);
+      return {
+        type: 'usage',
+        usage: usageChunk.usage,
+      };
+    }
+    case 'error': {
+      const errorChunk = ErrorStreamChunkFromJSON(raw);
+      return {
+        type: 'error',
+        error: errorChunk.error,
+      };
+    }
+    case 'done': {
+      return {
+        type: 'done',
       };
     }
   }
