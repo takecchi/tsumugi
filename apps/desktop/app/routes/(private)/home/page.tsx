@@ -39,8 +39,7 @@ export default function Page() {
   const { data: projects, isLoading } = useProjects();
   const { trigger: createProject, isMutating: isCreating } = useCreateProject();
   const { trigger: logout, isMutating: isLoggingOut } = useLogout();
-  const { trigger: exportProject, isMutating: isExporting } =
-    useExportProject();
+  const { trigger: exportProject } = useExportProject();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState('untitled');
