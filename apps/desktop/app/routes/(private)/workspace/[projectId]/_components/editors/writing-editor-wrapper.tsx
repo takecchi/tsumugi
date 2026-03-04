@@ -64,7 +64,6 @@ export function WritingEditorWrapper({
     <WritingEditor
       name={writing.name}
       content={writing.content}
-      wordCount={writing.wordCount}
       onNameChange={handleNameChange}
       onContentChange={handleContentChange}
     />
