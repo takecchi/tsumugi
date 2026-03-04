@@ -1,7 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { EditorTab, TreeNodeData } from '@tsumugi/ui';
-import type { EditorTabType } from '@tsumugi/adapter';
+import type { EditorTabType, TreeNode } from '@tsumugi/adapter';
 import { useProjectSettings, useUpdateProjectSettings } from '~/hooks/settings';
+import { useWritingTree } from '~/hooks/writings';
+import { usePlotTree } from '~/hooks/plots';
+import { useCharacterTree } from '~/hooks/characters';
+import { useMemoTree } from '~/hooks/memos';
 
 /**
  * selectedNode の型。TreeNodeData の type を EditorTabType に拡張。
@@ -51,6 +55,39 @@ export function useEditorTabs(projectId: string, projectName: string) {
       }
     }
   }, [settings]);
+
+  // ─── ツリーデータ取得（SWRキャッシュ共有、追加リクエストなし） ───
+  const { data: writingTree } = useWritingTree(projectId);
+  const { data: plotTree } = usePlotTree(projectId);
+  const { data: characterTree } = useCharacterTree(projectId);
+  const { data: memoTree } = useMemoTree(projectId);
+
+  // ─── ツリー更新時にタブ名を同期 ───
+  useEffect(() => {
+    const map = new Map<string, string>();
+    function collect(nodes: TreeNode[] | undefined, type: string) {
+      nodes?.forEach((n) => {
+        map.set(`${type}:${n.id}`, n.name);
+        collect(n.children, type);
+      });
+    }
+    collect(writingTree, 'writing');
+    collect(plotTree, 'plot');
+    collect(characterTree, 'character');
+    collect(memoTree, 'memo');
+
+    if (map.size === 0) return; // ツリー未取得時はスキップ
+
+    setOpenTabs((prev) => {
+      const next = prev.map((tab) => ({
+        ...tab,
+        name: map.get(`${tab.type}:${tab.id}`) ?? tab.name,
+      }));
+      // 変更がなければ同じ参照を返す（不要な再レンダリング防止）
+      const hasChange = next.some((t, i) => t.name !== prev[i].name);
+      return hasChange ? next : prev;
+    });
+  }, [writingTree, plotTree, characterTree, memoTree]);
 
   // ─── debounce 付きタブ状態保存 ───
   const saveTabState = useCallback(
