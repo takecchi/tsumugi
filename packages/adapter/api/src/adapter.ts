@@ -8,6 +8,7 @@ import { createMemoAdapter } from '@/adapters/memo';
 import { createWritingAdapter } from '@/adapters/writing';
 import { createSettingsAdapter } from '@/adapters/settings';
 import { createAIAdapter } from '@/adapters/ai';
+import { createExportAdapter } from '@/adapters/export';
 import { TokenManager } from '@/token-manager';
 
 export function createAdapter(config: AdapterConfig = {}): Adapter {
@@ -33,5 +34,6 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
     memos: createMemoAdapter(clients),
     writings: createWritingAdapter(clients),
     ai: createAIAdapter(clients),
+    export: createExportAdapter(clients),
   };
 }

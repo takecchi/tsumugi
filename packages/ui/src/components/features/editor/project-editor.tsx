@@ -2,6 +2,8 @@ import * as React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { DownloadIcon, LoaderCircleIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface ProjectEditorData {
@@ -16,6 +18,8 @@ export interface ProjectEditorData {
 export interface ProjectEditorProps {
   data: ProjectEditorData;
   onChange?: (field: keyof ProjectEditorData, value: string) => void;
+  onExport?: () => void;
+  isExporting?: boolean;
   className?: string;
   readOnly?: boolean;
 }
@@ -48,6 +52,8 @@ const textareaFields: {
 export function ProjectEditor({
   data,
   onChange,
+  onExport,
+  isExporting = false,
   className,
   readOnly = false,
 }: ProjectEditorProps) {
@@ -107,6 +113,23 @@ export function ProjectEditor({
           </div>
         </div>
       </ScrollArea>
+      {onExport && (
+        <div className="border-t px-6 py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExport}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <LoaderCircleIcon className="mr-2 size-4 animate-spin" />
+            ) : (
+              <DownloadIcon className="mr-2 size-4" />
+            )}
+            {isExporting ? 'エクスポート中...' : 'エクスポート (zip)'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

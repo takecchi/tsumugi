@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, type MetaFunction } from 'react-router';
 import { useProjects, useCreateProject } from '~/hooks/projects';
 import { useLogout } from '~/hooks/auth';
+import { useExportProject } from '~/hooks/export';
 import {
   ProjectList,
   Button,
@@ -37,10 +38,14 @@ export default function Page() {
   const { data: projects, isLoading } = useProjects();
   const { trigger: createProject, isMutating: isCreating } = useCreateProject();
   const { trigger: logout, isMutating: isLoggingOut } = useLogout();
+  const { trigger: exportProject } = useExportProject();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState('untitled');
   const [error, setError] = useState<string | null>(null);
+  const [exportingProjectId, setExportingProjectId] = useState<string | null>(
+    null,
+  );
 
   const defaultWorkDir = '~/TsumugiProjects';
 
@@ -71,6 +76,15 @@ export default function Page() {
 
   const handleSelectProject = (project: ProjectItem) => {
     navigate(`${PATH_WORKSPACE}/${encodeURIComponent(project.id)}`);
+  };
+
+  const handleExportProject = async (project: ProjectItem) => {
+    setExportingProjectId(project.id);
+    try {
+      await exportProject(project.id);
+    } finally {
+      setExportingProjectId(null);
+    }
   };
 
   return (
@@ -122,6 +136,8 @@ export default function Page() {
                 projects={toProjectItems(projects)}
                 isLoading={isLoading}
                 onSelect={handleSelectProject}
+                onExport={handleExportProject}
+                exportingProjectId={exportingProjectId}
               />
             </div>
           </div>

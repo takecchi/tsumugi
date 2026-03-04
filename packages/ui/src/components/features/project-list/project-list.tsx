@@ -8,6 +8,8 @@ import {
   CommandItem,
 } from '@/components/ui/command';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { DownloadIcon, LoaderCircleIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface ProjectItem {
@@ -21,6 +23,8 @@ export interface ProjectListProps {
   isLoading?: boolean;
   selectedId?: string | null;
   onSelect?: (project: ProjectItem) => void;
+  onExport?: (project: ProjectItem) => void;
+  exportingProjectId?: string | null;
   placeholder?: string;
   emptyMessage?: string;
   className?: string;
@@ -70,6 +74,8 @@ export function ProjectList({
   isLoading = false,
   selectedId,
   onSelect,
+  onExport,
+  exportingProjectId,
   placeholder = 'プロジェクトの検索',
   emptyMessage = 'プロジェクトが見つかりません',
   className,
@@ -110,7 +116,7 @@ export function ProjectList({
                     >
                       {getInitial(project.name)}
                     </div>
-                    <div className="flex min-w-0 flex-col">
+                    <div className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-sm font-medium">
                         {project.name}
                       </span>
@@ -120,6 +126,24 @@ export function ProjectList({
                         </span>
                       )}
                     </div>
+                    {onExport && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={exportingProjectId != null}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onExport(project);
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        {exportingProjectId === project.id ? (
+                          <LoaderCircleIcon className="size-4 animate-spin" />
+                        ) : (
+                          <DownloadIcon className="size-4" />
+                        )}
+                      </Button>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>

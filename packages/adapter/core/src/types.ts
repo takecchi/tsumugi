@@ -507,3 +507,24 @@ export interface GoogleAuthUrl {
   /** Google OAuth認可URL */
   url: string;
 }
+
+/**
+ * エクスポートのフォーマット
+ */
+export type ExportFormat = 'zip-markdown';
+
+/**
+ * エクスポートオプション
+ */
+export interface ExportOptions {
+  /** エクスポートフォーマット（デフォルト: 'zip-markdown'） */
+  format?: ExportFormat;
+  /** 執筆データを含めるか（デフォルト: true） */
+  includeWritings?: boolean;
+  /** プロットデータを含めるか（デフォルト: true） */
+  includePlots?: boolean;
+  /** キャラクターデータを含めるか（デフォルト: true） */
+  includeCharacters?: boolean;
+  /** メモデータを含めるか（デフォルト: true） */
+  includeMemos?: boolean;
+}

@@ -87,17 +87,28 @@ export const Loading: Story = {
 export const Interactive: StoryObj = {
   render: () => {
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [exportingProjectId, setExportingProjectId] = useState<string | null>(
+      null,
+    );
 
     const handleSelect = (project: ProjectItem) => {
       setSelectedId(project.id);
       console.log('Selected project:', project);
     };
 
+    const handleExport = (project: ProjectItem) => {
+      setExportingProjectId(project.id);
+      console.log('Exporting project:', project);
+      setTimeout(() => setExportingProjectId(null), 2000);
+    };
+
     return (
       <ProjectList
         projects={mockProjects}
         selectedId={selectedId}
+        exportingProjectId={exportingProjectId}
         onSelect={handleSelect}
+        onExport={handleExport}
       />
     );
   },
