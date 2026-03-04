@@ -163,7 +163,6 @@ export const WithContent: Story = {
       <WritingEditor
         name="1-1 出会い"
         content={`# 第1章 出会い\n\n夜明け前の静寂が街を包んでいた。\n\n主人公は窓辺に立ち、遠くに見える山々を眺めていた。`}
-        wordCount={42}
       />
     ),
     aiPanel: (
@@ -469,7 +468,6 @@ function InteractiveDemo() {
           <WritingEditor
             name={selectedNode.name}
             content={d.content}
-            wordCount={d.content.length}
             onContentChange={(content) =>
               setWritingData((prev) => ({ ...prev, [id]: { content } }))
             }
@@ -662,7 +660,6 @@ export const MobileWithContent: Story = {
       <WritingEditor
         name="1-1 出会い"
         content={`# 第1章 出会い\n\n夜明け前の静寂が街を包んでいた。\n\n主人公は窓辺に立ち、遠くに見える山々を眺めていた。`}
-        wordCount={42}
       />
     ),
     aiPanel: (

@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, type MetaFunction } from 'react-router';
-import { useProjects, useCreateProject } from '~/hooks/projects';
+import {
+  useProjects,
+  useCreateProject,
+  useDeleteProjectFromList,
+} from '~/hooks/projects';
 import { useLogout } from '~/hooks/auth';
 import { useExportProject } from '~/hooks/export';
 import {
@@ -8,6 +12,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -39,11 +44,16 @@ export default function Page() {
   const { trigger: createProject, isMutating: isCreating } = useCreateProject();
   const { trigger: logout, isMutating: isLoggingOut } = useLogout();
   const { trigger: exportProject } = useExportProject();
+  const { trigger: deleteProject } = useDeleteProjectFromList();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState('untitled');
   const [error, setError] = useState<string | null>(null);
   const [exportingProjectId, setExportingProjectId] = useState<string | null>(
+    null,
+  );
+  const [deleteTarget, setDeleteTarget] = useState<ProjectItem | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(
     null,
   );
 
@@ -84,6 +94,24 @@ export default function Page() {
       await exportProject(project.id);
     } finally {
       setExportingProjectId(null);
+    }
+  };
+
+  const handleDeleteProject = (project: ProjectItem) => {
+    setDeleteTarget(project);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteTarget(null);
+    setDeletingProjectId(deleteTarget.id);
+    try {
+      await deleteProject(deleteTarget.id);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setError(`プロジェクトの削除に失敗しました: ${errorMessage}`);
+    } finally {
+      setDeletingProjectId(null);
     }
   };
 
@@ -138,6 +166,8 @@ export default function Page() {
                 onSelect={handleSelectProject}
                 onExport={handleExportProject}
                 exportingProjectId={exportingProjectId}
+                onDelete={handleDeleteProject}
+                deletingProjectId={deletingProjectId}
               />
             </div>
           </div>
@@ -181,6 +211,30 @@ export default function Page() {
               disabled={!newProjectTitle.trim() || isCreating}
             >
               {isCreating ? '作成中...' : '作成'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>削除の確認</DialogTitle>
+            <DialogDescription>
+              「{deleteTarget?.name}」を削除しますか？この操作は取り消せません。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              キャンセル
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              削除
             </Button>
           </DialogFooter>
         </DialogContent>

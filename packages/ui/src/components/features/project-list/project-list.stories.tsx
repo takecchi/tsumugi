@@ -90,6 +90,9 @@ export const Interactive: StoryObj = {
     const [exportingProjectId, setExportingProjectId] = useState<string | null>(
       null,
     );
+    const [deletingProjectId, setDeletingProjectId] = useState<string | null>(
+      null,
+    );
 
     const handleSelect = (project: ProjectItem) => {
       setSelectedId(project.id);
@@ -102,13 +105,22 @@ export const Interactive: StoryObj = {
       setTimeout(() => setExportingProjectId(null), 2000);
     };
 
+    const handleDelete = (project: ProjectItem) => {
+      if (!confirm(`「${project.name}」を削除しますか？`)) return;
+      setDeletingProjectId(project.id);
+      console.log('Deleting project:', project);
+      setTimeout(() => setDeletingProjectId(null), 2000);
+    };
+
     return (
       <ProjectList
         projects={mockProjects}
         selectedId={selectedId}
         exportingProjectId={exportingProjectId}
+        deletingProjectId={deletingProjectId}
         onSelect={handleSelect}
         onExport={handleExport}
+        onDelete={handleDelete}
       />
     );
   },

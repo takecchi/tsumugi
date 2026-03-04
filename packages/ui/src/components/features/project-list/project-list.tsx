@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/command';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { DownloadIcon, LoaderCircleIcon } from 'lucide-react';
+import { DownloadIcon, LoaderCircleIcon, Trash2Icon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface ProjectItem {
@@ -25,6 +25,8 @@ export interface ProjectListProps {
   onSelect?: (project: ProjectItem) => void;
   onExport?: (project: ProjectItem) => void;
   exportingProjectId?: string | null;
+  onDelete?: (project: ProjectItem) => void;
+  deletingProjectId?: string | null;
   placeholder?: string;
   emptyMessage?: string;
   className?: string;
@@ -76,6 +78,8 @@ export function ProjectList({
   onSelect,
   onExport,
   exportingProjectId,
+  onDelete,
+  deletingProjectId,
   placeholder = 'プロジェクトの検索',
   emptyMessage = 'プロジェクトが見つかりません',
   className,
@@ -141,6 +145,24 @@ export function ProjectList({
                           <LoaderCircleIcon className="size-4 animate-spin" />
                         ) : (
                           <DownloadIcon className="size-4" />
+                        )}
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={deletingProjectId != null}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(project);
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        {deletingProjectId === project.id ? (
+                          <LoaderCircleIcon className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2Icon className="size-4" />
                         )}
                       </Button>
                     )}
