@@ -11,6 +11,8 @@ import { cn, Separator } from '@tsumugi/ui';
 import { FeatureCard } from '~/routes/(guest)/_components/feature-card';
 import { useGoogleLogin } from '~/hooks/auth';
 import { useCallback } from 'react';
+import { Link } from 'react-router';
+import { PATH_LEGAL_TERMS } from '~/constants/path';
 
 export default function Page() {
   const { trigger: getGoogleUrl } = useGoogleLogin();
@@ -116,8 +118,63 @@ export default function Page() {
       </section>
 
       {/* ─── フッター ─── */}
-      <footer className="border-t px-6 py-8">
-        <p className="text-center text-xs text-muted-foreground">
+      <footer className="border-t px-6 py-10">
+        <div className="mx-auto max-w-5xl flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+          {/* 左: ブランド */}
+          <div className="flex items-center gap-3">
+            <img
+              src="/icon-512.png"
+              alt="Tsumugi"
+              className="size-8 rounded-lg"
+            />
+            <div>
+              <p className="text-sm font-semibold">Tsumugi</p>
+              <p className="text-xs text-muted-foreground">
+                AIがサポートする創作支援ツール
+              </p>
+            </div>
+          </div>
+          {/* 右: リンク群 */}
+          <nav className="flex flex-wrap gap-x-6 gap-y-2 sm:justify-end">
+            {[{ label: '利用規約', to: PATH_LEGAL_TERMS }].map(
+              ({ label, to }) => (
+                <Link
+                  key={label}
+                  to={to}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {label}
+                </Link>
+              ),
+            )}
+            {[
+              {
+                label: 'GitHub',
+                href: 'https://github.com/takecchi/tsumugi',
+              },
+              {
+                label: '不具合を報告',
+                href: 'https://github.com/takecchi/tsumugi/issues',
+              },
+              {
+                label: 'お問い合わせ',
+                href: 'https://x.com/CureDotTyphoon',
+              },
+            ].map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        </div>
+        {/* コピーライト */}
+        <p className="mt-8 text-center text-xs text-muted-foreground">
           &copy; {new Date().getFullYear()} Tsumugi
         </p>
       </footer>

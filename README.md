@@ -137,4 +137,6 @@ npm run format
 
 ## ライセンス
 
-ISC
+[PolyForm Noncommercial License 1.0.0](./LICENSE)
+
+非商用目的での利用・改変・配布を許可します。商用利用は禁止します。
