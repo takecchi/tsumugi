@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { WritingEditor } from './writing-editor';
+import {
+  DEFAULT_FORMAT_OPTIONS,
+  type FormatOptions,
+} from '@/lib/writing-format';
 
 const meta = {
   title: 'Features/WritingEditor',
@@ -55,6 +59,27 @@ export const Interactive: StoryObj = {
         content={content}
         onNameChange={setName}
         onContentChange={setContent}
+      />
+    );
+  },
+};
+
+export const WithFormatting: StoryObj = {
+  render: () => {
+    const [content, setContent] = useState(
+      '夜明け前の静寂が街を包んでいた。\n「おはよう」\n主人公は窓辺に立ち、遠くに見える山々を眺めていた。\n『心の中でつぶやいた』',
+    );
+    const [options, setOptions] = useState<FormatOptions>(
+      DEFAULT_FORMAT_OPTIONS,
+    );
+
+    return (
+      <WritingEditor
+        name="フォーマット機能デモ"
+        content={content}
+        onContentChange={setContent}
+        formatOptions={options}
+        onFormatOptionsChange={setOptions}
       />
     );
   },
