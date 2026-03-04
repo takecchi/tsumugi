@@ -86,3 +86,18 @@ export function useDeleteProject(id: string) {
     { populateCache: true, revalidate: false },
   );
 }
+
+/**
+ * プロジェクト一覧からプロジェクトを削除する
+ * @revalidates useProjects - プロジェクト一覧を再フェッチする
+ */
+export function useDeleteProjectFromList() {
+  const adapter = useAdapter();
+  return useSWRMutation<undefined, Error, ProjectsKey, string>(
+    { type: 'projects' },
+    async (_, { arg: id }) => {
+      await adapter.projects.delete(id);
+      return undefined;
+    },
+  );
+}
