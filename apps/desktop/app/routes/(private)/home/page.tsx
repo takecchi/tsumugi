@@ -3,7 +3,6 @@ import { useNavigate, type MetaFunction } from 'react-router';
 import { useProjects, useCreateProject } from '~/hooks/projects';
 import { useLogout } from '~/hooks/auth';
 import { useExportProject } from '~/hooks/export';
-import { downloadExportResult } from '~/utils/download';
 import {
   ProjectList,
   Button,
@@ -82,8 +81,7 @@ export default function Page() {
   const handleExportProject = async (project: ProjectItem) => {
     setExportingProjectId(project.id);
     try {
-      const result = await exportProject(project.id);
-      if (result) downloadExportResult(result);
+      await exportProject(project.id);
     } finally {
       setExportingProjectId(null);
     }

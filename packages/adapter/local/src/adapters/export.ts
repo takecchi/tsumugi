@@ -1,7 +1,6 @@
 import type {
   ExportAdapter,
   ExportOptions,
-  ExportResult,
   ProjectAdapter,
   WritingAdapter,
   PlotAdapter,
@@ -9,6 +8,7 @@ import type {
   MemoAdapter,
 } from '@tsumugi/adapter';
 import { zipSync, strToU8 } from 'fflate';
+import { save } from '@tauri-apps/plugin-dialog';
 import {
   sanitizeFileName,
   buildProjectReadme,
@@ -18,6 +18,7 @@ import {
   buildMemoEntries,
   type ZipEntry,
 } from '@/internal/utils/export-markdown';
+import { writeBinaryFile } from '@/internal/utils/fs';
 
 export interface ExportAdapterDeps {
   projects: ProjectAdapter;
@@ -34,7 +35,7 @@ export function createExportAdapter(deps: ExportAdapterDeps): ExportAdapter {
     async exportProject(
       projectId: string,
       options: ExportOptions = {},
-    ): Promise<ExportResult> {
+    ): Promise<void> {
       const {
         includeWritings = true,
         includePlots = true,
@@ -71,7 +72,6 @@ export function createExportAdapter(deps: ExportAdapterDeps): ExportAdapter {
 
       const projectSlug = sanitizeFileName(project.name);
 
-      // プロジェクト名をトップレベルディレクトリとして zip を構築
       const zipFiles: Record<string, Uint8Array> = {};
       for (const entry of entries) {
         zipFiles[`${projectSlug}/${entry.path}`] = strToU8(entry.content);
@@ -80,7 +80,13 @@ export function createExportAdapter(deps: ExportAdapterDeps): ExportAdapter {
       const data = zipSync(zipFiles);
       const filename = `${projectSlug}-export.zip`;
 
-      return { data, filename, mimeType: 'application/zip' };
+      const savePath = await save({
+        defaultPath: filename,
+        filters: [{ name: 'ZIP', extensions: ['zip'] }],
+      });
+      if (!savePath) return;
+
+      await writeBinaryFile(savePath, data);
     },
   };
 }

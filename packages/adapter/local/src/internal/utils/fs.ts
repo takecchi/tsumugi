@@ -1,6 +1,7 @@
 import {
   readTextFile,
   writeTextFile,
+  writeFile,
   exists,
   mkdir,
   readDir,
@@ -45,6 +46,13 @@ export async function listDir(path: string): Promise<string[]> {
   }
   const entries = await readDir(path);
   return entries.map((e) => e.name);
+}
+
+export async function writeBinaryFile(
+  path: string,
+  data: Uint8Array,
+): Promise<void> {
+  await writeFile(path, data);
 }
 
 export async function listSubDirs(path: string): Promise<string[]> {

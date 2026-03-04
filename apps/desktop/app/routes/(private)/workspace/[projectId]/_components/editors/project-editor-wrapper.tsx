@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { useProject, useUpdateProject } from '~/hooks/projects';
 import { useExportProject } from '~/hooks/export';
-import { downloadExportResult } from '~/utils/download';
 import { ProjectEditor, type ProjectEditorData } from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import type { Project } from '@tsumugi/adapter';
@@ -62,8 +61,7 @@ export function ProjectEditorWrapper({
   );
 
   const handleExport = useCallback(async () => {
-    const result = await exportProject(projectId);
-    if (result) downloadExportResult(result);
+    await exportProject(projectId);
   }, [exportProject, projectId]);
 
   if (!project) return null;

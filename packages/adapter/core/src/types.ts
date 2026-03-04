@@ -528,29 +528,3 @@ export interface ExportOptions {
   /** メモデータを含めるか（デフォルト: true） */
   includeMemos?: boolean;
 }
-
-/**
- * エクスポート結果
- *
- * zip 内のディレクトリ構成（zip-markdown）:
- * ```
- * {project-name}/
- *   README.md          ← プロジェクト概要（name, synopsis, theme, goal 等）
- *   writings/
- *     {name}.md        ← 執筆内容（フォルダ階層を反映）
- *   plots/
- *     {name}.md        ← プロット内容
- *   characters/
- *     {name}.md        ← キャラクター詳細
- *   memos/
- *     {name}.md        ← メモ内容（タグ含む）
- * ```
- */
-export interface ExportResult {
-  /** zip ファイルのバイナリデータ */
-  data: Uint8Array;
-  /** ファイル名（例: my-novel-export.zip） */
-  filename: string;
-  /** MIMEタイプ */
-  mimeType: string;
-}

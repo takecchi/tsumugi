@@ -18,7 +18,6 @@ import type {
   AuthState,
   GoogleAuthUrl,
   ExportOptions,
-  ExportResult,
 } from './types';
 
 /**
@@ -254,10 +253,7 @@ export interface ExportAdapter {
    * @param projectId - エクスポートするプロジェクトID
    * @param options - エクスポートオプション（省略時はすべてのコンテンツを zip-markdown でエクスポート）
    */
-  exportProject(
-    projectId: string,
-    options?: ExportOptions,
-  ): Promise<ExportResult>;
+  exportProject(projectId: string, options?: ExportOptions): Promise<void>;
 }
 
 /**

@@ -1,22 +1,26 @@
-import type {
-  ExportAdapter,
-  ExportOptions,
-  ExportResult,
-} from '@tsumugi/adapter';
+import type { ExportAdapter, ExportOptions } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 
-function parseFilename(contentDisposition: string | null): string {
-  if (!contentDisposition) return 'export.zip';
+function triggerBrowserDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
-  // RFC 5987 形式: filename*=UTF-8''...
-  const rfcMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-  if (rfcMatch) {
-    return decodeURIComponent(rfcMatch[1]);
+function extractFilename(headers: Headers): string {
+  const disposition = headers.get('Content-Disposition');
+  if (disposition) {
+    const rfcMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (rfcMatch) return decodeURIComponent(rfcMatch[1]);
+    const match = disposition.match(/filename="?([^";\n]+)"?/i);
+    if (match) return match[1].trim();
   }
-
-  // fallback: filename="..."
-  const match = contentDisposition.match(/filename="?([^";\n]+)"?/i);
-  return match ? match[1].trim() : 'export.zip';
+  return 'export.zip';
 }
 
 export function createExportAdapter(clients: ApiClients): ExportAdapter {
@@ -24,17 +28,11 @@ export function createExportAdapter(clients: ApiClients): ExportAdapter {
     async exportProject(
       projectId: string,
       _options?: ExportOptions,
-    ): Promise<ExportResult> {
+    ): Promise<void> {
       const response = await clients.projects.exportProjectRaw({ projectId });
-      const buffer = await response.raw.arrayBuffer();
-      const filename = parseFilename(
-        response.raw.headers.get('Content-Disposition'),
-      );
-      return {
-        data: new Uint8Array(buffer),
-        filename,
-        mimeType: 'application/zip',
-      };
+      const blob = await response.raw.blob();
+      const filename = extractFilename(response.raw.headers);
+      triggerBrowserDownload(blob, filename);
     },
   };
 }

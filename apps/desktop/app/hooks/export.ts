@@ -1,18 +1,20 @@
 import { useAdapter } from '~/hooks/useAdapter';
 import useSWRMutation from 'swr/mutation';
-import type { ExportResult } from '@tsumugi/adapter';
 
 interface ExportKey {
   type: 'export';
 }
 
 /**
- * プロジェクトをエクスポートする
+ * プロジェクトをエクスポートする（保存ダイアログを含む）
  */
 export function useExportProject() {
   const adapter = useAdapter();
-  return useSWRMutation<ExportResult, Error, ExportKey, string>(
+  return useSWRMutation<undefined, Error, ExportKey, string>(
     { type: 'export' },
-    (_, { arg: projectId }) => adapter.export.exportProject(projectId),
+    async (_, { arg: projectId }) => {
+      await adapter.export.exportProject(projectId);
+      return undefined;
+    },
   );
 }
