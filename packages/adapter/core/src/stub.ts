@@ -92,5 +92,8 @@ export function createAdapter(_: AdapterConfig = {}): Adapter {
       deleteMemory: () => notImplemented(),
       getUsage: () => notImplemented(),
     },
+    export: {
+      exportProject: () => notImplemented(),
+    },
   };
 }

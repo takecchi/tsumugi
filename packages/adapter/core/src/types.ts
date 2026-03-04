@@ -507,3 +507,50 @@ export interface GoogleAuthUrl {
   /** Google OAuth認可URL */
   url: string;
 }
+
+/**
+ * エクスポートのフォーマット
+ */
+export type ExportFormat = 'zip-markdown';
+
+/**
+ * エクスポートオプション
+ */
+export interface ExportOptions {
+  /** エクスポートフォーマット（デフォルト: 'zip-markdown'） */
+  format?: ExportFormat;
+  /** 執筆データを含めるか（デフォルト: true） */
+  includeWritings?: boolean;
+  /** プロットデータを含めるか（デフォルト: true） */
+  includePlots?: boolean;
+  /** キャラクターデータを含めるか（デフォルト: true） */
+  includeCharacters?: boolean;
+  /** メモデータを含めるか（デフォルト: true） */
+  includeMemos?: boolean;
+}
+
+/**
+ * エクスポート結果
+ *
+ * zip 内のディレクトリ構成（zip-markdown）:
+ * ```
+ * {project-name}/
+ *   README.md          ← プロジェクト概要（name, synopsis, theme, goal 等）
+ *   writings/
+ *     {name}.md        ← 執筆内容（フォルダ階層を反映）
+ *   plots/
+ *     {name}.md        ← プロット内容
+ *   characters/
+ *     {name}.md        ← キャラクター詳細
+ *   memos/
+ *     {name}.md        ← メモ内容（タグ含む）
+ * ```
+ */
+export interface ExportResult {
+  /** zip ファイルのバイナリデータ */
+  data: Uint8Array;
+  /** ファイル名（例: my-novel-export.zip） */
+  filename: string;
+  /** MIMEタイプ */
+  mimeType: string;
+}

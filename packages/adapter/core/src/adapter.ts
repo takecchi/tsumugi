@@ -17,6 +17,8 @@ import type {
   AIProjectUsage,
   AuthState,
   GoogleAuthUrl,
+  ExportOptions,
+  ExportResult,
 } from './types';
 
 /**
@@ -244,6 +246,21 @@ export interface AuthAdapter {
 }
 
 /**
+ * エクスポート操作のインターフェース
+ */
+export interface ExportAdapter {
+  /**
+   * プロジェクトをエクスポート
+   * @param projectId - エクスポートするプロジェクトID
+   * @param options - エクスポートオプション（省略時はすべてのコンテンツを zip-markdown でエクスポート）
+   */
+  exportProject(
+    projectId: string,
+    options?: ExportOptions,
+  ): Promise<ExportResult>;
+}
+
+/**
  * 統合アダプター
  */
 export interface Adapter {
@@ -255,4 +272,5 @@ export interface Adapter {
   readonly memos: MemoAdapter;
   readonly writings: WritingAdapter;
   readonly ai: AIAdapter;
+  readonly export: ExportAdapter;
 }
