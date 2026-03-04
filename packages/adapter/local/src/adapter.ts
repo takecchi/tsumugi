@@ -7,6 +7,7 @@ import { createMemoAdapter } from '@/adapters/memo';
 import { createWritingAdapter } from '@/adapters/writing';
 import { createAIAdapter } from '@/adapters/ai';
 import { createSettingsAdapter } from '@/adapters/settings';
+import { createExportAdapter } from '@/adapters/export';
 
 export function createAdapter(config: AdapterConfig = {}): Adapter {
   const workDir = config.local?.workDir;
@@ -26,6 +27,13 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
     memos,
     writings,
     ai: createAIAdapter(config.local?.ai, {
+      projects,
+      plots,
+      characters,
+      memos,
+      writings,
+    }),
+    export: createExportAdapter({
       projects,
       plots,
       characters,
