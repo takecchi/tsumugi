@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 import { useProject, useUpdateProject } from '~/hooks/projects';
+import { useExportProject } from '~/hooks/export';
+import { downloadExportResult } from '~/utils/download';
 import { ProjectEditor, type ProjectEditorData } from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import type { Project } from '@tsumugi/adapter';
@@ -30,6 +32,8 @@ export function ProjectEditorWrapper({
 }: ProjectEditorWrapperProps) {
   const { data: project, mutate } = useProject(projectId, NO_REVALIDATE);
   const { trigger: updateProject } = useUpdateProject(projectId);
+  const { trigger: exportProject, isMutating: isExporting } =
+    useExportProject();
 
   const onSave = useCallback(
     async (field: string, value: unknown) => {
@@ -57,7 +61,19 @@ export function ProjectEditorWrapper({
     [mutate, debouncedSave, onNameChange],
   );
 
+  const handleExport = useCallback(async () => {
+    const result = await exportProject(projectId);
+    if (result) downloadExportResult(result);
+  }, [exportProject, projectId]);
+
   if (!project) return null;
 
-  return <ProjectEditor data={toEditorData(project)} onChange={handleChange} />;
+  return (
+    <ProjectEditor
+      data={toEditorData(project)}
+      onChange={handleChange}
+      onExport={handleExport}
+      isExporting={isExporting}
+    />
+  );
 }
