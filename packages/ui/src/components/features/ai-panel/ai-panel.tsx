@@ -124,8 +124,8 @@ function ConversationSelector({
           </div>
         </div>
         <div className="border-t">
-          <ScrollArea className="h-64">
-            <div className="p-2 space-y-1">
+          <ScrollArea className="h-64 overflow-hidden">
+            <div className="w-0 min-w-full p-2 space-y-1">
               {filteredConversations?.length === 0 ? (
                 <div className="text-center text-muted-foreground py-4">
                   <p className="text-sm">会話が見つかりません</p>
