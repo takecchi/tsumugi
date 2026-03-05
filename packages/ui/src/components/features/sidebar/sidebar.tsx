@@ -24,6 +24,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export type ContentType = 'plot' | 'character' | 'memo' | 'writing';
@@ -148,7 +153,7 @@ function TreeNode({
           )}
           <span className="flex-1 w-0 truncate text-left">{node.name}</span>
         </button>
-        <div className="flex shrink-0 opacity-0 group-hover/node:opacity-100">
+        <div className="flex shrink-0 opacity-0 group-hover/node:opacity-100 [@media(hover:none)]:opacity-100">
           {onMoveUp && !isFirst && (
             <Button
               variant="ghost"
@@ -282,14 +287,20 @@ export function SidebarSection({
           <Icon className="size-3" />
           <span>{config.label}</span>
         </button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={() => onCreateFile?.(type, null)}
-          className="opacity-0 group-hover:opacity-100 hover:opacity-100"
-        >
-          <Plus className="size-3" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => onCreateFile?.(type, null)}
+              className="opacity-0 group-hover:opacity-100 hover:opacity-100"
+              aria-label="新規作成"
+            >
+              <Plus className="size-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>新規作成</TooltipContent>
+        </Tooltip>
       </div>
       {isExpanded && (
         <div>

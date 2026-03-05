@@ -17,6 +17,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { isIMEActive } from '@/lib/keyboard-utils';
@@ -179,14 +184,20 @@ export function AiPanel({
           onSelectConversation={onSelectConversation}
         />
         <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={onNewConversation}
-          >
-            <Plus className="size-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={onNewConversation}
+                aria-label="新しいチャット"
+              >
+                <Plus className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>新しいチャット</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
