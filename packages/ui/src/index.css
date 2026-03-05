@@ -125,12 +125,3 @@
     cursor: pointer;
   }
 }
-
-/* iOS Safari: font-size < 16px の input にフォーカスすると自動ズームされるのを防止 */
-@supports (-webkit-touch-callout: none) {
-  input,
-  textarea,
-  select {
-    font-size: 1rem;
-  }
-}
