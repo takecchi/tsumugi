@@ -91,6 +91,17 @@ export const meta: MetaFunction = () => {
     },
     { name: 'twitter:image', content: `${SITE_URL}/og-image.png` },
     { name: 'twitter:image:alt', content: 'Tsumugi - 小説執筆支援ツール' },
+
+    // Google
+    ...(import.meta.env.VITE_GOOGLE_VERIFICATION &&
+    import.meta.env.VITE_GOOGLE_VERIFICATION.length !== 0
+      ? [
+          {
+            name: 'google-site-verification',
+            content: import.meta.env.VITE_GOOGLE_VERIFICATION,
+          },
+        ]
+      : []),
   ];
 };
 
