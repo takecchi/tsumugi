@@ -78,7 +78,7 @@ function TabItem({
             if (e.key === 'Enter' || e.key === ' ') onSelect(tab.id);
           }}
           className={cn(
-            'group/tab flex h-9 shrink-0 cursor-pointer items-center gap-1.5 border-r border-b-2 px-3 text-xs transition-colors',
+            'group/tab flex h-9 shrink-0 cursor-pointer select-none items-center gap-1.5 border-r border-b-2 px-3 text-xs transition-colors',
             isActive
               ? 'border-b-primary bg-background text-foreground'
               : 'border-b-transparent bg-muted/50 text-muted-foreground hover:bg-muted',

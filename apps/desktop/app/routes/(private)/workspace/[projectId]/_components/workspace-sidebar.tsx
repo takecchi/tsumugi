@@ -28,6 +28,9 @@ import {
   Sidebar,
   SidebarSection,
   Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   type TreeNodeData,
   type ContentType,
 } from '@tsumugi/ui';
@@ -269,14 +272,20 @@ export function WorkspaceSidebar({
           <span className="min-w-0 flex-1 truncate text-sm font-medium">
             {projectName}
           </span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="shrink-0"
-            onClick={onSelectProject}
-          >
-            <SettingsIcon className="size-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0"
+                onClick={onSelectProject}
+                aria-label="プロジェクト設定"
+              >
+                <SettingsIcon className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>プロジェクト設定</TooltipContent>
+          </Tooltip>
         </div>
       }
     >

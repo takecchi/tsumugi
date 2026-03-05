@@ -220,6 +220,16 @@ const sampleConversations: Conversation[] = [
   },
 ];
 
+const manyLongConversations: Conversation[] = [
+  ...sampleConversations,
+  ...Array.from({ length: 20 }, (_, i) => ({
+    id: `long-${i}`,
+    title: `これはとても長いタイトルの会話セッションです。主人公が冒険に出発する前の心理描写について詳しく議論した内容 #${i + 1}`,
+    createdAt: new Date(`2024-02-${String(i + 1).padStart(2, '0')}`),
+    updatedAt: new Date(`2024-02-${String(i + 1).padStart(2, '0')}`),
+  })),
+];
+
 const acceptedMessages: Message[] = [
   {
     id: '1',
@@ -393,6 +403,17 @@ export const MarkdownRendering: Story = {
       initialConversationId="2"
       initialMessages={markdownMessages}
       initialMode="ask"
+    />
+  ),
+};
+
+export const ManyLongConversations: Story = {
+  render: () => (
+    <MockAiPanel
+      initialConversations={manyLongConversations}
+      initialConversationId="1"
+      initialMessages={sampleMessages}
+      initialMode="write"
     />
   ),
 };

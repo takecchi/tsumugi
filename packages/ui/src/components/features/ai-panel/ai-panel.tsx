@@ -17,6 +17,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { isIMEActive } from '@/lib/keyboard-utils';
@@ -124,8 +129,8 @@ function ConversationSelector({
           </div>
         </div>
         <div className="border-t">
-          <ScrollArea className="h-64">
-            <div className="p-2 space-y-1">
+          <ScrollArea className="h-64 overflow-hidden">
+            <div className="w-0 min-w-full p-2 space-y-1">
               {filteredConversations?.length === 0 ? (
                 <div className="text-center text-muted-foreground py-4">
                   <p className="text-sm">会話が見つかりません</p>
@@ -179,14 +184,20 @@ export function AiPanel({
           onSelectConversation={onSelectConversation}
         />
         <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={onNewConversation}
-          >
-            <Plus className="size-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={onNewConversation}
+                aria-label="新しいチャット"
+              >
+                <Plus className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>新しいチャット</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
