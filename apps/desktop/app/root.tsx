@@ -63,10 +63,10 @@ export const meta: MetaFunction = () => {
         '小説,執筆,創作,プロット,キャラクター,ストーリー,執筆支援,創作ツール,小説家,作家',
     },
     { name: 'author', content: 'takecchi' },
-    { name: 'robots', content: 'index,follow' },
     { name: 'theme-color', content: '#ffffff' },
 
     // OGPタグ
+    { property: 'og:url', content: `${SITE_URL}` },
     { property: 'og:type', content: 'website' },
     { property: 'og:title', content: 'Tsumugi - 小説執筆支援ツール' },
     {
@@ -83,14 +83,6 @@ export const meta: MetaFunction = () => {
 
     // Twitter Card
     { name: 'twitter:card', content: 'summary' },
-    { name: 'twitter:title', content: 'Tsumugi - 小説執筆支援ツール' },
-    {
-      name: 'twitter:description',
-      content:
-        'Tsumugiは小説やストーリー執筆を支援するツールです。プロット管理、キャラクター設定、執筆進捗管理など、創作活動に必要な機能を提供します。',
-    },
-    { name: 'twitter:image', content: `${SITE_URL}/og-image.png` },
-    { name: 'twitter:image:alt', content: 'Tsumugi - 小説執筆支援ツール' },
 
     // Google
     ...(import.meta.env.VITE_GOOGLE_VERIFICATION &&
