@@ -69,31 +69,30 @@ export function WritingEditorWrapper({
   if (!writing) return null;
 
   return (
-    <div className="flex h-full flex-col">
+    <Tabs defaultValue="body" className="flex h-full min-h-0 flex-col gap-0">
       <NodeAttributesBar
         projectId={projectId}
         contentType="writing"
         nodeId={id}
         canonStatus={writing.canonStatus}
         contextPolicy={writing.contextPolicy}
-      />
-      <Tabs defaultValue="body" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="mx-3 mt-2 self-start">
+      >
+        <TabsList className="h-7">
           <TabsTrigger value="body">本文</TabsTrigger>
           <TabsTrigger value="consistency">整合性チェック</TabsTrigger>
         </TabsList>
-        <TabsContent value="body" className="min-h-0 flex-1">
-          <WritingEditor
-            name={writing.name}
-            content={writing.content}
-            onNameChange={handleNameChange}
-            onContentChange={handleContentChange}
-          />
-        </TabsContent>
-        <TabsContent value="consistency" className="min-h-0 flex-1">
-          <ConsistencyPanelWrapper writingId={id} projectId={projectId} />
-        </TabsContent>
-      </Tabs>
-    </div>
+      </NodeAttributesBar>
+      <TabsContent value="body" className="min-h-0 flex-1">
+        <WritingEditor
+          name={writing.name}
+          content={writing.content}
+          onNameChange={handleNameChange}
+          onContentChange={handleContentChange}
+        />
+      </TabsContent>
+      <TabsContent value="consistency" className="min-h-0 flex-1">
+        <ConsistencyPanelWrapper writingId={id} projectId={projectId} />
+      </TabsContent>
+    </Tabs>
   );
 }
