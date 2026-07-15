@@ -3,9 +3,14 @@ import {
   AiPanel,
   AiPanelContent,
   AiPanelInput,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
   type AiMode,
   type Conversation,
 } from '@tsumugi/ui';
+import { ContextPreviewWrapper } from './context-preview-wrapper';
 import {
   useAISessions,
   useAIMessages,
@@ -354,45 +359,56 @@ export function WorkspaceAiPanel({
       onNewConversation={() => setCurrentConversationId(undefined)}
       onSelectConversation={setCurrentConversationId}
     >
-      {currentConversationId ? (
-        <ExistingSessionContent
-          projectId={projectId}
-          sessionId={currentConversationId}
-          aiMode={aiMode}
-          onModeChange={handleModeChange}
-          context={
-            openTabs?.length
-              ? {
-                  openTabs: openTabs.map((t) => ({
-                    id: t.id,
-                    name: t.name,
-                    contentType: t.type,
-                    ...(t.active ? { active: true } : {}),
-                  })),
-                }
-              : undefined
-          }
-        />
-      ) : (
-        <NewSessionContent
-          projectId={projectId}
-          onSessionCreated={setCurrentConversationId}
-          aiMode={aiMode}
-          onModeChange={handleModeChange}
-          context={
-            openTabs?.length
-              ? {
-                  openTabs: openTabs.map((t) => ({
-                    id: t.id,
-                    name: t.name,
-                    contentType: t.type,
-                    ...(t.active ? { active: true } : {}),
-                  })),
-                }
-              : undefined
-          }
-        />
-      )}
+      <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="mx-3 mt-2 self-start">
+          <TabsTrigger value="chat">チャット</TabsTrigger>
+          <TabsTrigger value="context">コンテキスト</TabsTrigger>
+        </TabsList>
+        <TabsContent value="chat" className="flex min-h-0 flex-1 flex-col">
+          {currentConversationId ? (
+            <ExistingSessionContent
+              projectId={projectId}
+              sessionId={currentConversationId}
+              aiMode={aiMode}
+              onModeChange={handleModeChange}
+              context={
+                openTabs?.length
+                  ? {
+                      openTabs: openTabs.map((t) => ({
+                        id: t.id,
+                        name: t.name,
+                        contentType: t.type,
+                        ...(t.active ? { active: true } : {}),
+                      })),
+                    }
+                  : undefined
+              }
+            />
+          ) : (
+            <NewSessionContent
+              projectId={projectId}
+              onSessionCreated={setCurrentConversationId}
+              aiMode={aiMode}
+              onModeChange={handleModeChange}
+              context={
+                openTabs?.length
+                  ? {
+                      openTabs: openTabs.map((t) => ({
+                        id: t.id,
+                        name: t.name,
+                        contentType: t.type,
+                        ...(t.active ? { active: true } : {}),
+                      })),
+                    }
+                  : undefined
+              }
+            />
+          )}
+        </TabsContent>
+        <TabsContent value="context" className="min-h-0 flex-1">
+          <ContextPreviewWrapper projectId={projectId} mode={aiMode} />
+        </TabsContent>
+      </Tabs>
     </AiPanel>
   );
 }

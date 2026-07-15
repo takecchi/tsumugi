@@ -16,6 +16,8 @@ describe('findNodeInTree', () => {
     parentId: null,
     nodeType: 'folder' as const,
     order: 0,
+    canonStatus: 'draft',
+    contextPolicy: 'auto',
   });
 
   it('ルートレベルでノードを見つける', () => {

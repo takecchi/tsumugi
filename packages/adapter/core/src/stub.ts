@@ -33,6 +33,9 @@ export function createAdapter(_: AdapterConfig = {}): Adapter {
       get: () => notImplemented(),
       update: () => notImplemented(),
     },
+    nodes: {
+      updateAttributes: () => notImplemented(),
+    },
     plots: {
       getByProjectId: () => notImplemented(),
       getTreeByProjectId: () => notImplemented(),
@@ -91,6 +94,21 @@ export function createAdapter(_: AdapterConfig = {}): Adapter {
       getMemories: () => notImplemented(),
       deleteMemory: () => notImplemented(),
       getUsage: () => notImplemented(),
+      getContext: () => notImplemented(),
+    },
+    consistency: {
+      run: () => notImplemented(),
+      list: () => notImplemented(),
+      get: () => notImplemented(),
+      updateFinding: () => notImplemented(),
+      createFixSession: () => notImplemented(),
+    },
+    glossary: {
+      list: () => notImplemented(),
+      create: () => notImplemented(),
+      get: () => notImplemented(),
+      update: () => notImplemented(),
+      delete: () => notImplemented(),
     },
     export: {
       exportProject: () => notImplemented(),

@@ -1,15 +1,17 @@
 import {
   Configuration,
   ErrorStreamChunkFromJSON,
+  FinishStreamChunkFromJSON,
   ProposalStreamChunkFromJSON,
-  TextStreamChunkFromJSON,
+  TextDeltaStreamChunkFromJSON,
   ToolCallStreamChunkFromJSON,
   ToolResultStreamChunkFromJSON,
   UsageStreamChunkFromJSON,
 } from '@tsumugi-chan/client';
+import type { Proposal } from '@tsumugi-chan/client';
 import {
+  AIProposal,
   AIStreamChunk,
-  AIToolCall,
   AIToolName,
   FieldChange,
 } from '@tsumugi/adapter';
@@ -48,16 +50,38 @@ export async function fetchSSE(
 }
 
 /**
- * SSE レスポンスの body を ReadableStream<AIStreamChunk> に変換する
+ * 生の SSE フレーム（`data: <JSON>`）を 1 件パースし、変換関数で任意のチャンク型に変換する。
+ * data 行が無い / 不正な JSON の場合は null を返す。
  */
-export function parseSSEStream(
+function parseSSEFrame<T>(
+  raw: string,
+  toChunk: (data: unknown) => T | null,
+): T | null {
+  const dataLine = raw.split('\n').find((l) => l.startsWith('data: '));
+  if (!dataLine) return null;
+
+  try {
+    const data = JSON.parse(dataLine.slice(6));
+    return toChunk(data);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * SSE レスポンスの body を、任意のチャンク型の ReadableStream に変換する汎用ヘルパー。
+ * `data: <JSON>\n\n` 区切りのフレームを逐次パースして push する。
+ */
+export function createSSEChunkStream<T>(
   response: Response,
-): ReadableStream<AIStreamChunk> {
+  toChunk: (data: unknown) => T | null,
+  makeError: (message: string) => T,
+): ReadableStream<T> {
   const body = response.body;
   if (!body) {
-    return new ReadableStream<AIStreamChunk>({
+    return new ReadableStream<T>({
       start(controller) {
-        controller.enqueue({ type: 'error', error: 'No response body' });
+        controller.enqueue(makeError('No response body'));
         controller.close();
       },
     });
@@ -67,7 +91,7 @@ export function parseSSEStream(
   const decoder = new TextDecoder();
   let buffer = '';
 
-  return new ReadableStream<AIStreamChunk>({
+  return new ReadableStream<T>({
     start(controller) {
       // バックグラウンドで読み取りを開始（push ベース）
       const pump = async () => {
@@ -85,17 +109,16 @@ export function parseSSEStream(
             buffer = parts.pop() ?? '';
 
             for (const part of parts) {
-              const chunk = parseSSEEvent(part);
-              if (chunk) {
+              const chunk = parseSSEFrame(part, toChunk);
+              if (chunk !== null) {
                 controller.enqueue(chunk);
               }
             }
           }
         } catch (err) {
-          controller.enqueue({
-            type: 'error',
-            error: err instanceof Error ? err.message : String(err),
-          });
+          controller.enqueue(
+            makeError(err instanceof Error ? err.message : String(err)),
+          );
           controller.close();
         }
       };
@@ -113,16 +136,24 @@ export function parseSSEStream(
   });
 }
 
-function parseSSEEvent(raw: string): AIStreamChunk | null {
-  const dataLine = raw.split('\n').find((l) => l.startsWith('data: '));
-  if (!dataLine) return null;
+/**
+ * SSE レスポンスの body を ReadableStream<AIStreamChunk> に変換する
+ */
+export function parseSSEStream(
+  response: Response,
+): ReadableStream<AIStreamChunk> {
+  return createSSEChunkStream(response, toAIStreamChunk, (message) => ({
+    type: 'error',
+    error: message,
+  }));
+}
 
-  try {
-    const data = JSON.parse(dataLine.slice(6));
-    return toAIStreamChunk(data);
-  } catch {
-    return null;
-  }
+/**
+ * 生の SSE フレーム（`data: <JSON>`）を 1 件パースして AIStreamChunk に変換する。
+ * data 行が無い / 不正な JSON / ドメインに現れないチャンク種別は null を返す。
+ */
+export function parseSSEEvent(raw: string): AIStreamChunk | null {
+  return parseSSEFrame(raw, toAIStreamChunk);
 }
 
 export function hasType(raw: unknown): raw is { type: string } {
@@ -133,90 +164,117 @@ export function hasType(raw: unknown): raw is { type: string } {
 }
 
 /**
- * AIStreamChunkとして返す
- * @param raw
+ * バックエンドの Proposal（生成クライアント型）を adapter-core の AIProposal に変換する。
+ * replace / line_edits のプレビューを差分（FieldChange）配列に展開する。
  */
-export function toAIStreamChunk(raw: unknown): AIStreamChunk {
+export function toAIProposal(proposal: Proposal): AIProposal {
+  const diffs: FieldChange<string | unknown>[] = [];
+  for (const replacePreview of proposal.replacePreviews) {
+    diffs.push({
+      fieldName: replacePreview.fieldName,
+      before: replacePreview.before,
+      after: replacePreview.after,
+    });
+  }
+  for (const lineEditsPreview of proposal.lineEditsPreviews) {
+    for (const preview of lineEditsPreview.previews) {
+      diffs.push({
+        fieldName: lineEditsPreview.fieldName,
+        before: preview.before,
+        after: preview.after,
+        previewStart: preview.previewStart,
+        previewEnd: preview.previewEnd,
+      });
+    }
+  }
+  return {
+    id: proposal.toolCallId ?? '',
+    action: proposal.action,
+    targetId: proposal.targetId ?? '',
+    contentType: proposal.contentType,
+    targetName: proposal.targetName,
+    status: proposal.proposalStatus,
+    diffs,
+  };
+}
+
+/**
+ * v2 SSE チャンク（生成クライアントの StreamChunk 系, discriminated union）を
+ * adapter-core の AIStreamChunk に正規化する。
+ *
+ * - text-delta        → text（増分を content に）
+ * - tool-call         → tool_call（args オブジェクトを JSON 文字列化）
+ * - tool-result       → tool_result（result オブジェクトを JSON 文字列化）
+ * - proposal          → proposal
+ * - usage / error     → そのまま
+ * - finish            → done（message_id を messageId に）
+ * - start / text-start / text-end / その他 → ドメインには現れないため null
+ */
+export function toAIStreamChunk(raw: unknown): AIStreamChunk | null {
   if (!hasType(raw)) throw new Error('Invalid SSE chunk');
   switch (raw.type) {
-    case 'text': {
-      const textChunk = TextStreamChunkFromJSON(raw);
+    case 'text-delta': {
+      const chunk = TextDeltaStreamChunkFromJSON(raw);
       return {
         type: 'text',
-        content: textChunk.content,
+        content: chunk.delta,
       };
     }
-    case 'tool_call': {
-      const toolCallChunk = ToolCallStreamChunkFromJSON(raw);
+    case 'tool-call': {
+      const chunk = ToolCallStreamChunkFromJSON(raw);
       return {
         type: 'tool_call',
-        toolCall: toolCallChunk.toolCall as AIToolCall,
+        toolCall: {
+          id: chunk.toolCallId,
+          name: chunk.toolName as AIToolName,
+          arguments: JSON.stringify(chunk.args),
+        },
       };
     }
-    case 'tool_result': {
-      const toolResultChunk = ToolResultStreamChunkFromJSON(raw);
+    case 'tool-result': {
+      const chunk = ToolResultStreamChunkFromJSON(raw);
       return {
         type: 'tool_result',
-        toolResult: toolResultChunk.toolResult as {
-          toolCallId: string;
-          toolName: AIToolName;
-          result: string;
+        toolResult: {
+          toolCallId: chunk.toolCallId,
+          toolName: chunk.toolName as AIToolName,
+          result: JSON.stringify(chunk.result),
         },
       };
     }
     case 'proposal': {
-      const proposalChunk = ProposalStreamChunkFromJSON(raw);
-      const diffs: FieldChange<string | unknown>[] = [];
-      for (const replacePreview of proposalChunk.proposal.replacePreviews) {
-        diffs.push({
-          fieldName: replacePreview.fieldName,
-          before: replacePreview.before,
-          after: replacePreview.after,
-        });
-      }
-      for (const lineEditsPreview of proposalChunk.proposal.lineEditsPreviews) {
-        for (const preview of lineEditsPreview.previews) {
-          diffs.push({
-            fieldName: lineEditsPreview.fieldName,
-            before: preview.before,
-            after: preview.after,
-            previewStart: preview.previewStart,
-            previewEnd: preview.previewEnd,
-          });
-        }
-      }
+      const chunk = ProposalStreamChunkFromJSON(raw);
       return {
         type: 'proposal',
-        proposal: {
-          id: proposalChunk.proposal.toolCallId ?? '',
-          action: proposalChunk.proposal.action,
-          targetId: proposalChunk.proposal.targetId ?? '',
-          contentType: proposalChunk.proposal.contentType,
-          targetName: proposalChunk.proposal.targetName,
-          status: proposalChunk.proposal.proposalStatus,
-          diffs,
-        },
+        proposal: toAIProposal(chunk.proposal),
       };
     }
     case 'usage': {
-      const usageChunk = UsageStreamChunkFromJSON(raw);
+      const chunk = UsageStreamChunkFromJSON(raw);
       return {
         type: 'usage',
-        usage: usageChunk.usage,
+        usage: chunk.usage,
       };
     }
     case 'error': {
-      const errorChunk = ErrorStreamChunkFromJSON(raw);
+      const chunk = ErrorStreamChunkFromJSON(raw);
       return {
         type: 'error',
-        error: errorChunk.error,
+        error: chunk.error,
       };
     }
-    case 'done': {
+    case 'finish': {
+      const chunk = FinishStreamChunkFromJSON(raw);
       return {
         type: 'done',
+        messageId: chunk.messageId ?? undefined,
       };
     }
+    // 購読開始 / テキストブロックの開始・終了はドメインに現れない
+    case 'start':
+    case 'text-start':
+    case 'text-end':
+      return null;
   }
-  throw new Error('Invalid SSE chunk');
+  return null;
 }

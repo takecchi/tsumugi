@@ -11,6 +11,8 @@ function toPlot(api: ApiPlot): Plot {
     name: api.name,
     nodeType: api.nodeType,
     order: api.order,
+    canonStatus: api.canonStatus,
+    contextPolicy: api.contextPolicy,
     synopsis: api.synopsis ?? undefined,
     setting: api.setting ?? undefined,
     theme: api.theme ?? undefined,
@@ -70,7 +72,10 @@ export function createPlotAdapter(clients: ApiClients): PlotAdapter {
     },
 
     async create(
-      data: Omit<Plot, 'id' | 'createdAt' | 'updatedAt'>,
+      data: Omit<
+        Plot,
+        'id' | 'createdAt' | 'updatedAt' | 'canonStatus' | 'contextPolicy'
+      >,
     ): Promise<Plot> {
       const plot = await clients.projects.createPlot({
         projectId: data.projectId,
@@ -91,7 +96,17 @@ export function createPlotAdapter(clients: ApiClients): PlotAdapter {
 
     async update(
       id: string,
-      data: Partial<Omit<Plot, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>>,
+      data: Partial<
+        Omit<
+          Plot,
+          | 'id'
+          | 'projectId'
+          | 'createdAt'
+          | 'updatedAt'
+          | 'canonStatus'
+          | 'contextPolicy'
+        >
+      >,
     ): Promise<Plot> {
       const plot = await clients.plots.updatePlot({
         plotId: id,

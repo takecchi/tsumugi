@@ -6,6 +6,7 @@ import {
 } from '~/hooks/characters';
 import { CharacterEditor, type CharacterEditorData } from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
+import { NodeAttributesBar } from './node-attributes-bar';
 import type { Character } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = {
@@ -63,6 +64,20 @@ export function CharacterEditorWrapper({
   if (!character) return null;
 
   return (
-    <CharacterEditor data={toEditorData(character)} onChange={handleChange} />
+    <div className="flex h-full flex-col">
+      <NodeAttributesBar
+        projectId={projectId}
+        contentType="character"
+        nodeId={id}
+        canonStatus={character.canonStatus}
+        contextPolicy={character.contextPolicy}
+      />
+      <div className="min-h-0 flex-1">
+        <CharacterEditor
+          data={toEditorData(character)}
+          onChange={handleChange}
+        />
+      </div>
+    </div>
   );
 }
