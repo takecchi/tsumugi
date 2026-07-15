@@ -1,11 +1,13 @@
 import {
   AIAdapter,
+  AIChatContext,
   AIChatMode,
   AIChatRequest,
   AIChatMessageRequest,
   AIChatSession,
   AIContextPack,
   AIMessage as AdapterAIMessage,
+  AIModelConfig,
   AIStreamChunk,
   AIProposalResult,
   AIMemory as AdapterAIMemory,
@@ -18,10 +20,13 @@ import {
 } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import {
+  AIModelConfigModelEnum,
   ProposalResultStreamChunkFromJSON,
   type AISession as ClientAISession,
   type AIMessage as ClientAIMessage,
   type AIMemory as ClientAIMemory,
+  type AIModelConfig as ClientAIModelConfig,
+  type AIChatContext as ClientAIChatContext,
   type AIProjectUsage as ClientAIProjectUsage,
   type AIContextPack as ClientAIContextPack,
   type ChatRequest as ClientChatRequest,
@@ -42,6 +47,7 @@ export function toSession(api: ClientAISession): AIChatSession {
     id: api.id,
     projectId: api.projectId,
     title: api.title,
+    status: api.status,
     createdAt: api.createdAt,
     updatedAt: api.updatedAt,
   };
@@ -149,32 +155,52 @@ function toFeedback(feedback: ClientAIProposalFeedback): AIProposalFeedback {
   };
 }
 
+/**
+ * モデル名が API の許容モデル（生成 enum）かどうかを判定する型ガード。
+ * core 側は `model: string` で開いているため、ここで既知モデルに絞り込む。
+ */
+function isModelEnum(model: string): model is AIModelConfigModelEnum {
+  return (Object.values(AIModelConfigModelEnum) as string[]).includes(model);
+}
+
+/**
+ * モデル設定（core → client）。未知モデルは undefined にしてバックエンド既定に委ねる。
+ */
+function toClientConfig(
+  config: AIModelConfig | undefined,
+): ClientAIModelConfig | undefined {
+  if (!config) return undefined;
+  return {
+    model: config.model && isModelEnum(config.model) ? config.model : undefined,
+    temperature: config.temperature,
+    maxTokens: config.maxTokens,
+  };
+}
+
+/**
+ * 作業コンテキスト（core → client）。
+ */
+function toClientContext(
+  context: AIChatContext | undefined,
+): ClientAIChatContext | undefined {
+  if (!context) return undefined;
+  return {
+    openTabs: context.openTabs?.map((tab) => ({
+      id: tab.id,
+      name: tab.name,
+      contentType: tab.contentType,
+      active: tab.active,
+    })),
+  };
+}
+
 function toChatRequest(request: AIChatRequest): ClientChatRequest {
   return {
     message: request.message,
     mode: request.mode,
     revertToMessageId: request.revertToMessageId,
-    config: request.config
-      ? {
-          model: request.config.model as ClientChatRequest['config'] extends {
-            model?: infer M;
-          }
-            ? M
-            : never,
-          temperature: request.config.temperature,
-          maxTokens: request.config.maxTokens,
-        }
-      : undefined,
-    context: request.context
-      ? {
-          openTabs: request.context.openTabs?.map((tab) => ({
-            id: tab.id,
-            name: tab.name,
-            contentType: tab.contentType,
-            active: tab.active,
-          })),
-        }
-      : undefined,
+    config: toClientConfig(request.config),
+    context: toClientContext(request.context),
   };
 }
 
@@ -225,26 +251,8 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
         createSessionRequest: {
           message: request.message,
           mode: request.mode,
-          config: request.config
-            ? {
-                model: request.config.model as
-                  | 'gpt-5.2'
-                  | 'gpt-4o-mini'
-                  | 'claude-3-5-haiku-latest',
-                temperature: request.config.temperature,
-                maxTokens: request.config.maxTokens,
-              }
-            : undefined,
-          context: request.context
-            ? {
-                openTabs: request.context.openTabs?.map((tab) => ({
-                  id: tab.id,
-                  name: tab.name,
-                  contentType: tab.contentType,
-                  active: tab.active,
-                })),
-              }
-            : undefined,
+          config: toClientConfig(request.config),
+          context: toClientContext(request.context),
         },
       });
 

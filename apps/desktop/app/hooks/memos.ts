@@ -129,22 +129,3 @@ export function useReorderMemos(projectId: string) {
     },
   );
 }
-
-interface MemosByTagKey {
-  type: 'memosByTag';
-  projectId: string;
-  tag: string;
-}
-
-/**
- * タグでメモを検索する
- * @param projectId - プロジェクトID
- * @param tag - 検索タグ
- */
-export function useMemosByTag(projectId: string, tag: string) {
-  const adapter = useAdapter();
-  return useSWR<Memo[], Error, MemosByTagKey>(
-    { type: 'memosByTag', projectId, tag },
-    ({ projectId, tag }) => adapter.memos.getByTag(projectId, tag),
-  );
-}

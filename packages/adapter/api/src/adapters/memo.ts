@@ -1,7 +1,6 @@
 import type { Memo, MemoAdapter, TreeNode } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import type { Memo as ApiMemo } from '@tsumugi-chan/client';
-import { findNodeInTree } from '@/internal/helpers/node-tree';
 
 function toMemo(api: ApiMemo): Memo {
   return {
@@ -30,9 +29,12 @@ export function createMemoAdapter(clients: ApiClients): MemoAdapter {
     },
 
     async getTreeByProjectId(projectId: string): Promise<TreeNode[]> {
+      // 空フォルダーもツリーに含める（サイドバーでの新規フォルダ操作のため）。
+      // depth は指定せず全階層を取得する（デフォルト: 無制限）。
       return await clients.projects.getNodeTree({
         projectId,
         nodeTypes: ['memo', 'folder'],
+        includeEmptyFolders: true,
       });
     },
 
@@ -45,25 +47,6 @@ export function createMemoAdapter(clients: ApiClients): MemoAdapter {
       } catch {
         return null;
       }
-    },
-
-    // FIXME 未対応
-    async getChildren(parentId: string): Promise<Memo[]> {
-      const memo = await clients.memos.getMemo({
-        memoId: parentId,
-      });
-      const nodes = await clients.projects.getNodeTree({
-        projectId: memo.projectId,
-        nodeTypes: ['memo', 'folder'],
-      });
-      const parentNode = findNodeInTree(nodes, parentId);
-      if (!parentNode) return [];
-      const memos = await Promise.all(
-        parentNode.children.map((node) =>
-          clients.memos.getMemo({ memoId: node.id }),
-        ),
-      );
-      return memos.map(toMemo);
     },
 
     async create(
@@ -148,11 +131,6 @@ export function createMemoAdapter(clients: ApiClients): MemoAdapter {
           })),
         },
       });
-    },
-
-    async getByTag(projectId: string, tag: string): Promise<Memo[]> {
-      const all = await this.getByProjectId(projectId);
-      return all.filter((m) => m.tags?.includes(tag));
     },
   };
 }

@@ -11,6 +11,9 @@ import {
   ChevronDown,
   Check,
   XCircle,
+  RotateCcw,
+  Settings2,
+  X,
 } from 'lucide-react';
 import {
   Popover,
@@ -71,6 +74,8 @@ export interface Conversation {
   title: string;
   createdAt: Date;
   updatedAt: Date;
+  /** セッションの処理状態（一覧のインジケータ表示に使用） */
+  status?: 'idle' | 'processing' | 'error';
 }
 
 // --- AiPanel (シェル) ---
@@ -148,8 +153,20 @@ function ConversationSelector({
                     onClick={() => onSelectConversation?.(conversation.id)}
                   >
                     <div className="flex flex-col min-w-0">
-                      <span className="font-medium text-sm truncate">
-                        {conversation.title}
+                      <span className="flex items-center gap-1.5 text-sm font-medium">
+                        {conversation.status === 'processing' && (
+                          <span
+                            className="size-1.5 shrink-0 animate-pulse rounded-full bg-primary"
+                            aria-label="処理中"
+                          />
+                        )}
+                        {conversation.status === 'error' && (
+                          <span
+                            className="size-1.5 shrink-0 rounded-full bg-destructive"
+                            aria-label="エラー"
+                          />
+                        )}
+                        <span className="truncate">{conversation.title}</span>
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {conversation.updatedAt.toLocaleDateString()}
@@ -214,6 +231,8 @@ export interface AiPanelContentProps {
   description?: string;
   onAcceptProposal?: (proposalId: string) => void;
   onRejectProposal?: (proposalId: string) => void;
+  /** ユーザーメッセージから「この時点までやり直す」操作。未指定ならボタンを表示しない */
+  onRevertMessage?: (messageId: string) => void;
   isLoading?: boolean;
 }
 
@@ -365,11 +384,13 @@ function MessageBubble({
   message,
   onAcceptProposal,
   onRejectProposal,
+  onRevertMessage,
   isLoading = false,
 }: {
   message: Message;
   onAcceptProposal?: (proposalId: string) => void;
   onRejectProposal?: (proposalId: string) => void;
+  onRevertMessage?: (messageId: string) => void;
   isLoading?: boolean;
 }) {
   if ('proposal' in message) {
@@ -387,15 +408,38 @@ function MessageBubble({
 
   const isUser = message.role === 'user';
 
-  return (
-    <div
-      className={cn('w-full', isUser ? 'rounded-lg border px-3 py-1.5' : '')}
-    >
-      {isUser ? (
+  if (isUser) {
+    return (
+      <div className="group w-full rounded-lg border px-3 py-1.5">
         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-      ) : (
-        <Markdown className="text-sm">{message.content}</Markdown>
-      )}
+        {onRevertMessage && (
+          <div className="mt-1 flex justify-end">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="h-6 px-1.5 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  disabled={isLoading}
+                  onClick={() => onRevertMessage(message.id)}
+                >
+                  <RotateCcw className="mr-1 size-3" />
+                  ここからやり直す
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                このメッセージ以降を取り消して送信し直します
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <Markdown className="text-sm">{message.content}</Markdown>
     </div>
   );
 }
@@ -446,6 +490,7 @@ export function AiPanelContent({
   description,
   onAcceptProposal,
   onRejectProposal,
+  onRevertMessage,
   isLoading = false,
 }: AiPanelContentProps) {
   const { viewportRef, scrollToBottom } = useAutoScroll([messages, isLoading]);
@@ -476,6 +521,7 @@ export function AiPanelContent({
               message={message}
               onAcceptProposal={onAcceptProposal}
               onRejectProposal={onRejectProposal}
+              onRevertMessage={onRevertMessage}
               isLoading={isLoading}
             />
           ))
@@ -492,11 +538,27 @@ export function AiPanelContent({
 
 // --- AiPanelInput (入力欄 + モード切替) ---
 
+export interface AiModelOption {
+  value: string;
+  label: string;
+}
+
 export interface AiPanelInputProps {
   mode: AiMode;
   onModeChange?: (mode: AiMode) => void;
   onSend?: (message: string) => void;
   isLoading?: boolean;
+  /** 選択中のモデル */
+  model?: string;
+  /** 選択可能なモデル一覧（省略・空の場合はモデル設定UIを表示しない） */
+  models?: AiModelOption[];
+  onModelChange?: (model: string) => void;
+  /** 生成温度（0.0〜2.0）。onTemperatureChange 指定時のみ温度プリセットを表示 */
+  temperature?: number;
+  onTemperatureChange?: (temperature: number) => void;
+  /** やり直し（revert）モードが有効か。有効時は入力欄上部に通知を表示する */
+  revertActive?: boolean;
+  onCancelRevert?: () => void;
 }
 
 function ModeToggleFooter({
@@ -555,11 +617,96 @@ function ModeToggleFooter({
   );
 }
 
+const TEMPERATURE_PRESETS: { value: number; label: string }[] = [
+  { value: 0.3, label: '低（正確重視）' },
+  { value: 0.7, label: '標準' },
+  { value: 1.0, label: '高（創造重視）' },
+];
+
+function ModelConfigFooter({
+  model,
+  models,
+  onModelChange,
+  temperature,
+  onTemperatureChange,
+}: {
+  model?: string;
+  models: AiModelOption[];
+  onModelChange?: (model: string) => void;
+  temperature?: number;
+  onTemperatureChange?: (temperature: number) => void;
+}) {
+  const current = models.find((m) => m.value === model);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 max-w-40 px-2 text-xs font-medium"
+        >
+          <Settings2 className="mr-1 size-3 shrink-0" />
+          <span className="truncate">{current?.label ?? 'モデル'}</span>
+          <ChevronDown className="ml-1 size-3 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2" align="start">
+        <div className="space-y-1">
+          <p className="px-1 text-[10px] font-medium text-muted-foreground">
+            モデル
+          </p>
+          {models.map((m) => (
+            <Button
+              key={m.value}
+              variant={m.value === model ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-7 w-full justify-between text-xs"
+              onClick={() => onModelChange?.(m.value)}
+            >
+              <span className="truncate">{m.label}</span>
+              {m.value === model && <Check className="size-3 shrink-0" />}
+            </Button>
+          ))}
+        </div>
+        {onTemperatureChange && (
+          <div className="mt-2 space-y-1 border-t pt-2">
+            <p className="px-1 text-[10px] font-medium text-muted-foreground">
+              生成温度
+            </p>
+            {TEMPERATURE_PRESETS.map((t) => (
+              <Button
+                key={t.value}
+                variant={temperature === t.value ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-7 w-full justify-between text-xs"
+                onClick={() => onTemperatureChange(t.value)}
+              >
+                <span>{t.label}</span>
+                {temperature === t.value && (
+                  <Check className="size-3 shrink-0" />
+                )}
+              </Button>
+            ))}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function AiPanelInput({
   mode,
   onModeChange,
   onSend,
   isLoading = false,
+  model,
+  models,
+  onModelChange,
+  temperature,
+  onTemperatureChange,
+  revertActive = false,
+  onCancelRevert,
 }: AiPanelInputProps) {
   const [input, setInput] = React.useState('');
 
@@ -574,6 +721,24 @@ export function AiPanelInput({
   return (
     <div className="p-2">
       <div className="rounded-lg border bg-background">
+        {revertActive && (
+          <div className="flex items-center justify-between gap-2 rounded-t-lg border-b bg-muted/50 px-3 py-1.5 text-xs">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <RotateCcw className="size-3 shrink-0" />
+              選択した時点までやり直して送信します
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="h-5 px-1"
+              aria-label="やり直しをキャンセル"
+              onClick={onCancelRevert}
+            >
+              <X className="size-3" />
+            </Button>
+          </div>
+        )}
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -590,11 +755,22 @@ export function AiPanelInput({
           }}
         />
         <div className="flex items-center justify-between px-2 py-1.5 border-t">
-          <ModeToggleFooter mode={mode} onModeChange={onModeChange} />
+          <div className="flex min-w-0 items-center gap-1">
+            <ModeToggleFooter mode={mode} onModeChange={onModeChange} />
+            {models && models.length > 0 && (
+              <ModelConfigFooter
+                model={model}
+                models={models}
+                onModelChange={onModelChange}
+                temperature={temperature}
+                onTemperatureChange={onTemperatureChange}
+              />
+            )}
+          </div>
           <Button
             type="submit"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 shrink-0"
             disabled={!input.trim() || isLoading}
             onClick={handleSubmit}
           >

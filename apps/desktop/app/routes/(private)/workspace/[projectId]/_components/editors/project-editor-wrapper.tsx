@@ -11,6 +11,7 @@ import {
 } from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import { GlossaryManagerWrapper } from '../glossary-manager-wrapper';
+import { InstructionsManagerWrapper } from '../instructions-manager-wrapper';
 import type { Project } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = {
@@ -79,6 +80,7 @@ export function ProjectEditorWrapper({
       <TabsList className="mx-3 mt-2 self-start">
         <TabsTrigger value="basic">基本情報</TabsTrigger>
         <TabsTrigger value="glossary">用語集</TabsTrigger>
+        <TabsTrigger value="instructions">執筆指示</TabsTrigger>
       </TabsList>
       <TabsContent value="basic" className="min-h-0 flex-1">
         <ProjectEditor
@@ -90,6 +92,9 @@ export function ProjectEditorWrapper({
       </TabsContent>
       <TabsContent value="glossary" className="min-h-0 flex-1">
         <GlossaryManagerWrapper projectId={projectId} />
+      </TabsContent>
+      <TabsContent value="instructions" className="min-h-0 flex-1">
+        <InstructionsManagerWrapper projectId={projectId} />
       </TabsContent>
     </Tabs>
   );

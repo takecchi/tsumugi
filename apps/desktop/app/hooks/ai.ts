@@ -5,9 +5,11 @@ import type {
   AIChatMode,
   AIChatSession,
   AIContextPack,
+  AIMemory,
   AIMessage,
   AIChatMessageRequest,
   AIChatRequest,
+  AIProjectUsage,
   AIStreamChunk,
   AIProposalResult,
 } from '@tsumugi/adapter';
@@ -130,5 +132,65 @@ export function useAIContext(
     { type: 'aiContext', projectId, mode },
     ({ projectId, mode }) => adapter.ai.getContext(projectId, mode),
     config,
+  );
+}
+
+interface AIUsageKey {
+  type: 'aiUsage';
+  projectId: string;
+}
+
+/**
+ * プロジェクトのAIトークン使用量を取得する
+ * @param projectId - プロジェクトID
+ * @param config
+ */
+export function useAIUsage(
+  projectId: string,
+  config?: SWRConfiguration<AIProjectUsage, Error>,
+) {
+  const adapter = useAdapter();
+  return useSWR<AIProjectUsage, Error, AIUsageKey>(
+    { type: 'aiUsage', projectId },
+    ({ projectId }) => adapter.ai.getUsage(projectId),
+    config,
+  );
+}
+
+interface AIMemoriesKey {
+  type: 'aiMemories';
+  projectId: string;
+}
+
+/**
+ * プロジェクトのAIメモリ一覧を取得する
+ * @param projectId - プロジェクトID
+ * @param config
+ */
+export function useAIMemories(
+  projectId: string,
+  config?: SWRConfiguration<AIMemory[], Error>,
+) {
+  const adapter = useAdapter();
+  return useSWR<AIMemory[], Error, AIMemoriesKey>(
+    { type: 'aiMemories', projectId },
+    ({ projectId }) => adapter.ai.getMemories(projectId),
+    config,
+  );
+}
+
+/**
+ * AIメモリを削除する
+ * @param projectId - プロジェクトID
+ * @revalidates useAIMemories - AIメモリ一覧を再フェッチする
+ */
+export function useDeleteAIMemory(projectId: string) {
+  const adapter = useAdapter();
+  return useSWRMutation<undefined, Error, AIMemoriesKey, string>(
+    { type: 'aiMemories', projectId },
+    async ({ projectId }, { arg: memoryId }) => {
+      await adapter.ai.deleteMemory(projectId, memoryId);
+      return undefined;
+    },
   );
 }

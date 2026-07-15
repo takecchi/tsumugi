@@ -129,20 +129,3 @@ export function useReorderWritings(projectId: string) {
     },
   );
 }
-
-interface TotalWordCountKey {
-  type: 'totalWordCount';
-  projectId: string;
-}
-
-/**
- * プロジェクトの総文字数を取得する
- * @param projectId - プロジェクトID
- */
-export function useTotalWordCount(projectId: string) {
-  const adapter = useAdapter();
-  return useSWR<number, Error, TotalWordCountKey>(
-    { type: 'totalWordCount', projectId },
-    ({ projectId }) => adapter.writings.getTotalWordCount(projectId),
-  );
-}

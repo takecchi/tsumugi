@@ -1,4 +1,4 @@
-import type { ExportAdapter, ExportOptions } from '@tsumugi/adapter';
+import type { ExportAdapter } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 
 function triggerBrowserDownload(blob: Blob, filename: string): void {
@@ -25,10 +25,7 @@ function extractFilename(headers: Headers): string {
 
 export function createExportAdapter(clients: ApiClients): ExportAdapter {
   return {
-    async exportProject(
-      projectId: string,
-      _options?: ExportOptions,
-    ): Promise<void> {
+    async exportProject(projectId: string): Promise<void> {
       const response = await clients.projects.exportProjectRaw({ projectId });
       const blob = await response.raw.blob();
       const filename = extractFilename(response.raw.headers);
