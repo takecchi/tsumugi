@@ -1,8 +1,16 @@
 import { useCallback } from 'react';
 import { useProject, useUpdateProject } from '~/hooks/projects';
 import { useExportProject } from '~/hooks/export';
-import { ProjectEditor, type ProjectEditorData } from '@tsumugi/ui';
+import {
+  ProjectEditor,
+  type ProjectEditorData,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
+import { GlossaryManagerWrapper } from '../glossary-manager-wrapper';
 import type { Project } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = {
@@ -67,11 +75,22 @@ export function ProjectEditorWrapper({
   if (!project) return null;
 
   return (
-    <ProjectEditor
-      data={toEditorData(project)}
-      onChange={handleChange}
-      onExport={handleExport}
-      isExporting={isExporting}
-    />
+    <Tabs defaultValue="basic" className="flex h-full flex-col">
+      <TabsList className="mx-3 mt-2 self-start">
+        <TabsTrigger value="basic">基本情報</TabsTrigger>
+        <TabsTrigger value="glossary">用語集</TabsTrigger>
+      </TabsList>
+      <TabsContent value="basic" className="min-h-0 flex-1">
+        <ProjectEditor
+          data={toEditorData(project)}
+          onChange={handleChange}
+          onExport={handleExport}
+          isExporting={isExporting}
+        />
+      </TabsContent>
+      <TabsContent value="glossary" className="min-h-0 flex-1">
+        <GlossaryManagerWrapper projectId={projectId} />
+      </TabsContent>
+    </Tabs>
   );
 }

@@ -11,6 +11,8 @@ function toCharacter(api: ApiCharacter): Character {
     name: api.name,
     nodeType: api.nodeType,
     order: api.order,
+    canonStatus: api.canonStatus,
+    contextPolicy: api.contextPolicy,
     aliases: api.aliases ?? undefined,
     role: api.role ?? undefined,
     gender: api.gender ?? undefined,
@@ -73,7 +75,10 @@ export function createCharacterAdapter(clients: ApiClients): CharacterAdapter {
     },
 
     async create(
-      data: Omit<Character, 'id' | 'createdAt' | 'updatedAt'>,
+      data: Omit<
+        Character,
+        'id' | 'createdAt' | 'updatedAt' | 'canonStatus' | 'contextPolicy'
+      >,
     ): Promise<Character> {
       const character = await clients.projects.createCharacter({
         projectId: data.projectId,
@@ -98,7 +103,15 @@ export function createCharacterAdapter(clients: ApiClients): CharacterAdapter {
     async update(
       id: string,
       data: Partial<
-        Omit<Character, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>
+        Omit<
+          Character,
+          | 'id'
+          | 'projectId'
+          | 'createdAt'
+          | 'updatedAt'
+          | 'canonStatus'
+          | 'contextPolicy'
+        >
       >,
     ): Promise<Character> {
       const character = await clients.characters.updateCharacter({

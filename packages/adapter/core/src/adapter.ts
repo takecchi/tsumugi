@@ -7,7 +7,10 @@ import type {
   Character,
   Memo,
   Writing,
+  CanonStatus,
+  ContextPolicy,
   AIChatMessageRequest,
+  AIChatMode,
   AIChatRequest,
   AIChatSession,
   AIMessage,
@@ -15,6 +18,15 @@ import type {
   AIStreamChunk,
   AIMemory,
   AIProjectUsage,
+  AIContextPack,
+  ConsistencyCheck,
+  ConsistencyCheckSummary,
+  ConsistencyFinding,
+  ConsistencyStreamChunk,
+  FindingStatus,
+  GlossaryTerm,
+  CreateGlossaryTermData,
+  UpdateGlossaryTermData,
   AuthState,
   GoogleAuthUrl,
   ExportOptions,
@@ -42,13 +54,26 @@ export interface ApiAdapterConfig {
 
 /**
  * 作成時に除外するフィールド
+ * canonStatus / contextPolicy はバックエンドが払い出す AI 属性のため作成データには含めない。
  */
-type CreateOmit = 'id' | 'createdAt' | 'updatedAt';
+type CreateOmit =
+  | 'id'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'canonStatus'
+  | 'contextPolicy';
 
 /**
  * 更新時に除外するフィールド
+ * canonStatus / contextPolicy は `nodes.updateAttributes()` で個別に更新する。
  */
-type UpdateOmit = 'id' | 'projectId' | 'createdAt' | 'updatedAt';
+type UpdateOmit =
+  | 'id'
+  | 'projectId'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'canonStatus'
+  | 'contextPolicy';
 
 /**
  * ノードアダプター共通の操作
@@ -176,6 +201,85 @@ export interface AIAdapter {
    * プロジェクトのトークン使用量を取得
    */
   getUsage(projectId: string): Promise<AIProjectUsage>;
+
+  /**
+   * AIに渡るコンテキスト一式（プレビュー）を取得
+   * @param projectId - プロジェクトID
+   * @param mode - チャットモード（ask/write でコンテキストが変わる）
+   */
+  getContext(projectId: string, mode: AIChatMode): Promise<AIContextPack>;
+}
+
+/**
+ * ノードのAI属性
+ */
+export interface NodeAttributes {
+  /** 正典ステータス（確定/検討中） */
+  canonStatus?: CanonStatus;
+  /** AIコンテキストへの露出ポリシー */
+  contextPolicy?: ContextPolicy;
+}
+
+/**
+ * ノード共通操作のインターフェース（型に依存しないノード横断の操作）
+ */
+export interface NodeAdapter {
+  /**
+   * ノードのAI属性（canonStatus / contextPolicy）を更新する
+   */
+  updateAttributes(nodeId: string, attributes: NodeAttributes): Promise<Node>;
+}
+
+/**
+ * 矛盾チェック操作のインターフェース
+ */
+export interface ConsistencyAdapter {
+  /**
+   * 矛盾チェックを実行する（ストリーミング）。
+   * finding が逐次流れる ReadableStream を返す。実行中の再実行はエラー（409）。
+   */
+  run(writingId: string): Promise<ReadableStream<ConsistencyStreamChunk>>;
+
+  /**
+   * 執筆ノードの矛盾チェック履歴（一覧、finding 件数のみ）を取得する
+   */
+  list(writingId: string): Promise<ConsistencyCheckSummary[]>;
+
+  /**
+   * 矛盾チェックの詳細（finding 全件）を取得する
+   */
+  get(checkId: string): Promise<ConsistencyCheck>;
+
+  /**
+   * 指摘（finding）のトリアージ状態を更新する
+   */
+  updateFinding(
+    findingId: string,
+    status: FindingStatus,
+  ): Promise<ConsistencyFinding>;
+
+  /**
+   * 指摘から修正依頼を合成し、write モードのチャットセッションを作成する（ストリーミング）。
+   * 以降は通常のチャット→提案フローとなる。
+   */
+  createFixSession(findingId: string): Promise<{
+    session: AIChatSession;
+    stream: ReadableStream<AIStreamChunk>;
+  }>;
+}
+
+/**
+ * 用語集操作のインターフェース
+ */
+export interface GlossaryAdapter {
+  list(projectId: string): Promise<GlossaryTerm[]>;
+  create(
+    projectId: string,
+    data: CreateGlossaryTermData,
+  ): Promise<GlossaryTerm>;
+  get(termId: string): Promise<GlossaryTerm | null>;
+  update(termId: string, data: UpdateGlossaryTermData): Promise<GlossaryTerm>;
+  delete(termId: string): Promise<void>;
 }
 
 /**
@@ -231,10 +335,13 @@ export interface Adapter {
   readonly auth: AuthAdapter;
   readonly projects: ProjectAdapter;
   readonly settings: ProjectSettingsAdapter;
+  readonly nodes: NodeAdapter;
   readonly plots: PlotAdapter;
   readonly characters: CharacterAdapter;
   readonly memos: MemoAdapter;
   readonly writings: WritingAdapter;
   readonly ai: AIAdapter;
+  readonly consistency: ConsistencyAdapter;
+  readonly glossary: GlossaryAdapter;
   readonly export: ExportAdapter;
 }

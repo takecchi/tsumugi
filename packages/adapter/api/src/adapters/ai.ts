@@ -1,8 +1,10 @@
 import {
   AIAdapter,
+  AIChatMode,
   AIChatRequest,
   AIChatMessageRequest,
   AIChatSession,
+  AIContextPack,
   AIMessage as AdapterAIMessage,
   AIStreamChunk,
   AIProposalResult,
@@ -13,35 +15,47 @@ import {
   AIToolCallMessage,
   AIToolResultMessage,
   AIProposalMessage,
-  FieldChange,
 } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
-import type {
-  AISession as ClientAISession,
-  AIMessage as ClientAIMessage,
-  AIMemory as ClientAIMemory,
-  AIProjectUsage as ClientAIProjectUsage,
-  ChatRequest as ClientChatRequest,
+import {
+  ProposalResultStreamChunkFromJSON,
+  type AISession as ClientAISession,
+  type AIMessage as ClientAIMessage,
+  type AIMemory as ClientAIMemory,
+  type AIProjectUsage as ClientAIProjectUsage,
+  type AIContextPack as ClientAIContextPack,
+  type ChatRequest as ClientChatRequest,
+  type AIProposalFeedback as ClientAIProposalFeedback,
 } from '@tsumugi-chan/client';
 import {
   fetchSSE,
+  hasType,
+  parseSSEEvent,
   parseSSEStream,
-  toAIStreamChunk,
+  toAIProposal,
 } from '@/internal/helpers/sse';
-import type {
-  RawAIProposalResult,
-  RawAIProposalFeedback,
-} from '@/internal/types/raw-sse.types';
 
 // ─── 型変換 ───
 
-function toSession(api: ClientAISession): AIChatSession {
+export function toSession(api: ClientAISession): AIChatSession {
   return {
     id: api.id,
     projectId: api.projectId,
     title: api.title,
     createdAt: api.createdAt,
     updatedAt: api.updatedAt,
+  };
+}
+
+function toContextPack(api: ClientAIContextPack): AIContextPack {
+  return {
+    sections: api.sections.map((s) => ({
+      tier: s.tier,
+      title: s.title,
+      content: s.content,
+      charCount: s.charCount,
+    })),
+    totalCharCount: api.totalCharCount,
   };
 }
 
@@ -73,7 +87,11 @@ function toMessage(api: ClientAIMessage): AdapterAIMessage {
         content: JSON.stringify(api.content),
       } satisfies AIToolCallMessage;
     }
-    case 'tool_result': {
+    // tool_result / feedback は LLM ↔ アダプター間・フロント→AI 間の内部メッセージ。
+    // UI には表示しない（buildDisplayMessages が text / proposal のみ表示）ため
+    // tool_result として畳み込む。
+    case 'tool_result':
+    case 'feedback': {
       return {
         ...base,
         messageType: 'tool_result',
@@ -82,37 +100,10 @@ function toMessage(api: ClientAIMessage): AdapterAIMessage {
     }
     case 'proposal': {
       if (api.proposal) {
-        const diffs: FieldChange<string | unknown>[] = [];
-        for (const replacePreview of api.proposal.replacePreviews) {
-          diffs.push({
-            fieldName: replacePreview.fieldName,
-            before: replacePreview.before,
-            after: replacePreview.after,
-          });
-        }
-        for (const lineEditsPreview of api.proposal.lineEditsPreviews) {
-          for (const preview of lineEditsPreview.previews) {
-            diffs.push({
-              fieldName: lineEditsPreview.fieldName,
-              before: preview.before,
-              after: preview.after,
-              previewStart: preview.previewStart,
-              previewEnd: preview.previewEnd,
-            });
-          }
-        }
         return {
           ...base,
           messageType: 'proposal',
-          proposal: {
-            id: api.proposal.toolCallId ?? '',
-            action: api.proposal.action,
-            targetId: api.proposal.targetId ?? '',
-            contentType: api.proposal.contentType,
-            targetName: api.proposal.targetName,
-            diffs: diffs,
-            status: api.proposal.proposalStatus,
-          },
+          proposal: toAIProposal(api.proposal),
         } satisfies AIProposalMessage;
       }
     }
@@ -148,13 +139,13 @@ function toUsage(api: ClientAIProjectUsage): AdapterAIProjectUsage {
   };
 }
 
-function toFeedback(raw: RawAIProposalFeedback): AIProposalFeedback {
+function toFeedback(feedback: ClientAIProposalFeedback): AIProposalFeedback {
   return {
-    toolCallId: raw.tool_call_id,
-    status: raw.status,
-    contentType: raw.content_type,
-    targetId: raw.target_id,
-    conflictDetails: raw.conflict_details,
+    toolCallId: feedback.toolCallId,
+    status: feedback.status,
+    contentType: feedback.contentType,
+    targetId: feedback.targetId,
+    conflictDetails: feedback.conflictDetails,
   };
 }
 
@@ -257,6 +248,7 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
         },
       });
 
+      // セッション作成レスポンスは 200 SSE。X-Session-Id ヘッダーで新規IDを返す。
       const response = await fetchSSE(clients.configuration, opts);
 
       // レスポンスヘッダからセッションIDを取得
@@ -289,17 +281,7 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
         toolCallId,
       });
       const response = await fetchSSE(clients.configuration, opts);
-
-      const contentType = response.headers.get('Content-Type') ?? '';
-
-      if (contentType.includes('text/event-stream')) {
-        return await parseProposalSSEResponse(response);
-      }
-
-      const json = (await response.json()) as RawAIProposalResult;
-      return {
-        feedback: toFeedback(json.feedback),
-      };
+      return await parseProposalSSEResponse(response);
     },
 
     async rejectProposal(
@@ -311,17 +293,7 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
         toolCallId,
       });
       const response = await fetchSSE(clients.configuration, opts);
-
-      const contentType = response.headers.get('Content-Type') ?? '';
-
-      if (contentType.includes('text/event-stream')) {
-        return await parseProposalSSEResponse(response);
-      }
-
-      const json = (await response.json()) as RawAIProposalResult;
-      return {
-        feedback: toFeedback(json.feedback),
-      };
+      return await parseProposalSSEResponse(response);
     },
 
     async deleteSession(sessionId: string): Promise<void> {
@@ -341,12 +313,28 @@ export function createAIAdapter(clients: ApiClients): AIAdapter {
       const usage = await clients.projects.getAIUsage({ projectId });
       return toUsage(usage);
     },
+
+    async getContext(
+      projectId: string,
+      mode: AIChatMode,
+    ): Promise<AIContextPack> {
+      const pack = await clients.projects.getAIContext({ projectId, mode });
+      return toContextPack(pack);
+    },
   };
 }
 
-// ─── Proposal SSE パーサー ───
+// ─── Proposal SSE パーサー（v2: 常に SSE） ───
 
-async function parseProposalSSEResponse(
+/**
+ * 提案の承認/拒否レスポンス（常に SSE）をパースする。
+ *
+ * 先頭フレームは必ず `{type:'proposal-result', result}`。
+ * result.hasStream が true の場合、続くフレーム（start→text-*→finish）が
+ * AI 応答ターンとして流れるので、それを result.stream として返す。
+ * false の場合は続けて finish で閉じるため stream は返さない。
+ */
+export async function parseProposalSSEResponse(
   response: Response,
 ): Promise<AIProposalResult> {
   const body = response.body;
@@ -357,24 +345,92 @@ async function parseProposalSSEResponse(
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  let feedbackResolved = false;
-  let resolveFeedback: (value: AIProposalFeedback) => void = () => {
-    console.warn(
-      '[adapter-api] resolveFeedback called before Promise executor assigned it',
-    );
-  };
 
-  const feedbackPromise = new Promise<AIProposalFeedback>((resolve) => {
-    resolveFeedback = resolve;
-  });
+  // 先頭の proposal-result フレームを取得するまで読む
+  let feedback: AIProposalFeedback | null = null;
+  let hasStream = false;
+  let leftoverFrames: string[] = [];
 
-  const ctrl: {
-    current: ReadableStreamDefaultController<AIStreamChunk> | null;
-  } = { current: null };
+  outer: while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() ?? '';
 
+    for (let i = 0; i < parts.length; i++) {
+      const dataLine = parts[i].split('\n').find((l) => l.startsWith('data: '));
+      if (!dataLine) continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(dataLine.slice(6));
+      } catch {
+        continue;
+      }
+      if (hasType(parsed) && parsed.type === 'proposal-result') {
+        const result = ProposalResultStreamChunkFromJSON(parsed).result;
+        feedback = toFeedback(result.feedback);
+        hasStream = result.hasStream;
+        // proposal-result と同じバッチに含まれる後続フレームは AI 応答へ引き継ぐ
+        leftoverFrames = parts.slice(i + 1);
+        break outer;
+      }
+    }
+  }
+
+  if (!feedback) {
+    // proposal-result が来ずに終了した（想定外）
+    await reader.cancel().catch((e) => {
+      console.error('[adapter-api] Failed to cancel proposal SSE reader:', e);
+    });
+    throw new Error('proposal-result chunk not found in proposal SSE response');
+  }
+
+  if (!hasStream) {
+    await reader.cancel().catch((e) => {
+      console.error('[adapter-api] Failed to cancel proposal SSE reader:', e);
+    });
+    return { feedback };
+  }
+
+  // hasStream: 残り（未処理フレーム + 以降の read）を AI 応答ストリームとして返す
   const stream = new ReadableStream<AIStreamChunk>({
     start(controller) {
-      ctrl.current = controller;
+      const pump = async () => {
+        try {
+          for (const part of leftoverFrames) {
+            const chunk = parseSSEEvent(part);
+            if (chunk) controller.enqueue(chunk);
+          }
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              if (buffer.trim()) {
+                const chunk = parseSSEEvent(buffer);
+                if (chunk) controller.enqueue(chunk);
+              }
+              controller.close();
+              return;
+            }
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() ?? '';
+            for (const part of parts) {
+              const chunk = parseSSEEvent(part);
+              if (chunk) controller.enqueue(chunk);
+            }
+          }
+        } catch (err) {
+          controller.enqueue({
+            type: 'error',
+            error: err instanceof Error ? err.message : String(err),
+          });
+          controller.close();
+        }
+      };
+      pump().catch((e) => {
+        console.error('[adapter-api] proposal SSE pump error:', e);
+      });
     },
     cancel() {
       reader.cancel().catch((e) => {
@@ -383,60 +439,5 @@ async function parseProposalSSEResponse(
     },
   });
 
-  // バックグラウンドで読み取りを開始
-  void (async () => {
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          ctrl.current?.close();
-          return;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-
-        for (const part of parts) {
-          if (!part.trim()) continue;
-
-          if (!feedbackResolved && part.startsWith('event: proposal_result')) {
-            const dataLine = part
-              .split('\n')
-              .find((l) => l.startsWith('data: '));
-            if (dataLine) {
-              feedbackResolved = true;
-              const resultJson = JSON.parse(
-                dataLine.slice(6),
-              ) as RawAIProposalResult;
-              resolveFeedback(toFeedback(resultJson.feedback));
-            }
-            continue;
-          }
-
-          // 通常の SSE data イベント
-          const dataLine = part.split('\n').find((l) => l.startsWith('data: '));
-          if (dataLine) {
-            try {
-              const chunkData = JSON.parse(dataLine.slice(6));
-              const chunk = toAIStreamChunk(chunkData);
-              ctrl.current?.enqueue(chunk);
-            } catch {
-              // ignore parse errors
-            }
-          }
-        }
-      }
-    } catch {
-      ctrl.current?.close();
-    }
-  })();
-
-  // proposal_result イベントが到着するまで待つ
-  const feedback = await feedbackPromise;
-
-  return {
-    feedback,
-    stream,
-  };
+  return { feedback, stream };
 }

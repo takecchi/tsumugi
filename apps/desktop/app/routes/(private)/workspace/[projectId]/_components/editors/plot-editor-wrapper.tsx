@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { usePlot, usePlotTree, useUpdatePlot } from '~/hooks/plots';
 import { PlotEditor, type PlotEditorData } from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
+import { NodeAttributesBar } from './node-attributes-bar';
 import type { Plot } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = {
@@ -52,5 +53,18 @@ export function PlotEditorWrapper({ id, projectId }: PlotEditorWrapperProps) {
 
   if (!plot) return null;
 
-  return <PlotEditor data={toEditorData(plot)} onChange={handleChange} />;
+  return (
+    <div className="flex h-full flex-col">
+      <NodeAttributesBar
+        projectId={projectId}
+        contentType="plot"
+        nodeId={id}
+        canonStatus={plot.canonStatus}
+        contextPolicy={plot.contextPolicy}
+      />
+      <div className="min-h-0 flex-1">
+        <PlotEditor data={toEditorData(plot)} onChange={handleChange} />
+      </div>
+    </div>
+  );
 }

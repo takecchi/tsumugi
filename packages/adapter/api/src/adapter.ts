@@ -2,12 +2,15 @@ import type { Adapter, AdapterConfig } from '@tsumugi/adapter';
 import { createApiClients } from '@/client';
 import { createAuthAdapter } from '@/adapters/auth';
 import { createProjectAdapter } from '@/adapters/project';
+import { createNodeAdapter } from '@/adapters/node';
 import { createPlotAdapter } from '@/adapters/plot';
 import { createCharacterAdapter } from '@/adapters/character';
 import { createMemoAdapter } from '@/adapters/memo';
 import { createWritingAdapter } from '@/adapters/writing';
 import { createSettingsAdapter } from '@/adapters/settings';
 import { createAIAdapter } from '@/adapters/ai';
+import { createConsistencyAdapter } from '@/adapters/consistency';
+import { createGlossaryAdapter } from '@/adapters/glossary';
 import { createExportAdapter } from '@/adapters/export';
 import { TokenManager } from '@/token-manager';
 
@@ -29,11 +32,14 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
     auth: createAuthAdapter(clients, tokenManager),
     projects: createProjectAdapter(clients),
     settings: createSettingsAdapter(),
+    nodes: createNodeAdapter(clients),
     plots: createPlotAdapter(clients),
     characters: createCharacterAdapter(clients),
     memos: createMemoAdapter(clients),
     writings: createWritingAdapter(clients),
     ai: createAIAdapter(clients),
+    consistency: createConsistencyAdapter(clients),
+    glossary: createGlossaryAdapter(clients),
     export: createExportAdapter(clients),
   };
 }

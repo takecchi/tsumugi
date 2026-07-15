@@ -1,8 +1,10 @@
 import { useAdapter } from '~/hooks/useAdapter';
-import useSWR from 'swr';
+import useSWR, { type SWRConfiguration } from 'swr';
 import useSWRMutation from 'swr/mutation';
 import type {
+  AIChatMode,
   AIChatSession,
+  AIContextPack,
   AIMessage,
   AIChatMessageRequest,
   AIChatRequest,
@@ -103,5 +105,30 @@ export function useRejectProposal(sessionId: string) {
     { type: 'aiMessages', sessionId },
     ({ sessionId }, { arg: proposalId }) =>
       adapter.ai.rejectProposal(sessionId, proposalId),
+  );
+}
+
+interface AIContextKey {
+  type: 'aiContext';
+  projectId: string;
+  mode: AIChatMode;
+}
+
+/**
+ * AIに渡るコンテキスト一式（プレビュー）を取得する
+ * @param projectId - プロジェクトID
+ * @param mode - チャットモード（ask/write でコンテキストが変わる）
+ * @param config
+ */
+export function useAIContext(
+  projectId: string,
+  mode: AIChatMode,
+  config?: SWRConfiguration<AIContextPack, Error>,
+) {
+  const adapter = useAdapter();
+  return useSWR<AIContextPack, Error, AIContextKey>(
+    { type: 'aiContext', projectId, mode },
+    ({ projectId, mode }) => adapter.ai.getContext(projectId, mode),
+    config,
   );
 }

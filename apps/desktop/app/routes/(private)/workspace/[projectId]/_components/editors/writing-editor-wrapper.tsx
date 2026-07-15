@@ -1,7 +1,15 @@
 import { useCallback } from 'react';
 import { useWriting, useWritingTree, useUpdateWriting } from '~/hooks/writings';
-import { WritingEditor } from '@tsumugi/ui';
+import {
+  WritingEditor,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
+import { NodeAttributesBar } from './node-attributes-bar';
+import { ConsistencyPanelWrapper } from '../consistency-panel-wrapper';
 
 const NO_REVALIDATE = {
   revalidateOnFocus: false,
@@ -61,11 +69,31 @@ export function WritingEditorWrapper({
   if (!writing) return null;
 
   return (
-    <WritingEditor
-      name={writing.name}
-      content={writing.content}
-      onNameChange={handleNameChange}
-      onContentChange={handleContentChange}
-    />
+    <div className="flex h-full flex-col">
+      <NodeAttributesBar
+        projectId={projectId}
+        contentType="writing"
+        nodeId={id}
+        canonStatus={writing.canonStatus}
+        contextPolicy={writing.contextPolicy}
+      />
+      <Tabs defaultValue="body" className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="mx-3 mt-2 self-start">
+          <TabsTrigger value="body">本文</TabsTrigger>
+          <TabsTrigger value="consistency">整合性チェック</TabsTrigger>
+        </TabsList>
+        <TabsContent value="body" className="min-h-0 flex-1">
+          <WritingEditor
+            name={writing.name}
+            content={writing.content}
+            onNameChange={handleNameChange}
+            onContentChange={handleContentChange}
+          />
+        </TabsContent>
+        <TabsContent value="consistency" className="min-h-0 flex-1">
+          <ConsistencyPanelWrapper writingId={id} projectId={projectId} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

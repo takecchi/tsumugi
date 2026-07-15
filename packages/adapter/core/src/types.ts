@@ -59,8 +59,26 @@ export interface ProjectSettings {
 }
 
 /**
+ * ノードの正典ステータス
+ * - confirmed: 確定（設定として確定した内容）
+ * - draft: 検討中（まだ確定していない内容）
+ */
+export type CanonStatus = 'confirmed' | 'draft';
+
+/**
+ * ノードのAIコンテキストへの露出ポリシー
+ * - always: 常に全文をAIコンテキストに注入する
+ * - auto: 要約のみを注入する
+ * - never: AIから隠す
+ */
+export type ContextPolicy = 'always' | 'auto' | 'never';
+
+/**
  * コンテンツ共通の基底（ノード）
  * 各コンテンツタイプ（Writing, Plot, Character, Memo）はこれを継承する。
+ *
+ * canonStatus / contextPolicy はバックエンドが払い出す AI 属性。
+ * 作成/更新時は含めず、`nodes.updateAttributes()` で個別に更新する。
  */
 export interface Node extends Timestamps {
   id: string;
@@ -69,6 +87,10 @@ export interface Node extends Timestamps {
   name: string;
   nodeType: NodeType;
   order: number;
+  /** 正典ステータス（確定/検討中） */
+  canonStatus: CanonStatus;
+  /** AIコンテキストへの露出ポリシー */
+  contextPolicy: ContextPolicy;
 }
 
 /**
@@ -410,10 +432,14 @@ export type AIStreamChunkType =
 
 /**
  * ストリーミングチャンク
+ *
+ * バックエンドの SSE (v2) はテキストを text-start→text-delta×N→text-end の
+ * ブロック単位で流し、完了を finish で通知するが、adapter-api がそれを
+ * この安定したドメイン型に正規化する（text-delta→text / finish→done 等）。
  */
 export interface AIStreamChunk {
   type: AIStreamChunkType;
-  /** テキストチャンク（type='text'時） */
+  /** テキストチャンク（type='text'時。text-delta の増分） */
   content?: string;
   /** ツール呼び出し情報（type='tool_call'時） */
   toolCall?: AIToolCall;
@@ -425,6 +451,11 @@ export interface AIStreamChunk {
   usage?: AITokenUsage;
   /** エラーメッセージ（type='error'時） */
   error?: string;
+  /**
+   * 保存された最終アシスタントメッセージID（type='done'時）。
+   * finish.message_id に由来し、テキストが無かった場合は null（未設定）。
+   */
+  messageId?: string;
 }
 
 /**
@@ -484,6 +515,174 @@ export interface AIChatMessageRequest extends AIChatRequestBase {
  * フロント側から明示的にフィードバックを送信する必要はない。
  */
 export type AIChatRequest = AIChatMessageRequest;
+
+// ─── AIコンテキストプレビュー ───
+
+/**
+ * AIコンテキストの層（tier）ごとのセクション
+ */
+export interface AIContextSection {
+  /** 層（数値が小さいほど優先度が高い） */
+  tier: number;
+  /** セクションのタイトル */
+  title: string;
+  /** セクションの内容 */
+  content: string;
+  /** 文字数 */
+  charCount: number;
+}
+
+/**
+ * AIに渡されるコンテキスト一式（プレビュー用）
+ */
+export interface AIContextPack {
+  /** 層ごとのセクション一覧 */
+  sections: AIContextSection[];
+  /** 全体の合計文字数 */
+  totalCharCount: number;
+}
+
+// ─── 矛盾チェック ───
+
+/**
+ * 矛盾チェックの指摘の重要度
+ */
+export type FindingSeverity = 'info' | 'warning' | 'error';
+
+/**
+ * 矛盾チェックの指摘のカテゴリ
+ * - setting: 設定 / timeline: 時系列 / character: 人物
+ * - notation: 表記 / continuity: 連続性
+ */
+export type FindingCategory =
+  | 'setting'
+  | 'timeline'
+  | 'character'
+  | 'notation'
+  | 'continuity';
+
+/**
+ * 矛盾チェックの指摘のトリアージ状態
+ */
+export type FindingStatus = 'open' | 'dismissed' | 'resolved';
+
+/**
+ * 矛盾チェック（1回の実行）の状態
+ */
+export type ConsistencyCheckStatus = 'processing' | 'completed' | 'error';
+
+/**
+ * 矛盾チェックの指摘（finding）
+ */
+export interface ConsistencyFinding {
+  id: string;
+  /** 属する矛盾チェックのID */
+  checkId: string;
+  /** 重要度 */
+  severity: FindingSeverity;
+  /** カテゴリ */
+  category: FindingCategory;
+  /** 該当箇所の引用 */
+  quote: string;
+  /** 該当開始行（1始まり、無い場合は null） */
+  startLine: number | null;
+  /** 該当終了行（1始まり、無い場合は null） */
+  endLine: number | null;
+  /** 関連するノードのID（無い場合は null） */
+  relatedNodeId: string | null;
+  /** 指摘の説明 */
+  description: string;
+  /** 修正提案（無い場合は null） */
+  suggestion: string | null;
+  /** トリアージ状態 */
+  status: FindingStatus;
+  createdAt: Date;
+}
+
+/**
+ * 矛盾チェック（1回の実行）の詳細（finding 全件を含む）
+ */
+export interface ConsistencyCheck {
+  id: string;
+  /** 対象執筆ノードのID */
+  nodeId: string;
+  /** 実行状態 */
+  status: ConsistencyCheckStatus;
+  /** 総評（無い場合は null） */
+  summary: string | null;
+  /** 指摘一覧 */
+  findings: ConsistencyFinding[];
+  createdAt: Date;
+}
+
+/**
+ * 矛盾チェックの履歴項目（一覧用、finding 件数のみ）
+ */
+export interface ConsistencyCheckSummary {
+  id: string;
+  /** 対象執筆ノードのID */
+  nodeId: string;
+  /** 実行状態 */
+  status: ConsistencyCheckStatus;
+  /** 総評（無い場合は null） */
+  summary: string | null;
+  /** 指摘の件数 */
+  findingCount: number;
+  createdAt: Date;
+}
+
+/**
+ * 矛盾チェック実行ストリームのチャンク種別
+ */
+export type ConsistencyStreamChunkType = 'finding' | 'usage' | 'done' | 'error';
+
+/**
+ * 矛盾チェック実行（SSE）のストリーミングチャンク
+ * start→finding×N→usage→finish を正規化したもの。
+ */
+export interface ConsistencyStreamChunk {
+  type: ConsistencyStreamChunkType;
+  /** 指摘（type='finding'時） */
+  finding?: ConsistencyFinding;
+  /** トークン使用量（type='usage'時） */
+  usage?: AITokenUsage;
+  /** エラーメッセージ（type='error'時） */
+  error?: string;
+}
+
+// ─── 用語集 ───
+
+/**
+ * 用語集の項目
+ */
+export interface GlossaryTerm extends Timestamps {
+  id: string;
+  projectId: string;
+  /** 正規表記（必須） */
+  term: string;
+  /** 読み（無い場合は null） */
+  reading: string | null;
+  /** 別表記の配列 */
+  aliases: string[];
+  /** 備考（無い場合は null） */
+  notes: string | null;
+}
+
+/**
+ * 用語集項目の作成データ
+ */
+export interface CreateGlossaryTermData {
+  /** 正規表記（必須） */
+  term: string;
+  reading?: string;
+  aliases?: string[];
+  notes?: string;
+}
+
+/**
+ * 用語集項目の更新データ
+ */
+export type UpdateGlossaryTermData = Partial<CreateGlossaryTermData>;
 
 // ─── 認証関連 ───
 

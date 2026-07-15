@@ -6,6 +6,7 @@ import {
 } from '~/hooks/memos';
 import { MemoEditor } from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
+import { NodeAttributesBar } from './node-attributes-bar';
 
 const NO_REVALIDATE = {
   revalidateOnFocus: false,
@@ -45,13 +46,24 @@ export function MemoEditorWrapper({ id, projectId }: MemoEditorWrapperProps) {
   if (!memo) return null;
 
   return (
-    <MemoEditor
-      name={memo.name}
-      content={memo.content}
-      tags={memo.tags ?? []}
-      onNameChange={(v) => handleFieldChange('name', v)}
-      onContentChange={(v) => handleFieldChange('content', v)}
-      onTagsChange={(v) => handleFieldChange('tags', v)}
-    />
+    <div className="flex h-full flex-col">
+      <NodeAttributesBar
+        projectId={projectId}
+        contentType="memo"
+        nodeId={id}
+        canonStatus={memo.canonStatus}
+        contextPolicy={memo.contextPolicy}
+      />
+      <div className="min-h-0 flex-1">
+        <MemoEditor
+          name={memo.name}
+          content={memo.content}
+          tags={memo.tags ?? []}
+          onNameChange={(v) => handleFieldChange('name', v)}
+          onContentChange={(v) => handleFieldChange('content', v)}
+          onTagsChange={(v) => handleFieldChange('tags', v)}
+        />
+      </div>
+    </div>
   );
 }
