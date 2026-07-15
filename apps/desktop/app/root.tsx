@@ -6,9 +6,6 @@ import { SafeErrorBoundary, SafeMeta, SafeLinks } from '@tsumugi/react-router';
 
 import './app.css';
 
-export const ADAPTER: 'api' | 'local' =
-  import.meta.env.VITE_ADAPTER === 'api' ? 'api' : 'local';
-
 export const SITE_URL: string = import.meta.env.VITE_SITE_URL;
 
 export const links: LinksFunction = () => [
@@ -38,15 +35,11 @@ export const links: LinksFunction = () => [
     href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap',
   },
   // APIとPWA
-  ...(ADAPTER === 'api'
-    ? [
-        { rel: 'preconnect', href: import.meta.env.VITE_API_BASE_URL },
-        {
-          rel: 'manifest',
-          href: '/manifest.webmanifest',
-        },
-      ]
-    : []),
+  { rel: 'preconnect', href: import.meta.env.VITE_API_BASE_URL },
+  {
+    rel: 'manifest',
+    href: '/manifest.webmanifest',
+  },
 ];
 
 export const meta: MetaFunction = () => {
@@ -108,7 +101,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         />
         <SafeMeta />
         <SafeLinks />
-        {ADAPTER === 'api' && <script src="/registerSW.js" />}
+        <script src="/registerSW.js" />
       </head>
       <body>
         <SafeErrorBoundary

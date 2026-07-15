@@ -25,27 +25,9 @@ import type {
  */
 export interface AdapterConfig {
   /**
-   * ローカルアダプター設定
-   */
-  local?: LocalAdapterConfig;
-  /**
    * Web APIアダプター設定
    */
   api?: ApiAdapterConfig;
-}
-
-/**
- * ローカルアダプター設定
- */
-export interface LocalAdapterConfig {
-  /**
-   * ワークディレクトリ（未指定時は~/TsumugiProjects）
-   */
-  workDir?: string;
-  /**
-   * AI設定
-   */
-  ai?: AIAdapterConfig;
 }
 
 /**
@@ -56,20 +38,6 @@ export interface ApiAdapterConfig {
    * APIエンドポイント
    */
   baseUrl: string;
-}
-
-/**
- * AI アダプター設定
- */
-export interface AIAdapterConfig {
-  /** AIプロバイダー (e.g. "openai", "anthropic") */
-  provider: string;
-  /** APIキー */
-  apiKey: string;
-  /** デフォルトモデル名 */
-  defaultModel?: string;
-  /** APIエンドポイント（カスタムプロキシ等） */
-  baseUrl?: string;
 }
 
 /**
