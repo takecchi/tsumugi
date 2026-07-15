@@ -21,9 +21,7 @@ export interface Timestamps {
  */
 export interface Project extends Timestamps {
   /**
-   * プロジェクトID
-   * ローカル: フルパス(ex:/Users/username/TsumugiProjects/projectName)
-   * クラウド: Unique ID
+   * プロジェクトID（バックエンドが払い出す Unique ID）
    */
   id: string;
   name: string;
@@ -63,7 +61,6 @@ export interface ProjectSettings {
 /**
  * コンテンツ共通の基底（ノード）
  * 各コンテンツタイプ（Writing, Plot, Character, Memo）はこれを継承する。
- * id, projectId は adapter-local ではパスから自動計算されるため JSON には保存しない。
  */
 export interface Node extends Timestamps {
   id: string;

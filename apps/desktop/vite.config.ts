@@ -53,11 +53,8 @@ export default defineConfig({
   clearScreen: false,
   resolve: {
     alias: {
-      // VITE_ADAPTER=api のときは adapter-api、それ以外は adapter-local に置換
-      '@tsumugi/adapter':
-        process.env.VITE_ADAPTER === 'api'
-          ? '@tsumugi/adapter-api'
-          : '@tsumugi/adapter-local',
+      // アプリコードは @tsumugi/adapter(IF) を import し、ビルド時に実装へ置換する
+      '@tsumugi/adapter': '@tsumugi/adapter-api',
     },
   },
   server: {

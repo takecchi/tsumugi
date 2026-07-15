@@ -19,7 +19,7 @@ AIがあなたの創作活動をサポートする執筆環境です。
 - **執筆モード（write）** — AIによる文章の提案・編集
 - **提案システム** — AIが変更を提案 → 承認/拒否で反映（行単位の差分表示対応）
 - **コンテキスト認識** — 開いているタブの情報をAIに自動共有
-- **OpenAI / Anthropic** — プロバイダー切り替え対応
+- **バックエンド処理** — AIの推論・データ永続化はすべてバックエンドAPI経由
 
 ### UI
 - **リサイズ可能な3ペインレイアウト** — サイドバー・エディタ・AIパネル
@@ -34,7 +34,7 @@ AIがあなたの創作活動をサポートする執筆環境です。
 - **Desktop**: Tauri 2
 - **Frontend**: React 19, React Router v7
 - **State**: SWR（キャッシュ + オプティミスティック更新）
-- **AI**: Vercel AI SDK（OpenAI / Anthropic）
+- **データ / AI**: バックエンドAPI経由（`@tsumugi/adapter-api`）
 - **UI**: TailwindCSS 4, Radix UI
 - **Build**: Vite, tsup
 - **Linter/Formatter**: ESLint, Prettier
@@ -44,16 +44,15 @@ AIがあなたの創作活動をサポートする執筆環境です。
 ```
 tsumugi/
 ├── apps/
-│   └── desktop/              # デスクトップアプリ (Tauri + React Router)
+│   └── desktop/              # アプリ本体 (React Router / Tauri シェル)
 │       ├── app/
 │       │   ├── hooks/        # SWR hooks（データ取得・更新）
 │       │   └── routes/       # ページコンポーネント
-│       └── src-tauri/        # Tauri バックエンド (Rust)
+│       └── src-tauri/        # Tauri シェル (Rust, ネイティブ配布用)
 ├── packages/
 │   ├── adapter/
 │   │   ├── core/             # アダプターインターフェース・型定義
-│   │   ├── local/            # ローカルファイルシステム実装（Tauri）
-│   │   └── api/              # APIサーバー実装（Web）
+│   │   └── api/              # バックエンドAPI実装
 │   ├── react-router/         # React Router ユーティリティ
 │   └── ui/                   # 共通UIコンポーネント（Storybook付き）
 ├── turbo.json
@@ -83,8 +82,7 @@ npm install
 # 環境変数を設定
 cp apps/desktop/.env apps/desktop/.env.local
 # .env.local を編集
-#   VITE_AI_API_KEY   — AIプロバイダーのAPIキー（Tauriモード時）
-#   VITE_API_BASE_URL — バックエンドAPIのURL（Webモード時、デフォルト: http://localhost:8080）
+#   VITE_API_BASE_URL — バックエンドAPIのURL（デフォルト: http://localhost:8080）
 ```
 
 ## 起動方法
@@ -92,23 +90,23 @@ cp apps/desktop/.env apps/desktop/.env.local
 ### 開発サーバー
 
 ```bash
-# Tauri デスクトップアプリを起動（ローカルファイルシステム + AI SDK直接呼び出し）
+# Tauri デスクトップアプリ（ネイティブシェル）を起動
 npm run dev:tauri
 
-# Web モードで起動（バックエンドAPIサーバー経由）
+# Web（ブラウザ）で起動
 npm run dev:web
 
 # Storybookを起動（UIコンポーネント開発）
 npm run storybook
 ```
 
-`dev:tauri` と `dev:web` の違いは `VITE_ADAPTER` 環境変数のみです。
+`dev:tauri` と `dev:web` はどちらも `@tsumugi/adapter-api` を使い、データ保存・AI処理はすべてバックエンドAPI経由です。違いは実行シェル（Tauri デスクトップ / ブラウザ）だけです。
 
 | | `dev:tauri` | `dev:web` |
 |---|---|---|
-| **アダプター** | `@tsumugi/adapter-local` | `@tsumugi/adapter-api` |
-| **データ保存** | Tauri FS（ローカルファイル） | バックエンド API |
-| **AI** | フロントエンドから直接呼び出し | バックエンド経由 |
+| **実行シェル** | Tauri デスクトップ | ブラウザ |
+| **アダプター** | `@tsumugi/adapter-api` | `@tsumugi/adapter-api` |
+| **データ / AI** | バックエンド API | バックエンド API |
 
 ### その他のコマンド
 

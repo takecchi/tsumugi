@@ -5,7 +5,7 @@
 ## 1. テストコード
 
 - **ロジックを含むコードには必ずテストを書くこと**
-- テストフレームワーク: `packages/adapter/local` は Jest
+- テストフレームワーク: `packages/adapter/api` は Jest
 - テストファイルは対象ファイルと同じディレクトリに `*.spec.ts` で配置
 - ロジックは可能な限りピュアロジック（副作用なし）として分離し、ユニットテストを書く
 - I/O を含む関数は、I/O 部分を薄いラッパーにしてロジック部分をテスト可能にする
@@ -16,12 +16,12 @@
 - 単純な CRUD ラッパー（JSON の読み書きだけ、ロジックがないもの）
 - UI コンポーネント（`packages/ui`）はストーリーでカバー
 
-## 2. ファイル I/O の集約
+## 2. API 通信の集約
 
-- **ファイルの読み書きは全て `@/utils/fs.ts` 経由にすること**
-- Tauri プラグイン（`@tauri-apps/plugin-fs`, `@tauri-apps/api/path`）を直接 import しない
-- これにより `jest.mock('@/utils/fs')` でテスト時にモック可能になる
-- AI SDK（`ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`）は直接利用 OK
+- **バックエンドとの通信は生成クライアント（`@tsumugi-chan/client`）経由で行うこと**
+- `createApiClients()` で組み立てた `ApiClients` を各アダプターに注入する
+- コンポーネントや hooks から `fetch` を直接呼ばない（通信は必ずアダプター経由）
+- ピュアロジック（レスポンス変換・SSE パース・ツリー組み立て等）は `internal/helpers` に分離し、通信から切り離してユニットテストを書く
 
 ## 3. 型安全
 
@@ -36,11 +36,13 @@
 型変換が必要な場合は、**専用の変換関数または型チェック関数**を定義すること:
 
 ```typescript
-// ✅ OK: 変換関数を定義
-function toCharacter(json: CharacterJson, fullPath: string): Character {
+// ✅ OK: 変換関数を定義（APIレスポンス JSON → ドメイン型）
+function toCharacter(json: CharacterJson): Character {
   return {
-    id: fullPath,
-    projectId: getProjectIdFromPath(fullPath),
+    id: json.id,
+    projectId: json.projectId,
+    createdAt: new Date(json.createdAt),
+    updatedAt: new Date(json.updatedAt),
     // ... 明示的にフィールドをマッピング
   };
 }
