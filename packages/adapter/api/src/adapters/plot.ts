@@ -1,7 +1,6 @@
 import type { Plot, PlotAdapter, TreeNode } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import type { Plot as ApiPlot } from '@tsumugi-chan/client';
-import { findNodeInTree } from '@/internal/helpers/node-tree';
 
 function toPlot(api: ApiPlot): Plot {
   return {
@@ -35,9 +34,12 @@ export function createPlotAdapter(clients: ApiClients): PlotAdapter {
     },
 
     async getTreeByProjectId(projectId: string): Promise<TreeNode[]> {
+      // 空フォルダーもツリーに含める（サイドバーでの新規フォルダ操作のため）。
+      // depth は指定せず全階層を取得する（デフォルト: 無制限）。
       return await clients.projects.getNodeTree({
         projectId,
         nodeTypes: ['plot', 'folder'],
+        includeEmptyFolders: true,
       });
     },
 
@@ -50,25 +52,6 @@ export function createPlotAdapter(clients: ApiClients): PlotAdapter {
       } catch {
         return null;
       }
-    },
-
-    // FIXME 未対応
-    async getChildren(parentId: string): Promise<Plot[]> {
-      const plot = await clients.plots.getPlot({
-        plotId: parentId,
-      });
-      const nodes = await clients.projects.getNodeTree({
-        projectId: plot.projectId,
-        nodeTypes: ['plot', 'folder'],
-      });
-      const parentNode = findNodeInTree(nodes, parentId);
-      if (!parentNode) return [];
-      const plots = await Promise.all(
-        parentNode.children.map((node) =>
-          clients.plots.getPlot({ plotId: node.id }),
-        ),
-      );
-      return plots.map(toPlot);
     },
 
     async create(

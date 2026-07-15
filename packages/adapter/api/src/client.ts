@@ -10,6 +10,7 @@ import {
   NodesApi,
   ConsistencyApi,
   GlossaryApi,
+  InstructionsApi,
 } from '@tsumugi-chan/client';
 import type { TokenManager } from '@/token-manager';
 
@@ -24,6 +25,7 @@ export interface ApiClients {
   readonly ai: AiApi;
   readonly consistency: ConsistencyApi;
   readonly glossary: GlossaryApi;
+  readonly instructions: InstructionsApi;
   readonly configuration: Configuration;
 }
 
@@ -46,6 +48,7 @@ export function createApiClients(
     ai: new AiApi(configuration),
     consistency: new ConsistencyApi(configuration),
     glossary: new GlossaryApi(configuration),
+    instructions: new InstructionsApi(configuration),
     configuration,
   };
 }

@@ -54,6 +54,10 @@ export interface SavedEditorTab {
 export interface ProjectSettings {
   /** AIチャットモード */
   aiChatMode: AIChatMode;
+  /** AIモデル（未設定時はバックエンド既定を使用） */
+  aiModel?: string;
+  /** 生成温度（0.0〜2.0、未設定時はバックエンド既定を使用） */
+  aiTemperature?: number;
   /** 開いているタブ一覧（active フラグでアクティブタブを識別） */
   openTabs: SavedEditorTab[];
 }
@@ -305,22 +309,32 @@ export interface AIToolCall {
 }
 
 /**
+ * AIチャットセッションの処理状態
+ * - idle: 待機中（入力可能）
+ * - processing: AI 応答生成中
+ * - error: 直近の処理がエラーで終了した
+ */
+export type AISessionStatus = 'idle' | 'processing' | 'error';
+
+/**
  * AIチャットセッション
  */
 export interface AIChatSession extends Timestamps {
   id: string;
   projectId: string;
   title: string;
-  /** セッション全体のトークン使用量（累計） */
-  totalUsage?: AITokenUsage;
+  /** セッションの処理状態 */
+  status: AISessionStatus;
 }
 
 /**
  * AIモデル設定
+ * すべて任意。未指定のフィールドはバックエンド既定が使われる。
+ * （温度だけを指定してモデルは既定のまま、といった組み合わせも可能）
  */
 export interface AIModelConfig {
-  /** モデル名 (e.g. "gpt-5.2", "claude-sonnet-4-20250514") */
-  model: string;
+  /** モデル名 (e.g. "gpt-5.2", "claude-sonnet-4-20250514")。未指定時はバックエンド既定 */
+  model?: string;
   /** 生成時の温度パラメータ (0.0〜2.0) */
   temperature?: number;
   /** 最大トークン数 */
@@ -684,6 +698,43 @@ export interface CreateGlossaryTermData {
  */
 export type UpdateGlossaryTermData = Partial<CreateGlossaryTermData>;
 
+// ─── 執筆指示（カスタムインストラクション） ───
+
+/**
+ * 執筆指示（プロジェクト単位でAIに常時渡すカスタム指示）
+ */
+export interface Instruction extends Timestamps {
+  id: string;
+  projectId: string;
+  /** 指示のタイトル */
+  title: string;
+  /** 指示の本文（AIコンテキストに注入される内容） */
+  content: string;
+  /** 有効かどうか（無効時はAIに渡さない） */
+  enabled: boolean;
+  /** 表示順（昇順） */
+  order: number;
+}
+
+/**
+ * 執筆指示の作成データ
+ */
+export interface CreateInstructionData {
+  /** 指示のタイトル（必須） */
+  title: string;
+  /** 指示の本文（必須） */
+  content: string;
+  /** 有効かどうか（デフォルト: true） */
+  enabled?: boolean;
+  /** 表示順 */
+  order?: number;
+}
+
+/**
+ * 執筆指示の更新データ
+ */
+export type UpdateInstructionData = Partial<CreateInstructionData>;
+
 // ─── 認証関連 ───
 
 /**
@@ -704,23 +755,4 @@ export interface GoogleAuthUrl {
   url: string;
 }
 
-/**
- * エクスポートのフォーマット
- */
-export type ExportFormat = 'zip-markdown';
-
-/**
- * エクスポートオプション
- */
-export interface ExportOptions {
-  /** エクスポートフォーマット（デフォルト: 'zip-markdown'） */
-  format?: ExportFormat;
-  /** 執筆データを含めるか（デフォルト: true） */
-  includeWritings?: boolean;
-  /** プロットデータを含めるか（デフォルト: true） */
-  includePlots?: boolean;
-  /** キャラクターデータを含めるか（デフォルト: true） */
-  includeCharacters?: boolean;
-  /** メモデータを含めるか（デフォルト: true） */
-  includeMemos?: boolean;
-}
+// エクスポートは常に全コンテンツを zip-markdown で出力する（API 側にオプション未対応）。

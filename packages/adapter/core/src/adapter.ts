@@ -27,9 +27,11 @@ import type {
   GlossaryTerm,
   CreateGlossaryTermData,
   UpdateGlossaryTermData,
+  Instruction,
+  CreateInstructionData,
+  UpdateInstructionData,
   AuthState,
   GoogleAuthUrl,
-  ExportOptions,
 } from './types';
 
 /**
@@ -82,7 +84,6 @@ interface NodeAdapterBase<T extends Node> {
   getByProjectId(projectId: string): Promise<T[]>;
   getTreeByProjectId(projectId: string): Promise<TreeNode[]>;
   getById(id: string): Promise<T | null>;
-  getChildren(parentId: string): Promise<T[]>;
   create(data: Omit<T, CreateOmit>): Promise<T>;
   update(id: string, data: Partial<Omit<T, UpdateOmit>>): Promise<T>;
   delete(id: string): Promise<void>;
@@ -117,16 +118,12 @@ export type CharacterAdapter = NodeAdapterBase<Character>;
 /**
  * メモ操作のインターフェース
  */
-export interface MemoAdapter extends NodeAdapterBase<Memo> {
-  getByTag(projectId: string, tag: string): Promise<Memo[]>;
-}
+export type MemoAdapter = NodeAdapterBase<Memo>;
 
 /**
  * 執筆操作のインターフェース
  */
-export interface WritingAdapter extends NodeAdapterBase<Writing> {
-  getTotalWordCount(projectId: string): Promise<number>;
-}
+export type WritingAdapter = NodeAdapterBase<Writing>;
 
 /**
  * AI操作のインターフェース
@@ -283,6 +280,20 @@ export interface GlossaryAdapter {
 }
 
 /**
+ * 執筆指示（カスタムインストラクション）操作のインターフェース
+ */
+export interface InstructionAdapter {
+  list(projectId: string): Promise<Instruction[]>;
+  create(projectId: string, data: CreateInstructionData): Promise<Instruction>;
+  get(instructionId: string): Promise<Instruction | null>;
+  update(
+    instructionId: string,
+    data: UpdateInstructionData,
+  ): Promise<Instruction>;
+  delete(instructionId: string): Promise<void>;
+}
+
+/**
  * プロジェクト設定操作のインターフェース
  */
 export interface ProjectSettingsAdapter {
@@ -321,11 +332,10 @@ export interface AuthAdapter {
  */
 export interface ExportAdapter {
   /**
-   * プロジェクトをエクスポート
+   * プロジェクトをエクスポート（全コンテンツを zip-markdown で出力）
    * @param projectId - エクスポートするプロジェクトID
-   * @param options - エクスポートオプション（省略時はすべてのコンテンツを zip-markdown でエクスポート）
    */
-  exportProject(projectId: string, options?: ExportOptions): Promise<void>;
+  exportProject(projectId: string): Promise<void>;
 }
 
 /**
@@ -343,5 +353,6 @@ export interface Adapter {
   readonly ai: AIAdapter;
   readonly consistency: ConsistencyAdapter;
   readonly glossary: GlossaryAdapter;
+  readonly instructions: InstructionAdapter;
   readonly export: ExportAdapter;
 }

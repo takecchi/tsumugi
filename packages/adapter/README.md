@@ -125,7 +125,6 @@ interface NodeAdapterBase<T extends Node> {
   getByProjectId(projectId: string): Promise<T[]>;
   getTreeByProjectId(projectId: string): Promise<TreeNode[]>;
   getById(id: string): Promise<T | null>;
-  getChildren(parentId: string): Promise<T[]>;
   create(data: ...): Promise<T>;
   update(id: string, data: ...): Promise<T>;
   delete(id: string): Promise<void>;
@@ -138,9 +137,12 @@ interface NodeAdapterBase<T extends Node> {
 
 - **PlotAdapter** - プロット（あらすじ、構成）
 - **CharacterAdapter** - キャラクター設定
-- **MemoAdapter** - メモ、タグ検索対応（`getByTag`）
-- **WritingAdapter** - 執筆本文、文字数カウント（`getTotalWordCount`）
+- **MemoAdapter** - メモ
+- **WritingAdapter** - 執筆本文
 - **AIAdapter** - AIチャット（ストリーミング）、提案の承認/拒否、メモリ、トークン使用量
+- **ConsistencyAdapter** - 矛盾チェック（ストリーミング）
+- **GlossaryAdapter** - 用語集
+- **InstructionAdapter** - 執筆指示（カスタムインストラクション）
 - **AuthAdapter** - 認証（Google OAuth）
 - **ExportAdapter** - プロジェクトのエクスポート
 

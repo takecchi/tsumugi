@@ -1,7 +1,6 @@
 import type { Writing, WritingAdapter, TreeNode } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import type { Writing as ApiWriting } from '@tsumugi-chan/client';
-import { findNodeInTree } from '@/internal/helpers/node-tree';
 
 function countWords(text: string): number {
   // 日本語の文字数カウント（空白・改行を除く）
@@ -35,9 +34,12 @@ export function createWritingAdapter(clients: ApiClients): WritingAdapter {
     },
 
     async getTreeByProjectId(projectId: string): Promise<TreeNode[]> {
+      // 空フォルダーもツリーに含める（サイドバーでの新規フォルダ操作のため）。
+      // depth は指定せず全階層を取得する（デフォルト: 無制限）。
       return await clients.projects.getNodeTree({
         projectId,
         nodeTypes: ['writing', 'folder'],
+        includeEmptyFolders: true,
       });
     },
 
@@ -50,25 +52,6 @@ export function createWritingAdapter(clients: ApiClients): WritingAdapter {
       } catch {
         return null;
       }
-    },
-
-    // FIXME 未対応
-    async getChildren(parentId: string): Promise<Writing[]> {
-      const writing = await clients.writings.getWriting({
-        writingId: parentId,
-      });
-      const nodes = await clients.projects.getNodeTree({
-        projectId: writing.projectId,
-        nodeTypes: ['writing', 'folder'],
-      });
-      const parentNode = findNodeInTree(nodes, parentId);
-      if (!parentNode) return [];
-      const writings = await Promise.all(
-        parentNode.children.map((node) =>
-          clients.writings.getWriting({ writingId: node.id }),
-        ),
-      );
-      return writings.map(toWriting);
     },
 
     async create(
@@ -151,11 +134,6 @@ export function createWritingAdapter(clients: ApiClients): WritingAdapter {
           })),
         },
       });
-    },
-
-    async getTotalWordCount(projectId: string): Promise<number> {
-      const writings = await this.getByProjectId(projectId);
-      return writings.reduce((sum, w) => sum + w.wordCount, 0);
     },
   };
 }

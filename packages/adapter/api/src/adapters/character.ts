@@ -1,7 +1,6 @@
 import type { Character, CharacterAdapter, TreeNode } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import type { Character as ApiCharacter } from '@tsumugi-chan/client';
-import { findNodeInTree } from '@/internal/helpers/node-tree';
 
 function toCharacter(api: ApiCharacter): Character {
   return {
@@ -38,9 +37,12 @@ export function createCharacterAdapter(clients: ApiClients): CharacterAdapter {
     },
 
     async getTreeByProjectId(projectId: string): Promise<TreeNode[]> {
+      // 空フォルダーもツリーに含める（サイドバーでの新規フォルダ操作のため）。
+      // depth は指定せず全階層を取得する（デフォルト: 無制限）。
       return await clients.projects.getNodeTree({
         projectId,
         nodeTypes: ['character', 'folder'],
+        includeEmptyFolders: true,
       });
     },
 
@@ -53,25 +55,6 @@ export function createCharacterAdapter(clients: ApiClients): CharacterAdapter {
       } catch {
         return null;
       }
-    },
-
-    // FIXME 未対応
-    async getChildren(parentId: string): Promise<Character[]> {
-      const character = await clients.characters.getCharacter({
-        characterId: parentId,
-      });
-      const nodes = await clients.projects.getNodeTree({
-        projectId: character.projectId,
-        nodeTypes: ['character', 'folder'],
-      });
-      const parentNode = findNodeInTree(nodes, parentId);
-      if (!parentNode) return [];
-      const characters = await Promise.all(
-        parentNode.children.map((node) =>
-          clients.characters.getCharacter({ characterId: node.id }),
-        ),
-      );
-      return characters.map(toCharacter);
     },
 
     async create(

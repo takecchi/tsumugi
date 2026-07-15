@@ -11,6 +11,8 @@ import {
   type Conversation,
 } from '@tsumugi/ui';
 import { ContextPreviewWrapper } from './context-preview-wrapper';
+import { AIUsageWrapper } from './ai-usage-wrapper';
+import { AIMemoryWrapper } from './ai-memory-wrapper';
 import {
   useAISessions,
   useAIMessages,
@@ -21,8 +23,9 @@ import {
 } from '~/hooks/ai';
 import { useProjectSettings, useUpdateProjectSettings } from '~/hooks/settings';
 import { useSWRConfig } from 'swr';
-import type { AIChatContext } from '@tsumugi/adapter';
+import type { AIChatContext, AIModelConfig } from '@tsumugi/adapter';
 import type { EditorTab } from '@tsumugi/ui';
+import { AI_MODELS } from '~/constants/ai-models';
 import {
   consumeStream,
   toContentItemKey,
@@ -37,6 +40,32 @@ interface WorkspaceAiPanelProps {
 }
 
 /**
+ * モデル設定（core型）を組み立てる。
+ * model / temperature はそれぞれ独立に指定でき、未設定のものは含めない
+ * （温度だけ変えてモデルは既定のまま、も可能）。両方未設定なら undefined を返す。
+ */
+function buildConfig(
+  model: string | undefined,
+  temperature: number | undefined,
+): AIModelConfig | undefined {
+  if (!model && temperature == null) return undefined;
+  const config: AIModelConfig = {};
+  if (model) config.model = model;
+  if (temperature != null) config.temperature = temperature;
+  return config;
+}
+
+/**
+ * モデル設定に関する共通 props（NewSession / ExistingSession で共有）
+ */
+interface ModelConfigProps {
+  model?: string;
+  temperature?: number;
+  onModelChange: (model: string) => void;
+  onTemperatureChange: (temperature: number) => void;
+}
+
+/**
  * 新規セッション用コンテンツ（sessionId 未確定）
  * 初回メッセージ送信 → createSession → onSessionCreated で親に通知
  */
@@ -46,13 +75,17 @@ function NewSessionContent({
   context,
   aiMode,
   onModeChange,
+  model,
+  temperature,
+  onModelChange,
+  onTemperatureChange,
 }: {
   projectId: string;
   onSessionCreated: (sessionId: string) => void;
   context?: AIChatContext;
   aiMode: AiMode;
   onModeChange: (mode: AiMode) => void;
-}) {
+} & ModelConfigProps) {
   const { trigger: triggerCreateSession } = useCreateAISession(projectId);
   const {
     isLoading,
@@ -82,6 +115,7 @@ function NewSessionContent({
       message,
       mode: aiMode === 'write' ? ('write' as const) : ('ask' as const),
       context,
+      config: buildConfig(model, temperature),
     };
 
     setPendingUserMessage(message);
@@ -127,6 +161,11 @@ function NewSessionContent({
         onModeChange={onModeChange}
         onSend={handleSend}
         isLoading={isLoading}
+        model={model}
+        models={AI_MODELS}
+        onModelChange={onModelChange}
+        temperature={temperature}
+        onTemperatureChange={onTemperatureChange}
       />
     </>
   );
@@ -141,13 +180,20 @@ function ExistingSessionContent({
   context,
   aiMode,
   onModeChange,
+  model,
+  temperature,
+  onModelChange,
+  onTemperatureChange,
 }: {
   projectId: string;
   sessionId: string;
   context?: AIChatContext;
   aiMode: AiMode;
   onModeChange: (mode: AiMode) => void;
-}) {
+} & ModelConfigProps) {
+  const [revertToMessageId, setRevertToMessageId] = useState<
+    string | undefined
+  >();
   const { data: messages, mutate: mutateMessages } = useAIMessages(sessionId);
   const { mutate: globalMutate } = useSWRConfig();
   const { trigger: triggerChat } = useAIChat(sessionId);
@@ -271,6 +317,8 @@ function ExistingSessionContent({
       message,
       mode: aiMode === 'write' ? ('write' as const) : ('ask' as const),
       context,
+      config: buildConfig(model, temperature),
+      revertToMessageId,
     };
 
     setPendingUserMessage(message);
@@ -296,6 +344,7 @@ function ExistingSessionContent({
       setPendingUserMessage(null);
       setStreamingContent(null);
       setIsLoading(false);
+      setRevertToMessageId(undefined);
     }
   };
 
@@ -310,6 +359,7 @@ function ExistingSessionContent({
         }
         onAcceptProposal={handleAcceptProposal}
         onRejectProposal={handleRejectProposal}
+        onRevertMessage={setRevertToMessageId}
         isLoading={isLoading}
       />
       <AiPanelInput
@@ -317,6 +367,13 @@ function ExistingSessionContent({
         onModeChange={onModeChange}
         onSend={handleSend}
         isLoading={isLoading}
+        model={model}
+        models={AI_MODELS}
+        onModelChange={onModelChange}
+        temperature={temperature}
+        onTemperatureChange={onTemperatureChange}
+        revertActive={revertToMessageId != null}
+        onCancelRevert={() => setRevertToMessageId(undefined)}
       />
     </>
   );
@@ -335,9 +392,23 @@ export function WorkspaceAiPanel({
   >();
 
   const aiMode: AiMode = settings?.aiChatMode ?? 'ask';
+  const aiModel = settings?.aiModel;
+  const aiTemperature = settings?.aiTemperature;
   const handleModeChange = useCallback(
     (mode: AiMode) => {
       void triggerUpdateSettings({ aiChatMode: mode });
+    },
+    [triggerUpdateSettings],
+  );
+  const handleModelChange = useCallback(
+    (model: string) => {
+      void triggerUpdateSettings({ aiModel: model });
+    },
+    [triggerUpdateSettings],
+  );
+  const handleTemperatureChange = useCallback(
+    (temperature: number) => {
+      void triggerUpdateSettings({ aiTemperature: temperature });
     },
     [triggerUpdateSettings],
   );
@@ -349,6 +420,7 @@ export function WorkspaceAiPanel({
       title: s.title,
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
+      status: s.status,
     }));
   }, [sessions]);
 
@@ -363,14 +435,21 @@ export function WorkspaceAiPanel({
         <TabsList className="mx-3 mt-2 self-start">
           <TabsTrigger value="chat">チャット</TabsTrigger>
           <TabsTrigger value="context">コンテキスト</TabsTrigger>
+          <TabsTrigger value="usage">使用量</TabsTrigger>
+          <TabsTrigger value="memory">メモリ</TabsTrigger>
         </TabsList>
         <TabsContent value="chat" className="flex min-h-0 flex-1 flex-col">
           {currentConversationId ? (
             <ExistingSessionContent
+              key={currentConversationId}
               projectId={projectId}
               sessionId={currentConversationId}
               aiMode={aiMode}
               onModeChange={handleModeChange}
+              model={aiModel}
+              temperature={aiTemperature}
+              onModelChange={handleModelChange}
+              onTemperatureChange={handleTemperatureChange}
               context={
                 openTabs?.length
                   ? {
@@ -386,10 +465,15 @@ export function WorkspaceAiPanel({
             />
           ) : (
             <NewSessionContent
+              key="new"
               projectId={projectId}
               onSessionCreated={setCurrentConversationId}
               aiMode={aiMode}
               onModeChange={handleModeChange}
+              model={aiModel}
+              temperature={aiTemperature}
+              onModelChange={handleModelChange}
+              onTemperatureChange={handleTemperatureChange}
               context={
                 openTabs?.length
                   ? {
@@ -407,6 +491,12 @@ export function WorkspaceAiPanel({
         </TabsContent>
         <TabsContent value="context" className="min-h-0 flex-1">
           <ContextPreviewWrapper projectId={projectId} mode={aiMode} />
+        </TabsContent>
+        <TabsContent value="usage" className="min-h-0 flex-1">
+          <AIUsageWrapper projectId={projectId} />
+        </TabsContent>
+        <TabsContent value="memory" className="min-h-0 flex-1">
+          <AIMemoryWrapper projectId={projectId} />
         </TabsContent>
       </Tabs>
     </AiPanel>

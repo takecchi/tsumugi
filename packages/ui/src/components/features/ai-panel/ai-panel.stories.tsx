@@ -28,6 +28,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const MODELS = [
+  { value: 'gpt-5.4', label: 'GPT-5.4' },
+  { value: 'gpt-5.2', label: 'GPT-5.2' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o mini' },
+  { value: 'claude-3-5-haiku-latest', label: 'Claude 3.5 Haiku' },
+];
+
 /**
  * モック応答付きのインタラクティブなAiPanelストーリー
  */
@@ -50,8 +57,12 @@ function MockAiPanel({
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [mode, setMode] = useState<AiMode>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
+  const [model, setModel] = useState<string>('gpt-5.4');
+  const [temperature, setTemperature] = useState<number>(0.7);
+  const [revertId, setRevertId] = useState<string | undefined>();
 
   const handleSend = (message: string) => {
+    setRevertId(undefined);
     if (!currentConversationId) {
       const newId = Date.now().toString();
       setConversations((prev) => [
@@ -139,6 +150,7 @@ function MockAiPanel({
             ? '文章の執筆をお手伝いします。\n書いてほしい内容を教えてください。'
             : '質問があればお気軽にどうぞ。'
         }
+        onRevertMessage={setRevertId}
         isLoading={isLoading}
       />
       <AiPanelInput
@@ -146,6 +158,13 @@ function MockAiPanel({
         onModeChange={setMode}
         onSend={handleSend}
         isLoading={isLoading}
+        model={model}
+        models={MODELS}
+        onModelChange={setModel}
+        temperature={temperature}
+        onTemperatureChange={setTemperature}
+        revertActive={revertId != null}
+        onCancelRevert={() => setRevertId(undefined)}
       />
     </AiPanel>
   );

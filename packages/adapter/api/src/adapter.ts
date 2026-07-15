@@ -11,6 +11,7 @@ import { createSettingsAdapter } from '@/adapters/settings';
 import { createAIAdapter } from '@/adapters/ai';
 import { createConsistencyAdapter } from '@/adapters/consistency';
 import { createGlossaryAdapter } from '@/adapters/glossary';
+import { createInstructionAdapter } from '@/adapters/instruction';
 import { createExportAdapter } from '@/adapters/export';
 import { TokenManager } from '@/token-manager';
 
@@ -40,6 +41,7 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
     ai: createAIAdapter(clients),
     consistency: createConsistencyAdapter(clients),
     glossary: createGlossaryAdapter(clients),
+    instructions: createInstructionAdapter(clients),
     export: createExportAdapter(clients),
   };
 }
