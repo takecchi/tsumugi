@@ -120,6 +120,6 @@ export type { FooProps };
 新しいコードを書く際は、既存の実装パターンに合わせること:
 
 - **Json→型変換**: `XxxJson` 型 + `toXxx()` 変換関数パターン（`new Date()` 変換含む）
-- **SWR hooks**: `.windsurf/swr-hooks.md` のルールに従う
-- **UI コンポーネント**: `.windsurf/ui-stories.md` のルールに従う
-- **コンポーネント設計**: `.windsurf/component-design.md` のルールに従う
+- **SWR hooks**: `swr-hooks` skill（`.claude/skills/swr-hooks/`）のルールに従う
+- **UI コンポーネント**: `ui-stories` skill（`.claude/skills/ui-stories/`）のルールに従う
+- **コンポーネント設計**: `.claude/rules/component-design.md` のルールに従う

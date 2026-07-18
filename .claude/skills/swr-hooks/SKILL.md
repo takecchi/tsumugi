@@ -1,3 +1,8 @@
+---
+name: swr-hooks
+description: apps/desktop/app/hooks 配下の SWR hooks（useSWR / useSWRMutation）を新規作成・修正するときに従う規約。SWRキー設計、useAdapter の使用制限、mutation の書き方、delete / delete(ツリーキー) / reorder パターン、Data 型の null vs undefined、JSDoc（@revalidates）ルールを含む。SWR hook を書く・直すとき、または apps/desktop/app/hooks を触るときに必ず参照する。
+---
+
 # SWR Hooks ルール
 
 `apps/desktop/app/hooks/` 配下の SWR hooks に関するルール。

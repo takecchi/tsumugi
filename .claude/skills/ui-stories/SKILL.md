@@ -1,3 +1,8 @@
+---
+name: ui-stories
+description: packages/ui のコンポーネントに Storybook の *.stories.tsx を作成・更新するときの構成ルール。必須の3ストーリー（Default / Empty / Interactive）、共通 meta 設定、mock データの扱い、既存コンポーネント更新時の mockData 追従を含む。packages/ui でコンポーネントを新規作成・変更する、または stories.tsx を書くときに必ず参照する。
+---
+
 # packages/ui の Story ルール
 
 ### 新規コンポーネント作成時
