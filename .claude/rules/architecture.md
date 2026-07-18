@@ -102,7 +102,7 @@ ContentBase { id, projectId, parentId, name, nodeType, order } + Timestamps
 
 ## コーディング規約
 
-**詳細は `.windsurf/coding-rules.md` を参照すること。** 以下は要約:
+**詳細は `.claude/rules/coding-rules.md` を参照すること。** 以下は要約:
 
 - **`any` は禁止**、`as unknown` / `as never` のインライン使用も禁止（変換関数を定義すること）
 - **ロジックには必ずテストを書く**。ピュアロジックは `internal/helpers` に分離してユニットテストを書く
