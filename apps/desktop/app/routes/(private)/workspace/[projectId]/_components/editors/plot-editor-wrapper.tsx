@@ -1,8 +1,16 @@
 import { useCallback } from 'react';
 import { usePlot, usePlotTree, useUpdatePlot } from '~/hooks/plots';
-import { PlotEditor, type PlotEditorData } from '@tsumugi/ui';
+import {
+  PlotEditor,
+  type PlotEditorData,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import { NodeAttributesBar } from './node-attributes-bar';
+import { NodeRevisionWrapper } from '../version-history/node-revision-wrapper';
 import type { Plot } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = {
@@ -54,7 +62,7 @@ export function PlotEditorWrapper({ id, projectId }: PlotEditorWrapperProps) {
   if (!plot) return null;
 
   return (
-    <div className="flex h-full flex-col">
+    <Tabs defaultValue="body" className="flex h-full min-h-0 flex-col gap-0">
       <NodeAttributesBar
         projectId={projectId}
         contentType="plot"
@@ -62,10 +70,18 @@ export function PlotEditorWrapper({ id, projectId }: PlotEditorWrapperProps) {
         canonStatus={plot.canonStatus}
         contextPolicy={plot.contextPolicy}
         editPolicy={plot.editPolicy}
-      />
-      <div className="min-h-0 flex-1">
+      >
+        <TabsList className="h-7">
+          <TabsTrigger value="body">内容</TabsTrigger>
+          <TabsTrigger value="history">履歴</TabsTrigger>
+        </TabsList>
+      </NodeAttributesBar>
+      <TabsContent value="body" className="min-h-0 flex-1">
         <PlotEditor data={toEditorData(plot)} onChange={handleChange} />
-      </div>
-    </div>
+      </TabsContent>
+      <TabsContent value="history" className="min-h-0 flex-1">
+        <NodeRevisionWrapper projectId={projectId} nodeId={id} />
+      </TabsContent>
+    </Tabs>
   );
 }

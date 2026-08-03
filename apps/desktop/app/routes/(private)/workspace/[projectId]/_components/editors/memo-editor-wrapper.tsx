@@ -4,9 +4,16 @@ import {
   useMemoTree,
   useUpdateMemo,
 } from '~/hooks/memos';
-import { MemoEditor } from '@tsumugi/ui';
+import {
+  MemoEditor,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import { NodeAttributesBar } from './node-attributes-bar';
+import { NodeRevisionWrapper } from '../version-history/node-revision-wrapper';
 
 const NO_REVALIDATE = {
   revalidateOnFocus: false,
@@ -46,7 +53,7 @@ export function MemoEditorWrapper({ id, projectId }: MemoEditorWrapperProps) {
   if (!memo) return null;
 
   return (
-    <div className="flex h-full flex-col">
+    <Tabs defaultValue="body" className="flex h-full min-h-0 flex-col gap-0">
       <NodeAttributesBar
         projectId={projectId}
         contentType="memo"
@@ -54,8 +61,13 @@ export function MemoEditorWrapper({ id, projectId }: MemoEditorWrapperProps) {
         canonStatus={memo.canonStatus}
         contextPolicy={memo.contextPolicy}
         editPolicy={memo.editPolicy}
-      />
-      <div className="min-h-0 flex-1">
+      >
+        <TabsList className="h-7">
+          <TabsTrigger value="body">内容</TabsTrigger>
+          <TabsTrigger value="history">履歴</TabsTrigger>
+        </TabsList>
+      </NodeAttributesBar>
+      <TabsContent value="body" className="min-h-0 flex-1">
         <MemoEditor
           name={memo.name}
           content={memo.content}
@@ -64,7 +76,10 @@ export function MemoEditorWrapper({ id, projectId }: MemoEditorWrapperProps) {
           onContentChange={(v) => handleFieldChange('content', v)}
           onTagsChange={(v) => handleFieldChange('tags', v)}
         />
-      </div>
-    </div>
+      </TabsContent>
+      <TabsContent value="history" className="min-h-0 flex-1">
+        <NodeRevisionWrapper projectId={projectId} nodeId={id} />
+      </TabsContent>
+    </Tabs>
   );
 }

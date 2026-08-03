@@ -10,6 +10,7 @@ import {
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import { NodeAttributesBar } from './node-attributes-bar';
 import { ConsistencyPanelWrapper } from '../consistency-panel-wrapper';
+import { NodeRevisionWrapper } from '../version-history/node-revision-wrapper';
 
 const NO_REVALIDATE = {
   revalidateOnFocus: false,
@@ -81,6 +82,7 @@ export function WritingEditorWrapper({
         <TabsList className="h-7">
           <TabsTrigger value="body">本文</TabsTrigger>
           <TabsTrigger value="consistency">整合性チェック</TabsTrigger>
+          <TabsTrigger value="history">履歴</TabsTrigger>
         </TabsList>
       </NodeAttributesBar>
       <TabsContent value="body" className="min-h-0 flex-1">
@@ -93,6 +95,9 @@ export function WritingEditorWrapper({
       </TabsContent>
       <TabsContent value="consistency" className="min-h-0 flex-1">
         <ConsistencyPanelWrapper writingId={id} projectId={projectId} />
+      </TabsContent>
+      <TabsContent value="history" className="min-h-0 flex-1">
+        <NodeRevisionWrapper projectId={projectId} nodeId={id} />
       </TabsContent>
     </Tabs>
   );

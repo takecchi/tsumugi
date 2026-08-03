@@ -4,9 +4,17 @@ import {
   useCharacterTree,
   useUpdateCharacter,
 } from '~/hooks/characters';
-import { CharacterEditor, type CharacterEditorData } from '@tsumugi/ui';
+import {
+  CharacterEditor,
+  type CharacterEditorData,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import { NodeAttributesBar } from './node-attributes-bar';
+import { NodeRevisionWrapper } from '../version-history/node-revision-wrapper';
 import type { Character } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = {
@@ -64,7 +72,7 @@ export function CharacterEditorWrapper({
   if (!character) return null;
 
   return (
-    <div className="flex h-full flex-col">
+    <Tabs defaultValue="body" className="flex h-full min-h-0 flex-col gap-0">
       <NodeAttributesBar
         projectId={projectId}
         contentType="character"
@@ -72,13 +80,21 @@ export function CharacterEditorWrapper({
         canonStatus={character.canonStatus}
         contextPolicy={character.contextPolicy}
         editPolicy={character.editPolicy}
-      />
-      <div className="min-h-0 flex-1">
+      >
+        <TabsList className="h-7">
+          <TabsTrigger value="body">内容</TabsTrigger>
+          <TabsTrigger value="history">履歴</TabsTrigger>
+        </TabsList>
+      </NodeAttributesBar>
+      <TabsContent value="body" className="min-h-0 flex-1">
         <CharacterEditor
           data={toEditorData(character)}
           onChange={handleChange}
         />
-      </div>
-    </div>
+      </TabsContent>
+      <TabsContent value="history" className="min-h-0 flex-1">
+        <NodeRevisionWrapper projectId={projectId} nodeId={id} />
+      </TabsContent>
+    </Tabs>
   );
 }
