@@ -14,6 +14,7 @@ import { createGlossaryAdapter } from '@/adapters/glossary';
 import { createInstructionAdapter } from '@/adapters/instruction';
 import { createVersionAdapter } from '@/adapters/version';
 import { createExportAdapter } from '@/adapters/export';
+import { createFeedbackAdapter } from '@/adapters/feedback';
 import { TokenManager } from '@/token-manager';
 
 export function createAdapter(config: AdapterConfig = {}): Adapter {
@@ -45,5 +46,6 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
     instructions: createInstructionAdapter(clients),
     versions: createVersionAdapter(clients),
     export: createExportAdapter(clients),
+    feedback: createFeedbackAdapter(clients),
   };
 }

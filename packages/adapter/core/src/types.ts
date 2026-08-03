@@ -767,4 +767,56 @@ export interface GoogleAuthUrl {
   url: string;
 }
 
+// ─── プロダクトフィードバック ───
+
+/**
+ * プロダクトシグナルの種別
+ *
+ * サーバーが判定して払い出す。フロントから送ることはできない
+ * （送信ペイロードに含めると whitelist 検証で 400 になる）。
+ */
+export type ProductSignalKind =
+  | 'explicit_request'
+  | 'friction'
+  | 'error'
+  | 'cost'
+  | 'latency';
+
+/**
+ * プロダクトへの要望・不満（サーバー保存後の姿）
+ *
+ * `summary` はサーバー側で伏字化・切り詰めが行われるため、
+ * **送信した文章とは一致しない**。UI で「送った内容」として
+ * そのまま表示しないこと。
+ */
+export interface ProductSignal extends Timestamps {
+  id: string;
+  /** シグナルの種別（サーバー判定） */
+  kind: ProductSignalKind;
+  /** どの画面・機能についてか */
+  surface: string;
+  /** 匿名化・要約済みの内容（最大280文字。作品本文は含まれない） */
+  summary: string;
+  /** シグナルが発生した日時 */
+  occurredAt: Date;
+}
+
+/**
+ * フィードバック送信データ
+ *
+ * `kind` / `evidence` は **送ってはいけない**（サーバーが whitelist 検証しており、
+ * 無視ではなく 400 になる）。そのためこの型にはフィールドを増やさないこと。
+ */
+export interface CreateFeedbackData {
+  /**
+   * どの画面・機能についてか（1〜64文字）
+   *
+   * 集計軸なのでドット区切りで命名を揃える（例: `ai.chat`, `plots.create`）。
+   * 画面側で自動付与し、ユーザーには入力させない。
+   */
+  surface: string;
+  /** 要望の本文（trim後1〜2000文字） */
+  summary: string;
+}
+
 // エクスポートは常に全コンテンツを zip-markdown で出力する（API 側にオプション未対応）。
