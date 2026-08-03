@@ -1,5 +1,6 @@
 export * from './ai-memory';
 export * from './ai-panel';
+export * from './ai-run-panel';
 export * from './ai-usage';
 export * from './consistency-check';
 export * from './context-preview';

@@ -10,6 +10,7 @@ import {
   type AiMode,
   type Conversation,
 } from '@tsumugi/ui';
+import { WorkspaceRunPanel } from './workspace-run-panel';
 import { ContextPreviewWrapper } from './context-preview-wrapper';
 import { AIUsageWrapper } from './ai-usage-wrapper';
 import { AIMemoryWrapper } from './ai-memory-wrapper';
@@ -434,6 +435,7 @@ export function WorkspaceAiPanel({
       <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col">
         <TabsList className="mx-3 mt-2 self-start">
           <TabsTrigger value="chat">チャット</TabsTrigger>
+          <TabsTrigger value="run">自律実行</TabsTrigger>
           <TabsTrigger value="context">コンテキスト</TabsTrigger>
           <TabsTrigger value="usage">使用量</TabsTrigger>
           <TabsTrigger value="memory">メモリ</TabsTrigger>
@@ -488,6 +490,9 @@ export function WorkspaceAiPanel({
               }
             />
           )}
+        </TabsContent>
+        <TabsContent value="run" className="flex min-h-0 flex-1 flex-col">
+          <WorkspaceRunPanel projectId={projectId} />
         </TabsContent>
         <TabsContent value="context" className="min-h-0 flex-1">
           <ContextPreviewWrapper projectId={projectId} mode={aiMode} />

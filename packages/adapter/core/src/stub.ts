@@ -90,6 +90,14 @@ export function createAdapter(_: AdapterConfig = {}): Adapter {
       getUsage: () => notImplemented(),
       getContext: () => notImplemented(),
     },
+    runs: {
+      create: () => notImplemented(),
+      list: () => notImplemented(),
+      get: () => notImplemented(),
+      getMessages: () => notImplemented(),
+      stop: () => notImplemented(),
+      subscribe: () => notImplemented(),
+    },
     consistency: {
       run: () => notImplemented(),
       list: () => notImplemented(),
