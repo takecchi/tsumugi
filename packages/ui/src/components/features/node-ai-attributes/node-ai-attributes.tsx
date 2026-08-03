@@ -7,6 +7,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 export type CanonStatus = 'confirmed' | 'draft';
@@ -20,14 +21,6 @@ export interface NodeAiAttributesProps {
   disabled?: boolean;
   className?: string;
 }
-
-const CANON_STATUS_META: Record<
-  CanonStatus,
-  { label: string; dotClassName: string }
-> = {
-  confirmed: { label: '確定', dotClassName: 'bg-green-500' },
-  draft: { label: '検討中', dotClassName: 'bg-amber-500' },
-};
 
 const CONTEXT_POLICY_OPTIONS: {
   value: ContextPolicy;
@@ -48,22 +41,33 @@ function CanonStatusToggle({
   onChange?: (status: CanonStatus) => void;
   disabled?: boolean;
 }) {
-  const meta = CANON_STATUS_META[status];
-  const next: CanonStatus = status === 'confirmed' ? 'draft' : 'confirmed';
+  const id = React.useId();
+  const confirmed = status === 'confirmed';
+  const hint = 'オンにすると「確定」、オフのままだと「検討中」として扱われます';
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={disabled}
-      onClick={() => onChange?.(next)}
-      className="h-7 gap-1.5 px-2 text-xs font-medium"
-      title={`クリックで「${CANON_STATUS_META[next].label}」に切り替え`}
-    >
-      <span className={cn('size-2 rounded-full', meta.dotClassName)} />
-      {meta.label}
-    </Button>
+    <div className="flex items-center gap-1.5">
+      <Switch
+        id={id}
+        checked={confirmed}
+        disabled={disabled}
+        title={hint}
+        onCheckedChange={(checked) =>
+          onChange?.(checked ? 'confirmed' : 'draft')
+        }
+      />
+      <label
+        htmlFor={id}
+        title={hint}
+        className={cn(
+          'cursor-pointer text-xs font-medium select-none',
+          confirmed ? 'text-foreground' : 'text-muted-foreground',
+          disabled && 'cursor-not-allowed opacity-50',
+        )}
+      >
+        確定
+      </label>
+    </div>
   );
 }
 
@@ -141,6 +145,8 @@ function ContextPolicySelector({
 /**
  * ノードのAI属性（正典ステータス・コンテキストの見せ方）を操作する
  * コンパクトなインラインコントロール行。エディタのツールバー等に配置する。
+ *
+ * 正典ステータスは「確定」ラベル付きのトグルスイッチで表現する（オフ = 検討中）。
  */
 export function NodeAiAttributes({
   canonStatus,

@@ -18,7 +18,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    canonStatus: 'draft',
+    canonStatus: 'confirmed',
     contextPolicy: 'auto',
   },
 };
@@ -27,6 +27,13 @@ export const Empty: Story = {
   args: {
     canonStatus: 'draft',
     contextPolicy: 'never',
+  },
+};
+
+export const Disabled: Story = {
+  args: {
+    canonStatus: 'draft',
+    contextPolicy: 'auto',
     disabled: true,
   },
 };

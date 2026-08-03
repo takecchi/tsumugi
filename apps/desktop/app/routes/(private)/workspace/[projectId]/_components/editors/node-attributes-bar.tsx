@@ -1,7 +1,12 @@
 import type { ReactNode } from 'react';
 import { NodeAiAttributes } from '@tsumugi/ui';
 import { useUpdateNodeAttributes } from '~/hooks/nodes';
-import type { CanonStatus, ContentType, ContextPolicy } from '@tsumugi/adapter';
+import type {
+  CanonStatus,
+  ContentType,
+  ContextPolicy,
+  NodeAttributes,
+} from '@tsumugi/adapter';
 
 interface NodeAttributesBarProps {
   projectId: string;
@@ -31,18 +36,23 @@ export function NodeAttributesBar({
     contentType,
   );
 
+  const updateAttributes = (attributes: NodeAttributes) => {
+    trigger({ nodeId, attributes }).catch((e: unknown) => {
+      // 失敗時はキャッシュがロールバックされ、表示が元の値に戻る
+      console.error('Failed to update node attributes:', e);
+    });
+  };
+
   return (
     <div className="flex shrink-0 items-center border-b bg-background px-3 py-1.5">
       <NodeAiAttributes
         canonStatus={canonStatus}
         contextPolicy={contextPolicy}
         disabled={isMutating}
-        onCanonStatusChange={(status) => {
-          void trigger({ nodeId, attributes: { canonStatus: status } });
-        }}
-        onContextPolicyChange={(policy) => {
-          void trigger({ nodeId, attributes: { contextPolicy: policy } });
-        }}
+        onCanonStatusChange={(canonStatus) => updateAttributes({ canonStatus })}
+        onContextPolicyChange={(contextPolicy) =>
+          updateAttributes({ contextPolicy })
+        }
       />
       {children ? (
         <div className="ml-auto flex items-center">{children}</div>
