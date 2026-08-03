@@ -216,6 +216,8 @@ export function toAIProposal(proposal: Proposal): AIProposal {
  * ここに default: throw / assertNever を足すと既存のチャット画面ごと落ちる。
  */
 export function toAIStreamChunk(raw: unknown): AIStreamChunk | null {
+  // type を持たない壊れたペイロードのみ throw する。
+  // 呼び出し元（parseSSEFrame）が catch して null に落とすため、ストリームは継続する。
   if (!hasType(raw)) throw new Error('Invalid SSE chunk');
   switch (raw.type) {
     case 'text-delta': {

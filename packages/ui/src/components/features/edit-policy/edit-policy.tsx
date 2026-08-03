@@ -55,9 +55,12 @@ export function editPolicyLabel(policy: EditPolicy): string {
   );
 }
 
-const EDIT_POLICY_ICONS: Record<
-  Exclude<EditPolicy, 'free'>,
-  React.ElementType
+/**
+ * `free` 以外の値に対応するアイコン。
+ * バックエンドが将来値を追加しても落ちないよう、引き当て失敗を許容する型にしている。
+ */
+const EDIT_POLICY_ICONS: Partial<
+  Record<Exclude<EditPolicy, 'free'>, React.ElementType>
 > = {
   approval_required: ShieldCheck,
   locked: Lock,
@@ -75,7 +78,10 @@ export interface EditPolicyIconProps {
 export function EditPolicyIcon({ policy, className }: EditPolicyIconProps) {
   if (policy === 'free') return null;
 
+  // バックエンドが将来追加した未知の値でも落とさない（アイコンが無ければ描画しない）
   const Icon = EDIT_POLICY_ICONS[policy];
+  if (!Icon) return null;
+
   return (
     <Icon
       aria-hidden="true"

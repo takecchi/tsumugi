@@ -164,6 +164,10 @@ function TreeNode({
               <TooltipTrigger asChild>
                 <span className="flex shrink-0 items-center">
                   <EditPolicyIcon policy={node.editPolicy} />
+                  {/* アイコンは aria-hidden なので、支援技術向けにテキストを添える */}
+                  <span className="sr-only">
+                    AIの編集: {editPolicyLabel(node.editPolicy)}
+                  </span>
                 </span>
               </TooltipTrigger>
               <TooltipContent>
