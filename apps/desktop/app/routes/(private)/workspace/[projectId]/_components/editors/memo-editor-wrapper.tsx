@@ -53,6 +53,7 @@ export function MemoEditorWrapper({ id, projectId }: MemoEditorWrapperProps) {
         nodeId={id}
         canonStatus={memo.canonStatus}
         contextPolicy={memo.contextPolicy}
+        editPolicy={memo.editPolicy}
       />
       <div className="min-h-0 flex-1">
         <MemoEditor

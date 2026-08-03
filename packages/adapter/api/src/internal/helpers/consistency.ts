@@ -60,6 +60,8 @@ export function toConsistencyCheckSummary(
 /**
  * 矛盾チェック実行の v2 SSE チャンクを ConsistencyStreamChunk に正規化する。
  * start→finding×N→usage→finish。start はドメインに現れないため null。
+ *
+ * 未知の type は必ず null を返して読み飛ばす（default: throw / assertNever を足さないこと）。
  */
 export function toConsistencyStreamChunk(
   raw: unknown,

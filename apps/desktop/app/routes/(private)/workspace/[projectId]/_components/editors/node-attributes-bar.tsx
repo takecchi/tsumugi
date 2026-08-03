@@ -5,6 +5,7 @@ import type {
   CanonStatus,
   ContentType,
   ContextPolicy,
+  EditPolicy,
   NodeAttributes,
 } from '@tsumugi/adapter';
 
@@ -14,12 +15,13 @@ interface NodeAttributesBarProps {
   nodeId: string;
   canonStatus: CanonStatus;
   contextPolicy: ContextPolicy;
+  editPolicy: EditPolicy;
   /** バー右端に配置する追加コントロール（例: 本文/整合性チェックの切り替え） */
   children?: ReactNode;
 }
 
 /**
- * エディタ上部に表示する、ノードのAI属性（確定/検討中・AIへの見せ方）の操作バー。
+ * エディタ上部に表示する、ノードのAI属性（確定/検討中・AIへの見せ方・AIの編集保護）の操作バー。
  * 変更は adapter.nodes.updateAttributes 経由で保存し、対応するツリーを再フェッチする。
  * children を渡すとバー右端に配置される。
  */
@@ -29,6 +31,7 @@ export function NodeAttributesBar({
   nodeId,
   canonStatus,
   contextPolicy,
+  editPolicy,
   children,
 }: NodeAttributesBarProps) {
   const { trigger, isMutating } = useUpdateNodeAttributes(
@@ -48,11 +51,13 @@ export function NodeAttributesBar({
       <NodeAiAttributes
         canonStatus={canonStatus}
         contextPolicy={contextPolicy}
+        editPolicy={editPolicy}
         disabled={isMutating}
         onCanonStatusChange={(canonStatus) => updateAttributes({ canonStatus })}
         onContextPolicyChange={(contextPolicy) =>
           updateAttributes({ contextPolicy })
         }
+        onEditPolicyChange={(editPolicy) => updateAttributes({ editPolicy })}
       />
       {children ? (
         <div className="ml-auto flex items-center">{children}</div>

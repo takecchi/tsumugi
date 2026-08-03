@@ -149,6 +149,37 @@ describe('parseSSEStream (v2)', () => {
     ]);
   });
 
+  it('自律Run 専用の plan / run-status はスキップして後続を処理する', async () => {
+    const chunks = await collect(
+      [
+        'data: {"type":"plan","plan":[{"id":"p1","title":"章を書く","status":"pending"}]}\n\n',
+        'data: {"type":"run-status","status":"running"}\n\n',
+        'data: {"type":"text-delta","id":"t1","delta":"Hi"}\n\n',
+        'data: {"type":"run-status","status":"completed","finish_reason":"completed_plan"}\n\n',
+        'data: {"type":"finish","message_id":"m1"}\n\n',
+      ].join(''),
+    );
+    expect(chunks).toEqual([
+      { type: 'text', content: 'Hi' },
+      { type: 'done', messageId: 'm1' },
+    ]);
+  });
+
+  it('未知の type は throw せずスキップし、ストリームを継続する', async () => {
+    const chunks = await collect(
+      [
+        'data: {"type":"some-future-chunk","payload":{"a":1}}\n\n',
+        'data: {"type":"text-delta","id":"t1","delta":"Hi"}\n\n',
+        'data: {"type":"another-unknown"}\n\n',
+        'data: {"type":"finish","message_id":"m1"}\n\n',
+      ].join(''),
+    );
+    expect(chunks).toEqual([
+      { type: 'text', content: 'Hi' },
+      { type: 'done', messageId: 'm1' },
+    ]);
+  });
+
   it('tool-call を変換し args を JSON文字列にする', async () => {
     const chunks = await collect(
       `data: {"type":"tool-call","tool_call_id":"call_1","tool_name":"get_plot","args":{"id":"123"}}\n\n`,

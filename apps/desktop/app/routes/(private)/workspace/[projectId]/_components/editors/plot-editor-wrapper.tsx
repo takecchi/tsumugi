@@ -61,6 +61,7 @@ export function PlotEditorWrapper({ id, projectId }: PlotEditorWrapperProps) {
         nodeId={id}
         canonStatus={plot.canonStatus}
         contextPolicy={plot.contextPolicy}
+        editPolicy={plot.editPolicy}
       />
       <div className="min-h-0 flex-1">
         <PlotEditor data={toEditorData(plot)} onChange={handleChange} />

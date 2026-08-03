@@ -47,7 +47,13 @@ const mockPlots: TreeNodeData[] = [
       { id: '1-2', name: 'キャラ動線', type: 'plot', nodeType: 'file' },
     ],
   },
-  { id: '2', name: '全体構成', type: 'plot', nodeType: 'file' },
+  {
+    id: '2',
+    name: '全体構成',
+    type: 'plot',
+    nodeType: 'file',
+    editPolicy: 'approval_required',
+  },
 ];
 const mockCharacters: TreeNodeData[] = [
   {
@@ -56,7 +62,13 @@ const mockCharacters: TreeNodeData[] = [
     type: 'character',
     nodeType: 'folder',
     children: [
-      { id: '3-1', name: '主人公', type: 'character', nodeType: 'file' },
+      {
+        id: '3-1',
+        name: '主人公',
+        type: 'character',
+        nodeType: 'file',
+        editPolicy: 'locked',
+      },
       { id: '3-2', name: 'ヒロイン', type: 'character', nodeType: 'file' },
     ],
   },

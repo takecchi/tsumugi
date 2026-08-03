@@ -24,6 +24,7 @@ function mergeNodeAttributes<T extends Node>(
     ...current,
     canonStatus: attributes.canonStatus ?? current.canonStatus,
     contextPolicy: attributes.contextPolicy ?? current.contextPolicy,
+    editPolicy: attributes.editPolicy ?? current.editPolicy,
   };
 }
 
@@ -35,13 +36,14 @@ function applyUpdatedNode<T extends Node>(current: T, updated: Node): T {
     ...mergeNodeAttributes(current, {
       canonStatus: updated.canonStatus,
       contextPolicy: updated.contextPolicy,
+      editPolicy: updated.editPolicy,
     }),
     updatedAt: updated.updatedAt,
   };
 }
 
 /**
- * ノードのAI属性（canonStatus / contextPolicy）を更新する。
+ * ノードのAI属性（canonStatus / contextPolicy / editPolicy）を更新する。
  *
  * 個別コンテンツのキャッシュは楽観更新で即座に反映し、サーバー応答後にその値で確定させる
  * （失敗時は再フェッチせずロールバックするため、編集中の未保存テキストを巻き戻さない）。

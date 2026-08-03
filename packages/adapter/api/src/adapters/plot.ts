@@ -12,6 +12,7 @@ function toPlot(api: ApiPlot): Plot {
     order: api.order,
     canonStatus: api.canonStatus,
     contextPolicy: api.contextPolicy,
+    editPolicy: api.editPolicy,
     synopsis: api.synopsis ?? undefined,
     setting: api.setting ?? undefined,
     theme: api.theme ?? undefined,
@@ -57,7 +58,12 @@ export function createPlotAdapter(clients: ApiClients): PlotAdapter {
     async create(
       data: Omit<
         Plot,
-        'id' | 'createdAt' | 'updatedAt' | 'canonStatus' | 'contextPolicy'
+        | 'id'
+        | 'createdAt'
+        | 'updatedAt'
+        | 'canonStatus'
+        | 'contextPolicy'
+        | 'editPolicy'
       >,
     ): Promise<Plot> {
       const plot = await clients.projects.createPlot({
@@ -88,6 +94,7 @@ export function createPlotAdapter(clients: ApiClients): PlotAdapter {
           | 'updatedAt'
           | 'canonStatus'
           | 'contextPolicy'
+          | 'editPolicy'
         >
       >,
     ): Promise<Plot> {

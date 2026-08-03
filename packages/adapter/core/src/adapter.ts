@@ -9,6 +9,7 @@ import type {
   Writing,
   CanonStatus,
   ContextPolicy,
+  EditPolicy,
   AIChatMessageRequest,
   AIChatMode,
   AIChatRequest,
@@ -56,18 +57,19 @@ export interface ApiAdapterConfig {
 
 /**
  * 作成時に除外するフィールド
- * canonStatus / contextPolicy はバックエンドが払い出す AI 属性のため作成データには含めない。
+ * canonStatus / contextPolicy / editPolicy はバックエンドが払い出す AI 属性のため作成データには含めない。
  */
 type CreateOmit =
   | 'id'
   | 'createdAt'
   | 'updatedAt'
   | 'canonStatus'
-  | 'contextPolicy';
+  | 'contextPolicy'
+  | 'editPolicy';
 
 /**
  * 更新時に除外するフィールド
- * canonStatus / contextPolicy は `nodes.updateAttributes()` で個別に更新する。
+ * canonStatus / contextPolicy / editPolicy は `nodes.updateAttributes()` で個別に更新する。
  */
 type UpdateOmit =
   | 'id'
@@ -75,7 +77,8 @@ type UpdateOmit =
   | 'createdAt'
   | 'updatedAt'
   | 'canonStatus'
-  | 'contextPolicy';
+  | 'contextPolicy'
+  | 'editPolicy';
 
 /**
  * ノードアダプター共通の操作
@@ -209,12 +212,15 @@ export interface AIAdapter {
 
 /**
  * ノードのAI属性
+ * 未指定（undefined）のフィールドは「変更しない」を意味する。
  */
 export interface NodeAttributes {
   /** 正典ステータス（確定/検討中） */
   canonStatus?: CanonStatus;
   /** AIコンテキストへの露出ポリシー */
   contextPolicy?: ContextPolicy;
+  /** AIによる編集の保護ポリシー */
+  editPolicy?: EditPolicy;
 }
 
 /**
@@ -222,7 +228,7 @@ export interface NodeAttributes {
  */
 export interface NodeAdapter {
   /**
-   * ノードのAI属性（canonStatus / contextPolicy）を更新する
+   * ノードのAI属性（canonStatus / contextPolicy / editPolicy）を更新する
    */
   updateAttributes(nodeId: string, attributes: NodeAttributes): Promise<Node>;
 }

@@ -17,6 +17,7 @@ function toWriting(api: ApiWriting): Writing {
     order: api.order,
     canonStatus: api.canonStatus,
     contextPolicy: api.contextPolicy,
+    editPolicy: api.editPolicy,
     content: api.content,
     wordCount: countWords(api.content),
     createdAt: api.createdAt,
@@ -57,7 +58,12 @@ export function createWritingAdapter(clients: ApiClients): WritingAdapter {
     async create(
       data: Omit<
         Writing,
-        'id' | 'createdAt' | 'updatedAt' | 'canonStatus' | 'contextPolicy'
+        | 'id'
+        | 'createdAt'
+        | 'updatedAt'
+        | 'canonStatus'
+        | 'contextPolicy'
+        | 'editPolicy'
       >,
     ): Promise<Writing> {
       const writing = await clients.projects.createWriting({
@@ -82,6 +88,7 @@ export function createWritingAdapter(clients: ApiClients): WritingAdapter {
           | 'updatedAt'
           | 'canonStatus'
           | 'contextPolicy'
+          | 'editPolicy'
         >
       >,
     ): Promise<Writing> {
