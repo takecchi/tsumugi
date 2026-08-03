@@ -5,7 +5,6 @@ import {
   formatChangeCounts,
   groupByDay,
   toLocalDateKey,
-  totalChangeCount,
   validateCommitMessage,
   type DiffLineInput,
   type DiffRow,
@@ -39,13 +38,6 @@ describe('validateCommitMessage', () => {
   it('前後の空白は文字数に含めない', () => {
     const message = `  ${'あ'.repeat(COMMIT_MESSAGE_MAX_LENGTH)}  `;
     expect(validateCommitMessage(message)).toBeNull();
-  });
-});
-
-describe('totalChangeCount', () => {
-  it('3種類の件数を合計する', () => {
-    expect(totalChangeCount({ added: 2, modified: 1, removed: 3 })).toBe(6);
-    expect(totalChangeCount({ added: 0, modified: 0, removed: 0 })).toBe(0);
   });
 });
 

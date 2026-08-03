@@ -13,6 +13,7 @@ interface EntryContentLoaderProps {
   commitId: string;
   targetId: string;
   onLoaded: (targetId: string, content: CommitEntryContentItem) => void;
+  onFailed: (targetId: string) => void;
 }
 
 /**
@@ -23,20 +24,24 @@ function EntryContentLoader({
   commitId,
   targetId,
   onLoaded,
+  onFailed,
 }: EntryContentLoaderProps) {
   const { data, error } = useCommitEntry(commitId, targetId);
 
   useEffect(() => {
-    // 取得できなかった場合も空の内容を返し、読み込み中のまま止めない
     if (data !== undefined) {
+      // 404（null）は「中身が無い」ので空の内容として確定させる
       onLoaded(
         targetId,
         data === null ? EMPTY_ENTRY_CONTENT : toEntryContentItem(data),
       );
-    } else if (error !== undefined) {
-      onLoaded(targetId, EMPTY_ENTRY_CONTENT);
+      return;
     }
-  }, [data, error, targetId, onLoaded]);
+    if (error !== undefined) {
+      // 通信エラーは確定させない。要求を取り下げて再試行できる状態に戻す
+      onFailed(targetId);
+    }
+  }, [data, error, targetId, onLoaded, onFailed]);
 
   return null;
 }
@@ -63,7 +68,7 @@ export function CommitDiffLoader({
   targetId,
   emptyMessage,
 }: CommitDiffLoaderProps) {
-  const { data, isLoading } = useCommitDiff(commitId);
+  const { data, error, isLoading, mutate } = useCommitDiff(commitId);
   const [requestedIds, setRequestedIds] = useState<string[]>([]);
   const [contents, setContents] = useState<EntryContentMap>({});
 
@@ -75,14 +80,16 @@ export function CommitDiffLoader({
 
   const handleLoaded = useCallback(
     (loadedTargetId: string, content: CommitEntryContentItem) => {
-      setContents((prev) =>
-        prev[loadedTargetId] === content
-          ? prev
-          : { ...prev, [loadedTargetId]: content },
-      );
+      setContents((prev) => ({ ...prev, [loadedTargetId]: content }));
     },
     [],
   );
+
+  // 取得に失敗したら要求を取り下げ、「中身を表示」ボタンを復活させる。
+  // ローダーがアンマウントされるので、押し直せば SWR が再取得する。
+  const handleFailed = useCallback((failedTargetId: string) => {
+    setRequestedIds((prev) => prev.filter((id) => id !== failedTargetId));
+  }, []);
 
   const entries = useMemo(() => {
     const all = data?.entries ?? [];
@@ -110,6 +117,7 @@ export function CommitDiffLoader({
           commitId={commitId}
           targetId={id}
           onLoaded={handleLoaded}
+          onFailed={handleFailed}
         />
       ))}
       <CommitDiffView
@@ -121,6 +129,8 @@ export function CommitDiffLoader({
         loadingEntryIds={loadingEntryIds}
         onShowEntryContent={handleShowEntryContent}
         emptyMessage={emptyMessage}
+        hasError={error !== undefined}
+        onRetry={() => void mutate()}
       />
     </>
   );

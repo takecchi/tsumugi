@@ -43,13 +43,6 @@ export interface ChangeCounts {
 }
 
 /**
- * 変更エントリ件数の合計
- */
-export function totalChangeCount(counts: ChangeCounts): number {
-  return counts.added + counts.modified + counts.removed;
-}
-
-/**
  * 変更エントリ件数を「追加 2件・変更 1件」のような表示文字列にする。
  * 0 件の種別は省略し、すべて 0 なら「変更なし」を返す。
  *

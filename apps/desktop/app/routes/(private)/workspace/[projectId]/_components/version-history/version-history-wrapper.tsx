@@ -30,14 +30,19 @@ export function VersionHistoryWrapper({
 }: VersionHistoryWrapperProps) {
   const {
     data: pages,
+    error: commitsError,
     isLoading,
     isValidating,
     size,
     setSize,
     mutate: mutateCommits,
   } = useCommits(projectId);
-  const { data: projectDiff, mutate: mutateProjectDiff } =
-    useProjectDiff(projectId);
+  const {
+    data: projectDiff,
+    error: projectDiffError,
+    isValidating: isValidatingProjectDiff,
+    mutate: mutateProjectDiff,
+  } = useProjectDiff(projectId);
   const { trigger: createCommit, isMutating: isSaving } =
     useCreateCommit(projectId);
   const { trigger: restoreCommit, isMutating: isRestoring } =
@@ -53,10 +58,7 @@ export function VersionHistoryWrapper({
     () => (pages ?? []).flatMap((page) => page.commits),
     [pages],
   );
-  const timelineItems = useMemo(
-    () => commits.map(toTimelineItem),
-    [commits],
-  );
+  const timelineItems = useMemo(() => commits.map(toTimelineItem), [commits]);
 
   // next_cursor === null が終端（has_more は存在しない）
   const hasMore =
@@ -65,12 +67,17 @@ export function VersionHistoryWrapper({
     pages[pages.length - 1].nextCursor !== null;
   const isLoadingMore =
     isValidating && pages !== undefined && size > pages.length;
+  // 初回読み込み後の再検証（再取得ボタン / フォーカス復帰）
+  const isRefreshing = !isLoading && (isValidating || isValidatingProjectDiff);
 
   const uncommittedEntries = useMemo(
     () => (projectDiff?.entries ?? []).map(toDiffEntryItem),
     [projectDiff],
   );
-  const hasUncommittedChanges = uncommittedEntries.length > 0;
+  // 取得に失敗したときも行を残す。隠すと「未保存の編集が無い」と誤解させるため、
+  // クリックしてエラーと再試行を見せられるようにする。
+  const hasUncommittedChanges =
+    uncommittedEntries.length > 0 || projectDiffError !== undefined;
 
   const refresh = useCallback(async () => {
     await Promise.all([mutateCommits(), mutateProjectDiff()]);
@@ -147,6 +154,8 @@ export function VersionHistoryWrapper({
           title="未コミットの変更"
           subtitle="最新コミットとの差分"
           emptyMessage="未コミットの変更はありません。"
+          hasError={projectDiffError !== undefined}
+          onRetry={() => void mutateProjectDiff()}
         />
       );
     }
@@ -169,6 +178,8 @@ export function VersionHistoryWrapper({
       isUncommittedSelected={selection?.kind === 'uncommitted'}
       isLoading={isLoading}
       isLoadingMore={isLoadingMore}
+      isRefreshing={isRefreshing}
+      hasError={commitsError !== undefined}
       hasMore={hasMore}
       isSaving={isSaving}
       isRestoring={isRestoring}

@@ -33,6 +33,7 @@
     "dev:tauri": "vite build --watch",
     "dev:web": "vite build --watch",
     "lint": "eslint --fix",
+    "tsc": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "start-storybook": "npx http-server ./storybook-static -p 6006",

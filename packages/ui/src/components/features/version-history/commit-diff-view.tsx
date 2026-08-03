@@ -11,6 +11,7 @@ import {
   type RevisionEntryTypeValue,
 } from '@/lib/version-history-utils';
 import { ChangeTypeBadge, entryKindLabel, fieldLabel } from './version-badges';
+import { LoadErrorState } from './load-error-state';
 
 /** 短い属性フィールドの before/after */
 export interface DiffFieldChangeItem {
@@ -68,6 +69,12 @@ export interface CommitDiffViewProps {
   loadingEntryIds?: string[];
   /** 空のときに出すメッセージ */
   emptyMessage?: string;
+  /**
+   * 差分の取得に失敗したか。
+   * 「差分がない」と区別できるよう、空表示ではなくエラー表示にする。
+   */
+  hasError?: boolean;
+  onRetry?: () => void;
   className?: string;
 }
 
@@ -85,6 +92,17 @@ const LINE_OP_META: Record<
     symbol: '−',
     rowClassName: 'bg-red-50 text-red-900 dark:bg-red-950/40 dark:text-red-200',
   },
+};
+
+/**
+ * 差分の本体（field_changes / text_diffs）が空だったときの説明文。
+ * added / removed は差分APIが中身を返さない仕様。
+ * modified でも、ノード種別が変わった場合などにメタ情報だけになり得る。
+ */
+const EMPTY_BODY_MESSAGES: Record<DiffChangeTypeValue, string> = {
+  added: 'このエントリの中身は差分に含まれません。',
+  removed: 'このエントリは削除されました。削除前の中身は差分に含まれません。',
+  modified: 'このエントリの変更内容は差分に含まれていません。',
 };
 
 function FieldChangeRow({ change }: { change: DiffFieldChangeItem }) {
@@ -219,11 +237,12 @@ function DiffEntryCard({
   isLoadingContent: boolean;
   onShowEntryContent?: (targetId: string) => void;
 }) {
-  // added / removed では差分APIが中身を返さないため、別途取得して見せる
-  const needsContentFetch =
-    entry.changeType !== 'modified' && onShowEntryContent !== undefined;
   const hasDiffBody =
     entry.fieldChanges.length > 0 || entry.textDiffs.length > 0;
+  // added / removed では差分APIが中身を返さない。
+  // modified でも（ノード種別が変わった場合など）中身が空になり得るため、
+  // 差分の本体が無いエントリは種別にかかわらず取得できるようにする。
+  const needsContentFetch = !hasDiffBody && onShowEntryContent !== undefined;
 
   return (
     <div className="space-y-2 rounded-md border p-3">
@@ -256,9 +275,7 @@ function DiffEntryCard({
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                {entry.changeType === 'added'
-                  ? 'このエントリの中身は差分に含まれません。'
-                  : 'このエントリは削除されました。削除前の中身は差分に含まれません。'}
+                {EMPTY_BODY_MESSAGES[entry.changeType]}
               </p>
               {needsContentFetch && (
                 <Button
@@ -296,6 +313,8 @@ export function CommitDiffView({
   entryContents,
   loadingEntryIds,
   emptyMessage = '変更はありません。',
+  hasError = false,
+  onRetry,
   className,
 }: CommitDiffViewProps) {
   const loadingIds = React.useMemo(
@@ -321,6 +340,12 @@ export function CommitDiffView({
             <p className="animate-pulse py-8 text-center text-sm text-muted-foreground">
               差分を読み込んでいます…
             </p>
+          ) : hasError ? (
+            // 「差分がない」と誤解させないよう、空表示ではなくエラーとして見せる
+            <LoadErrorState
+              message="差分を読み込めませんでした。"
+              onRetry={onRetry}
+            />
           ) : entries.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               {emptyMessage}

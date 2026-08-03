@@ -45,6 +45,13 @@ export const Loading: Story = {
   },
 };
 
+export const LoadFailed: Story = {
+  args: {
+    entries: [],
+    hasError: true,
+  },
+};
+
 const mockEntryContents: Record<string, CommitEntryContentItem> = {
   node_memo_9: {
     metaFields: [{ field: 'canon_status', value: 'draft' }],

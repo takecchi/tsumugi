@@ -57,6 +57,13 @@ export const NoChangesNotice: Story = {
   },
 };
 
+export const LoadFailed: Story = {
+  args: {
+    commits: [],
+    hasError: true,
+  },
+};
+
 export const AfterRestore: Story = {
   args: {
     commits: mockCommits,

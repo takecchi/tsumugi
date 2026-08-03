@@ -21,6 +21,7 @@ export function NodeRevisionWrapper({
 }: NodeRevisionWrapperProps) {
   const {
     data: pages,
+    error: revisionsError,
     isLoading,
     isValidating,
     size,
@@ -49,6 +50,7 @@ export function NodeRevisionWrapper({
     pages[pages.length - 1].nextCursor !== null;
   const isLoadingMore =
     isValidating && pages !== undefined && size > pages.length;
+  const isRefreshing = !isLoading && isValidating;
 
   const handleRestore = useCallback(
     (commitId: string) => {
@@ -61,13 +63,15 @@ export function NodeRevisionWrapper({
           setNotice(
             `「${target?.message ?? ''}」の時点の本文に戻しました。名前や置き場所は変わっていません。`,
           );
+          // 復元による変更が履歴に載る場合に取り逃さないよう再取得する
+          await mutateRevisions();
         } catch (e: unknown) {
           console.error('[versions] restoreNode failed:', e);
           setNotice('本文の復元に失敗しました。もう一度お試しください。');
         }
       })();
     },
-    [restoreNode, nodeId, revisions],
+    [restoreNode, nodeId, revisions, mutateRevisions],
   );
 
   const selected = revisions.find(
@@ -80,6 +84,8 @@ export function NodeRevisionWrapper({
       selectedCommitId={selectedCommitId}
       isLoading={isLoading}
       isLoadingMore={isLoadingMore}
+      isRefreshing={isRefreshing}
+      hasError={revisionsError !== undefined}
       hasMore={hasMore}
       isRestoring={isRestoring}
       notice={notice}

@@ -48,6 +48,13 @@ export const Loading: Story = {
   },
 };
 
+export const LoadFailed: Story = {
+  args: {
+    revisions: [],
+    hasError: true,
+  },
+};
+
 export const Interactive: StoryObj = {
   render: () => {
     const [selectedCommitId, setSelectedCommitId] = React.useState<

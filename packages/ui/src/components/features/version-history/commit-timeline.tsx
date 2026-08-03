@@ -32,6 +32,7 @@ import {
   formatDateHeading,
   formatTimeOfDay,
 } from './version-badges';
+import { LoadErrorState } from './load-error-state';
 
 /** タイムラインに並べるコミット */
 export interface CommitTimelineItem {
@@ -57,6 +58,13 @@ export interface CommitTimelineProps {
   isUncommittedSelected?: boolean;
   isLoading?: boolean;
   isLoadingMore?: boolean;
+  /** 再取得中か（初回読み込み後の再検証） */
+  isRefreshing?: boolean;
+  /**
+   * 履歴の取得に失敗したか。
+   * 「履歴がない」と区別できるよう、空表示ではなくエラー表示にする。
+   */
+  hasError?: boolean;
   /** 次ページがあるか（next_cursor !== null） */
   hasMore?: boolean;
   isSaving?: boolean;
@@ -279,6 +287,8 @@ export function CommitTimeline({
   isUncommittedSelected = false,
   isLoading = false,
   isLoadingMore = false,
+  isRefreshing = false,
+  hasError = false,
   hasMore = false,
   isSaving = false,
   isRestoring = false,
@@ -325,11 +335,14 @@ export function CommitTimeline({
               size="icon-xs"
               variant="ghost"
               aria-label="履歴を再取得"
-              disabled={isLoading}
+              disabled={isLoading || isRefreshing}
               onClick={onRefresh}
             >
               <RefreshCw
-                className={cn('size-3', isLoading && 'animate-spin')}
+                className={cn(
+                  'size-3',
+                  (isLoading || isRefreshing) && 'animate-spin',
+                )}
               />
             </Button>
           </div>
@@ -375,7 +388,15 @@ export function CommitTimeline({
               </p>
             )}
 
-            {!isLoading && commits.length === 0 && (
+            {/* 取得失敗を「履歴がない」と誤解させない（復元を伴う画面なので特に重要） */}
+            {!isLoading && hasError && commits.length === 0 && (
+              <LoadErrorState
+                message="履歴を読み込めませんでした。"
+                onRetry={onRefresh}
+              />
+            )}
+
+            {!isLoading && !hasError && commits.length === 0 && (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 まだ履歴がありません。メッセージを付けて保存すると履歴に残ります。
               </p>

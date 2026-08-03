@@ -2,7 +2,6 @@ import useSWR, { type SWRConfiguration, useSWRConfig } from 'swr';
 import useSWRInfinite from 'swr/infinite';
 import useSWRMutation from 'swr/mutation';
 import type {
-  Commit,
   CommitDiff,
   CommitEntry,
   CommitList,
@@ -28,6 +27,8 @@ interface CommitsPageKey {
   projectId: string;
   /** 前ページの nextCursor。1ページ目は null */
   cursor: string | null;
+  /** 1ページあたりの件数。異なる件数でキャッシュを共有しないためキーに含める */
+  limit: number | null;
 }
 
 /**
@@ -50,32 +51,14 @@ export function useCommits(projectId: string, limit?: number) {
         type: 'commits',
         projectId,
         cursor: previous?.nextCursor ?? null,
+        limit: limit ?? null,
       };
     },
-    ({ projectId, cursor }: CommitsPageKey) =>
-      adapter.versions.listCommits(projectId, { limit, cursor }),
-  );
-}
-
-interface CommitKey {
-  type: 'commit';
-  commitId: string;
-}
-
-/**
- * コミットを1件取得する
- * @param commitId - コミットID
- * @param config
- */
-export function useCommit(
-  commitId: string,
-  config?: SWRConfiguration<Commit | null, Error>,
-) {
-  const adapter = useAdapter();
-  return useSWR<Commit | null, Error, CommitKey>(
-    { type: 'commit', commitId },
-    ({ commitId }) => adapter.versions.getCommit(commitId),
-    config,
+    ({ projectId, cursor, limit }: CommitsPageKey) =>
+      adapter.versions.listCommits(projectId, {
+        limit: limit ?? undefined,
+        cursor,
+      }),
   );
 }
 
@@ -164,6 +147,8 @@ interface NodeRevisionsPageKey {
   nodeId: string;
   /** 前ページの nextCursor。1ページ目は null */
   cursor: string | null;
+  /** 1ページあたりの件数。異なる件数でキャッシュを共有しないためキーに含める */
+  limit: number | null;
 }
 
 /**
@@ -185,31 +170,16 @@ export function useNodeRevisions(nodeId: string, limit?: number) {
         type: 'nodeRevisions',
         nodeId,
         cursor: previous?.nextCursor ?? null,
+        limit: limit ?? null,
       };
     },
-    ({ nodeId, cursor }: NodeRevisionsPageKey) =>
-      adapter.versions.listNodeRevisions(nodeId, { limit, cursor }),
+    ({ nodeId, cursor, limit }: NodeRevisionsPageKey) =>
+      adapter.versions.listNodeRevisions(nodeId, {
+        limit: limit ?? undefined,
+        cursor,
+      }),
   );
 }
-
-/**
- * 復元によって内容が書き換わる可能性のある SWR キーの種別。
- * AIセッションや使用量など、バージョン管理の対象外のキーは含めない。
- */
-const RESTORE_AFFECTED_KEY_TYPES: ReadonlySet<string> = new Set([
-  'project',
-  'projectSettings',
-  'plot',
-  'plotTree',
-  'character',
-  'characterTree',
-  'memo',
-  'memoTree',
-  'writing',
-  'writingTree',
-  'glossaryTerms',
-  'instructions',
-]);
 
 function hasStringType(key: unknown): key is { type: string } {
   return (
@@ -220,11 +190,53 @@ function hasStringType(key: unknown): key is { type: string } {
   );
 }
 
+function hasStringId(key: object): key is { id: string } {
+  return 'id' in key && typeof key.id === 'string';
+}
+
+function hasStringProjectId(key: object): key is { projectId: string } {
+  return 'projectId' in key && typeof key.projectId === 'string';
+}
+
 /**
- * 復元後に再フェッチすべきキーかどうかを判定する
+ * 復元後に再フェッチすべき SWR キーを判定する述語を作る。
+ *
+ * 無関係なプロジェクトのキャッシュまで再フェッチしないよう、
+ * プロジェクトIDを持つキーは対象プロジェクトのものだけに絞る。
+ * AIセッションや使用量など、バージョン管理の対象外のキーは含めない。
+ * `projectSettings` は localStorage 管理でサーバー状態ではないため対象外。
  */
-function isRestoreAffectedKey(key: unknown): boolean {
-  return hasStringType(key) && RESTORE_AFFECTED_KEY_TYPES.has(key.type);
+function createRestoreAffectedKeyMatcher(
+  projectId: string,
+): (key: unknown) => boolean {
+  return (key: unknown): boolean => {
+    if (!hasStringType(key)) return false;
+    switch (key.type) {
+      // プロジェクト一覧は横断的なキー。復元でプロジェクト名が変わり得るため常に対象
+      case 'projects':
+        return true;
+      // id がプロジェクトIDなので絞り込める
+      case 'project':
+        return hasStringId(key) && key.id === projectId;
+      // projectId を持つキーは対象プロジェクトのみ
+      case 'plotTree':
+      case 'characterTree':
+      case 'memoTree':
+      case 'writingTree':
+      case 'glossaryTerms':
+      case 'instructions':
+        return hasStringProjectId(key) && key.projectId === projectId;
+      // 個別ノードのキーは id がノードIDのためプロジェクトを判別できない。
+      // 開いたノードの分しかキャッシュされないので一律に対象とする
+      case 'plot':
+      case 'character':
+      case 'memo':
+      case 'writing':
+        return true;
+      default:
+        return false;
+    }
+  };
 }
 
 /**
@@ -266,12 +278,12 @@ export function useRestoreCommit(projectId: string) {
       projectId,
       baseCommitId: DEFAULT_BASE_COMMIT_ID,
     },
-    async (_, { arg: commitId }) => {
+    async ({ projectId }, { arg: commitId }) => {
       const result = await adapter.versions.restoreCommit(commitId);
       // 何も変わらなかった場合は再フェッチしない
       if (result.status === 'already_at_commit') return result;
       // 復元はプロジェクト全体を書き換えるため、影響するキーをまとめて再フェッチする
-      await mutate(isRestoreAffectedKey);
+      await mutate(createRestoreAffectedKeyMatcher(projectId));
       return result;
     },
   );
@@ -300,9 +312,9 @@ export function useRestoreNode(projectId: string) {
       projectId,
       baseCommitId: DEFAULT_BASE_COMMIT_ID,
     },
-    async (_, { arg }) => {
+    async ({ projectId }, { arg }) => {
       const node = await adapter.versions.restoreNode(arg.nodeId, arg.commitId);
-      await mutate(isRestoreAffectedKey);
+      await mutate(createRestoreAffectedKeyMatcher(projectId));
       return node;
     },
   );
