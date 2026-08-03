@@ -33,6 +33,8 @@ import type {
   UpdateInstructionData,
   AuthState,
   GoogleAuthUrl,
+  CreateFeedbackData,
+  ProductSignal,
 } from './types';
 
 /**
@@ -345,6 +347,21 @@ export interface ExportAdapter {
 }
 
 /**
+ * フィードバック送信のインターフェース
+ */
+export interface FeedbackAdapter {
+  /**
+   * プロダクトへの要望・不満を送信する
+   *
+   * 返り値の `summary` はサーバー側で伏字化・280文字への切り詰めが行われた結果であり、
+   * 送信した文章とは一致しない。
+   *
+   * @throws trim後の `summary` が空、または文字数制約を満たさない場合
+   */
+  send(data: CreateFeedbackData): Promise<ProductSignal>;
+}
+
+/**
  * 統合アダプター
  */
 export interface Adapter {
@@ -361,4 +378,5 @@ export interface Adapter {
   readonly glossary: GlossaryAdapter;
   readonly instructions: InstructionAdapter;
   readonly export: ExportAdapter;
+  readonly feedback: FeedbackAdapter;
 }

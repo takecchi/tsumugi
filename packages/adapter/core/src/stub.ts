@@ -114,5 +114,8 @@ export function createAdapter(_: AdapterConfig = {}): Adapter {
     export: {
       exportProject: () => notImplemented(),
     },
+    feedback: {
+      send: () => notImplemented(),
+    },
   };
 }

@@ -19,8 +19,9 @@ import {
   Input,
 } from '@tsumugi/ui';
 import type { ProjectItem } from '@tsumugi/ui';
-import { PlusIcon, LogOutIcon } from 'lucide-react';
+import { PlusIcon, LogOutIcon, MessageSquarePlusIcon } from 'lucide-react';
 import { PATH_WORKSPACE } from '~/constants/path';
+import { FeedbackDialog } from './_components/feedback-dialog';
 
 export const meta: MetaFunction = () => [
   { title: 'Tsumugi - プロジェクト一覧' },
@@ -55,6 +56,7 @@ export default function Page() {
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(
     null,
   );
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
 
   const handleOpenCreateDialog = () => {
     setNewProjectTitle('untitled');
@@ -131,15 +133,25 @@ export default function Page() {
                 </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void logout()}
-              disabled={isLoggingOut}
-            >
-              <LogOutIcon className="mr-2 size-4" />
-              {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFeedbackDialogOpen(true)}
+              >
+                <MessageSquarePlusIcon className="mr-2 size-4" />
+                ご意見・ご要望
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void logout()}
+                disabled={isLoggingOut}
+              >
+                <LogOutIcon className="mr-2 size-4" />
+                {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+              </Button>
+            </div>
           </div>
           {error && (
             <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -168,6 +180,12 @@ export default function Page() {
           </div>
         </div>
       </div>
+
+      <FeedbackDialog
+        open={isFeedbackDialogOpen}
+        onOpenChange={setIsFeedbackDialogOpen}
+        surface="home.feedback"
+      />
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent showCloseButton={false}>
