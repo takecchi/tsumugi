@@ -208,9 +208,16 @@ export function toAIProposal(proposal: Proposal): AIProposal {
  * - proposal          → proposal
  * - usage / error     → そのまま
  * - finish            → done（message_id を messageId に）
- * - start / text-start / text-end / その他 → ドメインには現れないため null
+ * - start / text-start / text-end → ドメインには現れないため null
+ * - plan / run-status → 自律Run 専用のチャンク。対話チャットには流れないため null
+ *
+ * 未知の type は必ず null を返して読み飛ばす（throw しない）。
+ * バックエンドはマイナーバージョンでチャンク種別を追加してくるため、
+ * ここに default: throw / assertNever を足すと既存のチャット画面ごと落ちる。
  */
 export function toAIStreamChunk(raw: unknown): AIStreamChunk | null {
+  // type を持たない壊れたペイロードのみ throw する。
+  // 呼び出し元（parseSSEFrame）が catch して null に落とすため、ストリームは継続する。
   if (!hasType(raw)) throw new Error('Invalid SSE chunk');
   switch (raw.type) {
     case 'text-delta': {
@@ -275,6 +282,11 @@ export function toAIStreamChunk(raw: unknown): AIStreamChunk | null {
     case 'text-start':
     case 'text-end':
       return null;
+    // 自律Run のストリーム専用チャンク。対話チャットの SSE には流れない
+    case 'plan':
+    case 'run-status':
+      return null;
   }
+  // 未知の type は握り潰してスキップする（default: throw を足さないこと）
   return null;
 }

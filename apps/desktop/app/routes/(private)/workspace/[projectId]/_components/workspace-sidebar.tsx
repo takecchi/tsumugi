@@ -46,6 +46,8 @@ function convertTreeNodes(
     name: node.name,
     type,
     nodeType: node.nodeType === 'folder' ? 'folder' : 'file',
+    // free 以外のノードはツリー上に保護アイコンを出す
+    editPolicy: node.editPolicy,
     children: node.children ? convertTreeNodes(node.children, type) : undefined,
   }));
 }

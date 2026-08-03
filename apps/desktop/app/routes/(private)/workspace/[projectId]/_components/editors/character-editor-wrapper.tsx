@@ -71,6 +71,7 @@ export function CharacterEditorWrapper({
         nodeId={id}
         canonStatus={character.canonStatus}
         contextPolicy={character.contextPolicy}
+        editPolicy={character.editPolicy}
       />
       <div className="min-h-0 flex-1">
         <CharacterEditor

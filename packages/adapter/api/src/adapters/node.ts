@@ -12,6 +12,7 @@ function toNode(api: ApiNode): Node {
     order: api.order,
     canonStatus: api.canonStatus,
     contextPolicy: api.contextPolicy,
+    editPolicy: api.editPolicy,
     createdAt: api.createdAt,
     updatedAt: api.updatedAt,
   };
@@ -25,9 +26,11 @@ export function createNodeAdapter(clients: ApiClients): NodeAdapter {
     ): Promise<Node> {
       const node = await clients.nodes.updateNode({
         nodeId,
+        // 未指定のフィールドは送らない（バックエンド側で「変更しない」扱いになる）
         updateNodeRequest: {
           canonStatus: attributes.canonStatus,
           contextPolicy: attributes.contextPolicy,
+          editPolicy: attributes.editPolicy,
         },
       });
       return toNode(node);

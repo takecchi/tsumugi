@@ -3,6 +3,7 @@ export * from './ai-panel';
 export * from './ai-usage';
 export * from './consistency-check';
 export * from './context-preview';
+export * from './edit-policy';
 export * from './editor';
 export * from './glossary';
 export * from './instructions';

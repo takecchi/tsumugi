@@ -8,6 +8,12 @@ import {
 } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import {
+  EDIT_POLICY_NOTE,
+  EDIT_POLICY_OPTIONS,
+  EditPolicyIcon,
+  type EditPolicy,
+} from '@/components/features/edit-policy';
 import { cn } from '@/lib/utils';
 
 export type CanonStatus = 'confirmed' | 'draft';
@@ -16,8 +22,10 @@ export type ContextPolicy = 'always' | 'auto' | 'never';
 export interface NodeAiAttributesProps {
   canonStatus: CanonStatus;
   contextPolicy: ContextPolicy;
+  editPolicy: EditPolicy;
   onCanonStatusChange?: (status: CanonStatus) => void;
   onContextPolicyChange?: (policy: ContextPolicy) => void;
+  onEditPolicyChange?: (policy: EditPolicy) => void;
   disabled?: boolean;
   className?: string;
 }
@@ -71,28 +79,49 @@ function CanonStatusToggle({
   );
 }
 
-function ContextPolicySelector({
-  policy,
+interface PolicyOption<T extends string> {
+  value: T;
+  label: string;
+  description: string;
+}
+
+/**
+ * ラベル + ポップオーバーで選択肢を選ぶ共通コントロール。
+ * contextPolicy / editPolicy で共有する。
+ */
+function PolicySelector<T extends string>({
+  label,
+  options,
+  value,
   onChange,
   disabled,
+  note,
+  triggerIcon,
+  contentClassName,
 }: {
-  policy: ContextPolicy;
-  onChange?: (policy: ContextPolicy) => void;
+  label: string;
+  options: PolicyOption<T>[];
+  value: T;
+  onChange?: (value: T) => void;
   disabled?: boolean;
+  /** ポップオーバー下部に出す補足説明 */
+  note?: string;
+  /** トリガーのラベル前に出すアイコン */
+  triggerIcon?: React.ReactNode;
+  contentClassName?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const current =
-    CONTEXT_POLICY_OPTIONS.find((option) => option.value === policy) ??
-    CONTEXT_POLICY_OPTIONS[0];
+    options.find((option) => option.value === value) ?? options[0];
 
-  const handleSelect = (value: ContextPolicy) => {
-    onChange?.(value);
+  const handleSelect = (next: T) => {
+    onChange?.(next);
     setOpen(false);
   };
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-xs text-muted-foreground">AIへの見せ方:</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -102,14 +131,18 @@ function ContextPolicySelector({
             disabled={disabled}
             className="h-7 gap-1 px-2 text-xs font-medium"
           >
+            {triggerIcon}
             {current.label}
             <ChevronDown className="size-3" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-56 p-1" align="start">
+        <PopoverContent
+          className={cn('w-56 p-1', contentClassName)}
+          align="start"
+        >
           <div className="space-y-0.5">
-            {CONTEXT_POLICY_OPTIONS.map((option) => {
-              const active = option.value === policy;
+            {options.map((option) => {
+              const active = option.value === value;
               return (
                 <button
                   key={option.value}
@@ -136,6 +169,11 @@ function ContextPolicySelector({
               );
             })}
           </div>
+          {note && (
+            <p className="mt-1 border-t px-2 py-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {note}
+            </p>
+          )}
         </PopoverContent>
       </Popover>
     </div>
@@ -143,7 +181,7 @@ function ContextPolicySelector({
 }
 
 /**
- * ノードのAI属性（正典ステータス・コンテキストの見せ方）を操作する
+ * ノードのAI属性（正典ステータス・コンテキストの見せ方・編集の保護）を操作する
  * コンパクトなインラインコントロール行。エディタのツールバー等に配置する。
  *
  * 正典ステータスは「確定」ラベル付きのトグルスイッチで表現する（オフ = 検討中）。
@@ -151,8 +189,10 @@ function ContextPolicySelector({
 export function NodeAiAttributes({
   canonStatus,
   contextPolicy,
+  editPolicy,
   onCanonStatusChange,
   onContextPolicyChange,
+  onEditPolicyChange,
   disabled = false,
   className,
 }: NodeAiAttributesProps) {
@@ -164,10 +204,23 @@ export function NodeAiAttributes({
         disabled={disabled}
       />
       <Separator orientation="vertical" className="h-4" />
-      <ContextPolicySelector
-        policy={contextPolicy}
+      <PolicySelector
+        label="AIへの見せ方:"
+        options={CONTEXT_POLICY_OPTIONS}
+        value={contextPolicy}
         onChange={onContextPolicyChange}
         disabled={disabled}
+      />
+      <Separator orientation="vertical" className="h-4" />
+      <PolicySelector
+        label="AIの編集:"
+        options={EDIT_POLICY_OPTIONS}
+        value={editPolicy}
+        onChange={onEditPolicyChange}
+        disabled={disabled}
+        note={EDIT_POLICY_NOTE}
+        contentClassName="w-72"
+        triggerIcon={<EditPolicyIcon policy={editPolicy} />}
       />
     </div>
   );

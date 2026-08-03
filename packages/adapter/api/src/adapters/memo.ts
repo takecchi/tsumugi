@@ -12,6 +12,7 @@ function toMemo(api: ApiMemo): Memo {
     order: api.order,
     canonStatus: api.canonStatus,
     contextPolicy: api.contextPolicy,
+    editPolicy: api.editPolicy,
     content: api.content,
     tags: api.tags,
     createdAt: api.createdAt,
@@ -52,7 +53,12 @@ export function createMemoAdapter(clients: ApiClients): MemoAdapter {
     async create(
       data: Omit<
         Memo,
-        'id' | 'createdAt' | 'updatedAt' | 'canonStatus' | 'contextPolicy'
+        | 'id'
+        | 'createdAt'
+        | 'updatedAt'
+        | 'canonStatus'
+        | 'contextPolicy'
+        | 'editPolicy'
       >,
     ): Promise<Memo> {
       const memo = await clients.projects.createMemo({
@@ -78,6 +84,7 @@ export function createMemoAdapter(clients: ApiClients): MemoAdapter {
           | 'updatedAt'
           | 'canonStatus'
           | 'contextPolicy'
+          | 'editPolicy'
         >
       >,
     ): Promise<Memo> {

@@ -76,6 +76,7 @@ export function WritingEditorWrapper({
         nodeId={id}
         canonStatus={writing.canonStatus}
         contextPolicy={writing.contextPolicy}
+        editPolicy={writing.editPolicy}
       >
         <TabsList className="h-7">
           <TabsTrigger value="body">本文</TabsTrigger>

@@ -78,10 +78,20 @@ export type CanonStatus = 'confirmed' | 'draft';
 export type ContextPolicy = 'always' | 'auto' | 'never';
 
 /**
+ * AIによる編集の保護ポリシー
+ * - free: 制限なし。対話チャットでも自律Runでも編集が適用される
+ * - approval_required: ユーザーの承認なしに適用しない。
+ *   対話チャットは元々承認必須なので free と体感差はなく、差が出るのは
+ *   承認を経ない適用経路（自律Run）だけで、そこでは拒否される
+ * - locked: AIからの編集提案自体を拒否する（提案が生成されない）
+ */
+export type EditPolicy = 'free' | 'approval_required' | 'locked';
+
+/**
  * コンテンツ共通の基底（ノード）
  * 各コンテンツタイプ（Writing, Plot, Character, Memo）はこれを継承する。
  *
- * canonStatus / contextPolicy はバックエンドが払い出す AI 属性。
+ * canonStatus / contextPolicy / editPolicy はバックエンドが払い出す AI 属性。
  * 作成/更新時は含めず、`nodes.updateAttributes()` で個別に更新する。
  */
 export interface Node extends Timestamps {
@@ -95,6 +105,8 @@ export interface Node extends Timestamps {
   canonStatus: CanonStatus;
   /** AIコンテキストへの露出ポリシー */
   contextPolicy: ContextPolicy;
+  /** AIによる編集の保護ポリシー */
+  editPolicy: EditPolicy;
 }
 
 /**

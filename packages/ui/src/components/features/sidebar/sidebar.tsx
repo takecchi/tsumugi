@@ -29,6 +29,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  EditPolicyIcon,
+  editPolicyLabel,
+  type EditPolicy,
+} from '@/components/features/edit-policy';
 import { cn } from '@/lib/utils';
 
 export type ContentType = 'plot' | 'character' | 'memo' | 'writing';
@@ -38,6 +43,8 @@ export interface TreeNodeData {
   name: string;
   type: ContentType;
   nodeType: 'file' | 'folder';
+  /** AIによる編集の保護ポリシー。未指定 / 'free' ではアイコンを出さない */
+  editPolicy?: EditPolicy;
   children?: TreeNodeData[];
 }
 
@@ -152,6 +159,22 @@ function TreeNode({
             </>
           )}
           <span className="flex-1 w-0 truncate text-left">{node.name}</span>
+          {node.editPolicy && node.editPolicy !== 'free' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex shrink-0 items-center">
+                  <EditPolicyIcon policy={node.editPolicy} />
+                  {/* アイコンは aria-hidden なので、支援技術向けにテキストを添える */}
+                  <span className="sr-only">
+                    AIの編集: {editPolicyLabel(node.editPolicy)}
+                  </span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                AIの編集: {editPolicyLabel(node.editPolicy)}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </button>
         <div className="flex shrink-0 opacity-0 group-hover/node:opacity-100 [@media(hover:none)]:opacity-100">
           {onMoveUp && !isFirst && (
