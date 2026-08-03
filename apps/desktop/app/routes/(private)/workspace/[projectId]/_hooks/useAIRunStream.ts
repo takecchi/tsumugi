@@ -24,15 +24,28 @@ export interface AIRunStreamState {
    * 「失敗した」ではなく「リトライしている」として見せる。
    */
   transientError: string | null;
+  /**
+   * 購読を打ち切ったときのエラー。
+   * こちらは復旧しないので、明示的に再接続をユーザーに促す。
+   */
+  fatalError: string | null;
+  /** 打ち切り後に購読をやり直す */
+  retry: () => void;
 }
 
-const INITIAL_STATE: AIRunStreamState = {
+type AIRunStreamData = Omit<AIRunStreamState, 'retry'>;
+
+const INITIAL_STATE: AIRunStreamData = {
   messages: [],
   streamingContent: null,
   plan: null,
   isReconnecting: false,
   transientError: null,
+  fatalError: null,
 };
+
+/** ツリーを持つコンテンツ種別（contentType 不明時の一括再取得用） */
+const CONTENT_TYPES = ['plot', 'character', 'memo', 'writing'] as const;
 
 /**
  * 自律Run のストリームを購読して表示状態に反映する。
@@ -51,7 +64,10 @@ export function useAIRunStream(
   const subscribe = useSubscribeAIRun(runId ?? '');
   const fetchMessages = useFetchAIRunMessages(runId ?? '');
 
-  const [state, setState] = useState<AIRunStreamState>(INITIAL_STATE);
+  const [state, setState] = useState<AIRunStreamData>(INITIAL_STATE);
+  // 打ち切り後の再購読トリガー（値が変わると購読 effect が張り直される）
+  const [retryToken, setRetryToken] = useState(0);
+  const retry = useCallback(() => setRetryToken((token) => token + 1), []);
 
   /**
    * 自律Run が作ったノードは canon_status: 'draft' で即座に保存済み。
@@ -59,7 +75,14 @@ export function useAIRunStream(
    */
   const revalidateContent = useCallback(
     (contentType: EditorTabType | undefined, targetId: string | undefined) => {
-      if (!contentType) return;
+      if (!contentType) {
+        // contentType は任意項目。分からなくてもノードは既に保存済みなので、
+        // 取りこぼすくらいなら全ツリーを引き直す。
+        for (const type of CONTENT_TYPES) {
+          void globalMutate(toContentTreeKey(type, projectId));
+        }
+        return;
+      }
       if (contentType === 'project') {
         void globalMutate({ type: 'project', id: projectId });
         return;
@@ -83,12 +106,25 @@ export function useAIRunStream(
     let cancelled = false;
     const reader = subscribe().getReader();
 
-    /** transcript を取り直して、畳み込み済みのストリーミングテキストを捨てる */
-    const resyncTranscript = async () => {
+    /**
+     * transcript を取り直す。
+     *
+     * ストリーミング中のテキストは「取り直した transcript に含まれている」ときだけ
+     * 捨てる。`usage` が発言の保存より先に届くことがあり、無条件に捨てると
+     * 目の前で流れていた文章が一瞬消える。
+     */
+    const resyncTranscript = async (force = false) => {
       try {
         const messages = await fetchMessages();
         if (cancelled) return;
-        setState((prev) => ({ ...prev, messages, streamingContent: null }));
+        setState((prev) => ({
+          ...prev,
+          messages,
+          streamingContent:
+            force || messages.length > prev.messages.length
+              ? null
+              : prev.streamingContent,
+        }));
       } catch (e) {
         console.error('[ai-run] Failed to resync the transcript:', e);
       }
@@ -97,7 +133,13 @@ export function useAIRunStream(
     const pump = async () => {
       while (!cancelled) {
         const { done, value } = await reader.read();
-        if (done || cancelled) break;
+        if (done || cancelled) {
+          // ストリームが閉じたら再接続待ちの表示を残さない
+          if (!cancelled) {
+            setState((prev) => ({ ...prev, isReconnecting: false }));
+          }
+          break;
+        }
 
         switch (value.type) {
           // 購読開始時・再接続時のスナップショット。追記ではなく置き換える
@@ -135,7 +177,7 @@ export function useAIRunStream(
             void globalMutate(toAIRunsKey(projectId));
             if (value.finishReason != null) {
               // 終端。最終メッセージを取り込む
-              await resyncTranscript();
+              await resyncTranscript(true);
             }
             break;
 
@@ -151,16 +193,29 @@ export function useAIRunStream(
             );
             break;
 
-          // error は終端ではない（最大2回リトライされる）
+          // error は終端ではない（同じバッチが最大2回リトライされる）。
+          // リトライされたバッチのテキストが継ぎ足されて二重に見えるのを防ぐため、
+          // 未確定のストリーミングテキストは破棄する。
           case 'error':
             setState((prev) => ({
               ...prev,
+              streamingContent: null,
               transientError: value.error ?? '不明なエラー',
             }));
             break;
 
           case 'reconnecting':
             setState((prev) => ({ ...prev, isReconnecting: true }));
+            break;
+
+          // クライアント側で購読を打ち切った（error とは別物で、復旧しない）
+          case 'disconnected':
+            setState((prev) => ({
+              ...prev,
+              isReconnecting: false,
+              transientError: null,
+              fatalError: value.error ?? 'ストリームが切断されました',
+            }));
             break;
 
           // tool_call / proposal は transcript の順序が正なので、
@@ -188,7 +243,8 @@ export function useAIRunStream(
     fetchMessages,
     globalMutate,
     revalidateContent,
+    retryToken,
   ]);
 
-  return state;
+  return { ...state, retry };
 }

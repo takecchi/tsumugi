@@ -20,7 +20,9 @@ import type {
   AIRunSubscribeOptions,
   AIToolName,
 } from '@tsumugi/adapter';
+import { ResponseError } from '@tsumugi-chan/client';
 import {
+  SSEResponseError,
   hasType,
   parseSSEFrame,
   toAIProposal,
@@ -212,6 +214,13 @@ export const DEFAULT_RECONNECT_DELAYS_MS: readonly number[] = [
 export const DEFAULT_MAX_RECONNECT_ATTEMPTS = 10;
 
 /**
+ * 進捗の有無に関わらない通算の再接続回数の上限（暴走の保険）。
+ *
+ * 長時間 Run では正常でも何度か切断されるため上限は高くとるが、無制限にはしない。
+ */
+export const DEFAULT_MAX_TOTAL_RECONNECTS = 200;
+
+/**
  * 自律Run ストリームの入出力。テストで差し替えられるように切り出している。
  */
 export interface RunStreamTransport {
@@ -221,7 +230,33 @@ export interface RunStreamTransport {
   openSSE(): Promise<Response>;
 }
 
+/**
+ * 再接続しても解消しない HTTP ステータス。
+ *
+ * 401 は含めない（購読のたびにトークンを取り直すためリフレッシュで回復しうる）。
+ * 408 / 429 / 5xx も一時的な失敗として再接続に任せる。
+ */
+const NON_RETRYABLE_STATUSES: readonly number[] = [400, 403, 404, 410, 422];
+
+/**
+ * 再接続しても無駄なエラーかどうかを判定する。
+ *
+ * 例: Run が削除済み（404）やプロジェクト違い（403）でリトライを繰り返すと、
+ * 無意味なリクエストを撒いたうえに「再接続失敗」という誤った文言になる。
+ */
+export function isNonRetryableStreamError(error: unknown): boolean {
+  if (error instanceof SSEResponseError) {
+    return NON_RETRYABLE_STATUSES.includes(error.status);
+  }
+  if (error instanceof ResponseError) {
+    return NON_RETRYABLE_STATUSES.includes(error.response.status);
+  }
+  return false;
+}
+
 export interface DurableRunStreamOptions extends AIRunSubscribeOptions {
+  /** 通算の再接続回数の上限（暴走の保険） */
+  maxTotalReconnects?: number;
   /** 待機処理（テスト用に差し替える） */
   sleep?: (ms: number) => Promise<void>;
 }
@@ -250,6 +285,8 @@ export function createDurableRunStream(
       : DEFAULT_RECONNECT_DELAYS_MS;
   const maxAttempts =
     options.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT_ATTEMPTS;
+  const maxTotalReconnects =
+    options.maxTotalReconnects ?? DEFAULT_MAX_TOTAL_RECONNECTS;
   const sleep = options.sleep ?? defaultSleep;
 
   let cancelled = false;
@@ -275,7 +312,12 @@ export function createDurableRunStream(
       };
 
       const pump = async (): Promise<void> => {
+        // 連続失敗の回数（進捗があればリセットする）
         let attempt = 0;
+        // 進捗の有無に関わらない通算の再接続回数。
+        // 「スナップショットの少し先まで流してから毎回切れる」サーバー相手だと
+        // attempt がリセットされ続けて再接続が止まらなくなるため、その保険。
+        let totalReconnects = 0;
 
         while (!cancelled) {
           // このセッションで受け取ったチャンク数（スナップショットを含む）
@@ -288,7 +330,14 @@ export function createDurableRunStream(
             controller.enqueue({ type: 'transcript', messages });
 
             const response = await transport.openSSE();
-            if (cancelled) break;
+            if (cancelled) {
+              // 接続確立中にキャンセルされた場合、body を捨てないと
+              // サーバー側の SSE がタイムアウトまで開いたままになる
+              void response.body?.cancel().catch(() => {
+                // 後片付けなので失敗は無視する
+              });
+              break;
+            }
 
             const body = response.body;
             if (!body) throw new Error('No response body for run SSE');
@@ -299,6 +348,10 @@ export function createDurableRunStream(
             let buffer = '';
 
             const emit = (chunk: AIRunStreamChunk) => {
+              // read() の待機中にキャンセルされていることがある。クローズ済みの
+              // controller に enqueue すると throw するため、通常の購読終了を
+              // 例外フローに乗せないようここで弾く。
+              if (cancelled) return;
               chunkCount += 1;
               controller.enqueue(chunk);
               if (isTerminalRunChunk(chunk)) terminated = true;
@@ -319,20 +372,32 @@ export function createDurableRunStream(
               const parts = buffer.split('\n\n');
               buffer = parts.pop() ?? '';
 
+              // 終端チャンクと同じ read に含まれた後続フレームを取りこぼさないよう、
+              // ここでは break せず parts を出し切る（スナップショットの
+              // run-status → plan が 1 回の read に収まるため、終了済み Run の
+              // 購読で plan を失わないようにする）
               for (const part of parts) {
                 const chunk = parseAIRunSSEEvent(part);
                 if (chunk) emit(chunk);
-                if (terminated) break;
               }
             }
 
             cancelActiveReader();
 
             if (terminated || cancelled) break;
-          } catch {
+          } catch (e) {
             cancelActiveReader();
             if (cancelled) break;
-            // transcript 取得・購読・読み取りの失敗はすべて切断として扱う
+            // 再接続しても直らないエラー（Run 削除済み・権限違い等）は即座に打ち切る。
+            // ここで諦めないと無意味なリクエストを撒いた末に誤った文言になる。
+            if (isNonRetryableStreamError(e)) {
+              controller.enqueue({
+                type: 'disconnected',
+                error: e instanceof Error ? e.message : String(e),
+              });
+              break;
+            }
+            // それ以外（transcript 取得・購読・読み取りの失敗）は切断として扱う
           }
 
           // ─── 再接続 ───
@@ -340,11 +405,15 @@ export function createDurableRunStream(
           // リトライ回数をリセットする（長時間 Run で試行回数を使い切らないため）
           if (chunkCount > SNAPSHOT_CHUNK_COUNT) attempt = 0;
           attempt += 1;
+          totalReconnects += 1;
 
-          if (attempt > maxAttempts) {
+          if (attempt > maxAttempts || totalReconnects > maxTotalReconnects) {
+            // 'error' ではなく 'disconnected'。'error' は「サーバーがリトライ中」を
+            // 意味するので、クライアント側の打ち切りと混ぜると UI が嘘をつく。
             controller.enqueue({
-              type: 'error',
-              error: `自律Runのストリームに再接続できませんでした（${maxAttempts}回試行）。状態は再読み込みで確認してください。`,
+              type: 'disconnected',
+              error:
+                'ストリームへの再接続を諦めました。進捗はここで止まって見えますが、実行自体は続いている可能性があります。',
             });
             break;
           }

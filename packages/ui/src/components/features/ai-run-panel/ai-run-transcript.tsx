@@ -19,7 +19,13 @@ function EditMessageRow({ message }: { message: AiRunEditMessage }) {
       )}
       <span className="min-w-0 truncate">
         [{typeLabel}] {message.targetName} を
-        {EDIT_ACTION_LABELS[message.action]}しました
+        {EDIT_ACTION_LABELS[message.action]}
+        {/* 編集保護やコンフリクトで弾かれた場合に「しました」と書かない */}
+        {message.status === 'accepted' || message.status === 'pending'
+          ? 'しました'
+          : message.status === 'conflict'
+            ? 'できませんでした（コンフリクト）'
+            : 'できませんでした'}
       </span>
     </div>
   );
@@ -85,7 +91,9 @@ export function RunTranscript({
         {streamingContent !== null && streamingContent !== '' && (
           <Markdown className="text-sm">{streamingContent}</Markdown>
         )}
-        {isRunning && streamingContent === '' && (
+        {/* バッチ間（LLM 待ち・リトライの無音区間）で無反応に見えないようにする。
+            streamingContent は null にも '' にもなり得るので両方を拾う。 */}
+        {!isEmpty && isRunning && !streamingContent && (
           <p className="text-sm text-muted-foreground animate-pulse">
             考えています...
           </p>

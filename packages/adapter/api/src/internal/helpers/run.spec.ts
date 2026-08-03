@@ -1,11 +1,13 @@
 import type { AIMessage, AIRunStreamChunk } from '@tsumugi/adapter';
 import {
   createDurableRunStream,
+  isNonRetryableStreamError,
   isTerminalRunChunk,
   toAIRunFinishReason,
   toAIRunStreamChunk,
   type RunStreamTransport,
 } from './run';
+import { SSEResponseError } from './sse';
 
 /** SSE フレーム列を Response に組み立てる */
 function sseResponse(...frames: string[]): Response {
@@ -183,6 +185,34 @@ describe('isTerminalRunChunk', () => {
   });
 });
 
+describe('isNonRetryableStreamError', () => {
+  it('再接続しても直らない 4xx を判定する', () => {
+    expect(
+      isNonRetryableStreamError(new SSEResponseError(404, 'Not Found')),
+    ).toBe(true);
+    expect(
+      isNonRetryableStreamError(new SSEResponseError(403, 'Forbidden')),
+    ).toBe(true);
+  });
+
+  it('一時的な失敗（401 / 429 / 5xx）は再接続対象とする', () => {
+    // 401 は購読のたびにトークンを取り直すためリフレッシュで回復しうる
+    expect(
+      isNonRetryableStreamError(new SSEResponseError(401, 'Unauthorized')),
+    ).toBe(false);
+    expect(
+      isNonRetryableStreamError(new SSEResponseError(429, 'Too Many Requests')),
+    ).toBe(false);
+    expect(
+      isNonRetryableStreamError(new SSEResponseError(503, 'Unavailable')),
+    ).toBe(false);
+  });
+
+  it('HTTP 由来でないエラーは再接続対象とする', () => {
+    expect(isNonRetryableStreamError(new Error('socket hang up'))).toBe(false);
+  });
+});
+
 describe('createDurableRunStream', () => {
   it('購読開始時に transcript を先に流し、終端で閉じる', async () => {
     const transport = stubTransport(
@@ -346,10 +376,72 @@ describe('createDurableRunStream', () => {
     );
 
     const last = chunks.at(-1);
-    expect(last?.type).toBe('error');
-    expect(last?.error).toContain('再接続できませんでした');
+    // 'error'（サーバーがリトライ中）ではなく 'disconnected'（打ち切り）で終わる
+    expect(last?.type).toBe('disconnected');
+    expect(last?.error).toContain('再接続を諦めました');
     // 初回 + 再接続2回 = 3
     expect(transport.sseCalls).toBe(3);
+  });
+
+  it('404 など再接続しても直らないエラーは即 disconnected で打ち切る', async () => {
+    const transport = stubTransport([
+      () => {
+        throw new SSEResponseError(404, 'Not Found');
+      },
+      () => sseResponse(RUNNING, EMPTY_PLAN, COMPLETED),
+    ]);
+
+    const chunks = await drain(
+      createDurableRunStream(transport, {
+        sleep: noSleep,
+        reconnectDelaysMs: [1],
+      }),
+    );
+
+    expect(chunks.map((c) => c.type)).toEqual(['transcript', 'disconnected']);
+    // リトライしていない
+    expect(transport.sseCalls).toBe(1);
+  });
+
+  it('500 は一時的な失敗として再接続する', async () => {
+    const transport = stubTransport([
+      () => {
+        throw new SSEResponseError(500, 'Internal Server Error');
+      },
+      () => sseResponse(RUNNING, EMPTY_PLAN, COMPLETED),
+    ]);
+
+    const chunks = await drain(
+      createDurableRunStream(transport, {
+        sleep: noSleep,
+        reconnectDelaysMs: [1],
+      }),
+    );
+
+    expect(chunks.map((c) => c.type)).toEqual([
+      'transcript',
+      'reconnecting',
+      'transcript',
+      'run_status',
+      'plan',
+      'run_status',
+    ]);
+  });
+
+  it('終端チャンクと同じ read に含まれた後続フレームを取りこぼさない', async () => {
+    // 終了済み Run の購読では run-status(終端) → plan が 1 回の read で届く
+    const transport = stubTransport([() => sseResponse(COMPLETED, EMPTY_PLAN)]);
+
+    const chunks = await drain(
+      createDurableRunStream(transport, { sleep: noSleep }),
+    );
+
+    expect(chunks.map((c) => c.type)).toEqual([
+      'transcript',
+      'run_status',
+      // 終端の後ろにあった plan も落とさない
+      'plan',
+    ]);
   });
 
   it('スナップショットより先に進めたら試行回数をリセットする', async () => {
@@ -382,6 +474,35 @@ describe('createDurableRunStream', () => {
       status: 'completed',
       finishReason: 'completed_plan',
     });
+  });
+
+  it('進捗があっても通算の再接続回数の上限で打ち切る（暴走の保険）', async () => {
+    // 毎回スナップショット + 1チャンク流してから切れる = attempt はリセットされ続ける。
+    // 通算上限が無いと永久に再接続してしまうケース。
+    const transport = stubTransport(
+      Array.from(
+        { length: 20 },
+        () => () =>
+          truncatedResponse(
+            RUNNING,
+            EMPTY_PLAN,
+            '{"type":"text-delta","delta":"x"}',
+          ),
+      ),
+    );
+
+    const chunks = await drain(
+      createDurableRunStream(transport, {
+        sleep: noSleep,
+        maxReconnectAttempts: 2,
+        maxTotalReconnects: 3,
+        reconnectDelaysMs: [1],
+      }),
+    );
+
+    expect(chunks.at(-1)?.type).toBe('disconnected');
+    // 初回 + 再接続3回 = 4 で打ち切られる
+    expect(transport.sseCalls).toBe(4);
   });
 
   it('消費側がキャンセルしたら再接続しない', async () => {

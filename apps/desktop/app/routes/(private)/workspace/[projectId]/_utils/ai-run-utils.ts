@@ -32,6 +32,9 @@ export function buildRunTranscript(
         action: message.proposal.action,
         contentType: message.proposal.contentType,
         targetName: message.proposal.targetName,
+        // 編集保護（editPolicy）やコンフリクトで弾かれた提案もあるため、
+        // 状態を渡して「適用しました」と言い切らないようにする
+        status: message.proposal.status,
       });
     }
   }

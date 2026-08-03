@@ -45,19 +45,21 @@ export function StartRunForm({
   goalMaxLength,
   maxStepsRange,
   maxTotalTokensRange,
+  initialGoal,
 }: {
   onStartRun?: (input: AiRunStartInput) => void;
   isStarting: boolean;
   startError?: AiRunStartError | null;
   onSelectRun?: (runId: string) => void;
   models: AiModelOption[];
+  initialGoal?: string;
   goalMaxLength: number;
   maxStepsRange: { min: number; max: number; default: number };
   maxTotalTokensRange: { min: number; max: number; default: number };
 }) {
   const maxStepsId = React.useId();
   const maxTotalTokensId = React.useId();
-  const [goal, setGoal] = React.useState('');
+  const [goal, setGoal] = React.useState(initialGoal ?? '');
   const [model, setModel] = React.useState<string | undefined>();
   const [maxSteps, setMaxSteps] = React.useState(maxStepsRange.default);
   const [maxTotalTokens, setMaxTotalTokens] = React.useState(
@@ -71,19 +73,28 @@ export function StartRunForm({
     trimmedGoal.length <= goalMaxLength &&
     !isStarting;
 
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(Math.max(value, min), max);
+
+  /** 空欄・NaN・範囲外を既定値と範囲に丸める */
+  const normalize = (
+    value: number,
+    range: { min: number; max: number; default: number },
+  ) =>
+    clamp(Number.isFinite(value) ? value : range.default, range.min, range.max);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canStart) return;
+    // number input で Enter 送信すると blur が発生せず未丸めの値が残るため、
+    // 送信時にも必ず正規化する（そのままだとバックエンドで 422 になる）
     onStartRun?.({
       goal: trimmedGoal,
       ...(model ? { model } : {}),
-      maxSteps,
-      maxTotalTokens,
+      maxSteps: normalize(maxSteps, maxStepsRange),
+      maxTotalTokens: normalize(maxTotalTokens, maxTotalTokensRange),
     });
   };
-
-  const clamp = (value: number, min: number, max: number) =>
-    Math.min(Math.max(value, min), max);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 p-3">

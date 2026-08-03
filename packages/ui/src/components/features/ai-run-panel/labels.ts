@@ -111,3 +111,20 @@ export const DEFAULT_MAX_TOTAL_TOKENS_RANGE = {
 export function isActiveStatus(status: AiRunStatus): boolean {
   return status === 'queued' || status === 'running' || status === 'paused';
 }
+
+/**
+ * 終了理由が未知（バックエンドが新しい値を追加した）の場合に使う文言。
+ *
+ * `status` が終了系なのに理由が判別できないとき、バナーを出さずに黙って
+ * 「終了」だけ見せると成功と誤解されるため、必ず何か出す。
+ */
+export const UNKNOWN_FINISH_META: {
+  label: string;
+  description: string;
+  tone: FinishTone;
+} = {
+  label: '終了しました',
+  description:
+    '終了理由を判別できませんでした。成功したとは限らないため、内容を確認してください。',
+  tone: 'warning',
+};

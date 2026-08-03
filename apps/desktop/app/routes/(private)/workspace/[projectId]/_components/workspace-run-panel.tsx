@@ -11,9 +11,9 @@ import {
   useCreateAIRun,
   useStopAIRun,
 } from '~/hooks/ai-runs';
-import { AI_MODELS } from '~/constants/ai-models';
 import {
   AI_RUN_GOAL_MAX_LENGTH,
+  AI_RUN_MODELS,
   AI_RUN_MAX_STEPS,
   AI_RUN_MAX_TOTAL_TOKENS,
   AI_RUN_POLL_INTERVAL_MS,
@@ -42,6 +42,8 @@ export function WorkspaceRunPanel({ projectId }: WorkspaceRunPanelProps) {
 
   const [selectedRunId, setSelectedRunId] = useState<string | undefined>();
   const [startError, setStartError] = useState<AiRunStartError | null>(null);
+  // 打ち切られた Run の続きを実行しやすくするため、直前のゴールを引き継ぐ
+  const [prefillGoal, setPrefillGoal] = useState<string | undefined>();
 
   // 進行中の Run があれば初回だけ自動で開く（別タブ・再読み込み後でも進捗に復帰できる）。
   // 「新しい実行」で意図的にフォームへ戻した場合に引き戻さないよう、初回限定にする。
@@ -97,8 +99,9 @@ export function WorkspaceRunPanel({ projectId }: WorkspaceRunPanelProps) {
     setSelectedRunId(runId);
   }, []);
 
-  const handleNewRun = useCallback(() => {
+  const handleNewRun = useCallback((goal?: string) => {
     setStartError(null);
+    setPrefillGoal(goal);
     setSelectedRunId(undefined);
   }, []);
 
@@ -109,9 +112,10 @@ export function WorkspaceRunPanel({ projectId }: WorkspaceRunPanelProps) {
       <AiRunPanel
         run={null}
         runs={runSummaries}
-        models={AI_MODELS}
+        models={AI_RUN_MODELS}
         isStarting={isStarting}
         startError={startError}
+        initialGoal={prefillGoal}
         onStartRun={handleStartRun}
         onSelectRun={handleSelectRun}
         goalMaxLength={AI_RUN_GOAL_MAX_LENGTH}
@@ -138,7 +142,7 @@ interface RunContentProps {
   runId: string;
   runSummaries: ReturnType<typeof toAiRunSummaries>;
   onSelectRun: (runId: string) => void;
-  onNewRun: () => void;
+  onNewRun: (prefillGoal?: string) => void;
 }
 
 /**
@@ -151,15 +155,32 @@ function RunContent({
   onSelectRun,
   onNewRun,
 }: RunContentProps) {
-  const { messages, streamingContent, plan, isReconnecting, transientError } =
-    useAIRunStream(projectId, runId);
+  const {
+    messages,
+    streamingContent,
+    plan,
+    isReconnecting,
+    transientError,
+    fatalError,
+    retry,
+  } = useAIRunStream(projectId, runId);
 
   // step / トークンの累積は AIRun から読む。バッチ境界を知らせるチャンクが
   // 流れないため、実行中はポーリングで追う。
-  const { data: run, isLoading: isLoadingRun } = useAIRun(runId, {
+  const {
+    data: run,
+    isLoading: isLoadingRun,
+    error: runError,
+    mutate: mutateRun,
+  } = useAIRun(runId, {
     refreshInterval: (latest) =>
       isActiveRun(latest) ? AI_RUN_POLL_INTERVAL_MS : 0,
   });
+
+  const handleRetryConnection = useCallback(() => {
+    void mutateRun();
+    retry();
+  }, [mutateRun, retry]);
 
   const { trigger: triggerStop } = useStopAIRun(runId);
   const [stopRequested, setStopRequested] = useState(false);
@@ -193,10 +214,15 @@ function RunContent({
       messages={transcript}
       streamingContent={streamingContent}
       runs={runSummaries}
-      models={AI_MODELS}
+      models={AI_RUN_MODELS}
       isStopping={stopRequested}
       isReconnecting={isReconnecting}
       transientError={transientError}
+      fatalError={fatalError}
+      onRetryConnection={handleRetryConnection}
+      loadError={
+        runError ? `実行を読み込めませんでした: ${runError.message}` : null
+      }
       onSelectRun={onSelectRun}
       onNewRun={onNewRun}
       onStopRun={handleStopRun}

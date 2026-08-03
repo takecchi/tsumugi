@@ -1,7 +1,23 @@
+import type { AiModelOption } from '@tsumugi/ui';
+
 /**
  * 自律Run の入力値の制約と既定値。
  * バックエンド（CreateAIRunRequest）のバリデーションと一致させること。
  */
+
+/**
+ * 自律Run で選択できるモデル一覧。
+ *
+ * 対話チャットの `AI_MODELS` とは意図的に分けている。`CreateAIRunRequest.model` の
+ * enum に無い値を送ると adapter が黙って落としてバックエンド既定になるため、
+ * チャット側にモデルが追加されたときに Run が勝手に既定へ降格しないようにする。
+ */
+export const AI_RUN_MODELS: AiModelOption[] = [
+  { value: 'gpt-5.4', label: 'GPT-5.4' },
+  { value: 'gpt-5.2', label: 'GPT-5.2' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o mini' },
+  { value: 'claude-3-5-haiku-latest', label: 'Claude 3.5 Haiku' },
+];
 
 /** ゴールの最大文字数 */
 export const AI_RUN_GOAL_MAX_LENGTH = 4000;

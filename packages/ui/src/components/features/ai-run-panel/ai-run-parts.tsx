@@ -1,7 +1,12 @@
 import { AlertTriangle, Check, CircleDashed, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AiRunFinishReason, AiRunPlanItem, AiRunStatus } from './types';
-import { FINISH_REASON_META, FINISH_TONE_CLASS, STATUS_META } from './labels';
+import {
+  FINISH_REASON_META,
+  FINISH_TONE_CLASS,
+  STATUS_META,
+  UNKNOWN_FINISH_META,
+} from './labels';
 
 export function StatusBadge({ status }: { status: AiRunStatus }) {
   const meta = STATUS_META[status];
@@ -99,10 +104,14 @@ export function FinishBanner({
   finishReason,
   lastError,
 }: {
-  finishReason: AiRunFinishReason;
+  /** null の場合は「理由不明で終了」として扱う（黙って隠さない） */
+  finishReason: AiRunFinishReason | null;
   lastError: string | null;
 }) {
-  const meta = FINISH_REASON_META[finishReason];
+  const meta =
+    finishReason != null
+      ? FINISH_REASON_META[finishReason]
+      : UNKNOWN_FINISH_META;
   return (
     <div
       className={cn(

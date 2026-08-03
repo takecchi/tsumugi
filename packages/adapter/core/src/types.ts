@@ -716,7 +716,8 @@ export type AIRunStreamChunkType =
   | 'error'
   | 'plan'
   | 'run_status'
-  | 'reconnecting';
+  | 'reconnecting'
+  | 'disconnected';
 
 /**
  * 自律Run ストリームのチャンク
@@ -757,11 +758,15 @@ export interface AIRunStreamChunk {
   /** トークン使用量（type='usage'時）。**そのバッチ単体**の値で累積ではない */
   usage?: AITokenUsage;
   /**
-   * エラーメッセージ（type='error'時）。
+   * エラーメッセージ（type='error' / 'disconnected'時）。
    *
-   * **終端ではない。** バックエンドが最大2回リトライするため後続処理が続く
-   * （2秒 / 4秒の無音区間が発生する）。3回連続で失敗して初めて
-   * `run_status` の `error` になる。
+   * `type='error'` は **終端ではない。** バックエンドが最大2回リトライするため
+   * 後続処理が続く（2秒 / 4秒の無音区間が発生する）。3回連続で失敗して初めて
+   * `run_status` の `error` になる。したがって UI では「失敗」ではなく
+   * 「リトライ中」として見せること。
+   *
+   * `type='disconnected'` は逆に**クライアント側の打ち切り**で、以降チャンクは
+   * 流れない。両者を同じ扱いにしないこと。
    */
   error?: string;
   /** 現在の計画（type='plan'時、全項目） */
@@ -778,6 +783,7 @@ export interface AIRunStreamChunk {
    * 再接続までの待機ミリ秒（type='reconnecting'時）。
    *
    * 終端 `run_status` を受け取る前にストリームが閉じた場合に流れる。
+   * この後 `transcript` が流れれば再接続成功、`disconnected` が流れれば打ち切り。
    */
   reconnectDelayMs?: number;
 }

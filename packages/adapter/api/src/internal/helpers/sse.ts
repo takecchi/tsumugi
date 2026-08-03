@@ -21,6 +21,22 @@ import {
 } from '@tsumugi/adapter';
 
 /**
+ * SSE リクエストが HTTP エラーになったことを表すエラー。
+ *
+ * `status` を保持するため、呼び出し側が「リトライして意味があるか」を判断できる
+ * （例: 404 は再接続しても直らない）。
+ */
+export class SSEResponseError extends Error {
+  readonly status: number;
+
+  constructor(status: number, statusText: string) {
+    super(`SSE request failed: ${status} ${statusText}`);
+    this.name = 'SSEResponseError';
+    this.status = status;
+  }
+}
+
+/**
  * RequestOpts から SSE リクエストを発行する
  */
 export async function fetchSSE(
@@ -45,9 +61,7 @@ export async function fetchSSE(
   });
 
   if (!response.ok) {
-    throw new Error(
-      `SSE request failed: ${response.status} ${response.statusText}`,
-    );
+    throw new SSEResponseError(response.status, response.statusText);
   }
 
   return response;

@@ -140,6 +140,12 @@ export function createAIRunAdapter(clients: ApiClients): AIRunAdapter {
             runningRun: await findActiveRun(projectId),
           };
         }
+        // 409 以外（422 のバリデーションエラー等）も、生成クライアントの
+        // 既定メッセージは "Response returned an error code" で情報がないため、
+        // 本文からメッセージを取り出して投げ直す。
+        if (e instanceof ResponseError) {
+          throw new Error(await readErrorMessage(e.response, e.message));
+        }
         throw e;
       }
     },

@@ -73,6 +73,7 @@ const mockMessages: AiRunMessage[] = [
     action: 'create',
     contentType: 'memo',
     targetName: '第2章 矛盾点メモ',
+    status: 'accepted',
   },
   {
     id: 'm4',
@@ -86,6 +87,16 @@ const mockMessages: AiRunMessage[] = [
     action: 'update',
     contentType: 'plot',
     targetName: '第2章 邂逅',
+    status: 'accepted',
+  },
+  {
+    id: 'm6',
+    kind: 'edit',
+    action: 'update',
+    contentType: 'character',
+    // 編集保護（editPolicy: approval_required）で弾かれた例
+    targetName: '主人公 アキラ',
+    status: 'rejected',
   },
 ];
 
@@ -268,6 +279,52 @@ export const Reconnecting: Story = {
     runs: mockRuns,
     models: mockModels,
     isReconnecting: true,
-    streamingContent: '',
+  },
+};
+
+/** サーバー側がリトライ中（終端ではないので「失敗」と書かない） */
+export const RetryingAfterError: Story = {
+  args: {
+    run: mockRunningRun,
+    messages: mockMessages,
+    runs: mockRuns,
+    models: mockModels,
+    transientError: 'upstream timeout',
+  },
+};
+
+/** 再接続を諦めた状態（自動リトライとは別物として見せる） */
+export const Disconnected: Story = {
+  args: {
+    run: mockRunningRun,
+    messages: mockMessages,
+    runs: mockRuns,
+    models: mockModels,
+    fatalError:
+      'ストリームへの再接続を諦めました。進捗はここで止まって見えますが、実行自体は続いている可能性があります。',
+  },
+};
+
+/** 終了理由が未知（バックエンドが新しい値を追加した場合も成功と誤解させない） */
+export const UnknownFinishReason: Story = {
+  args: {
+    run: {
+      ...mockRunningRun,
+      status: 'completed',
+      finishReason: null,
+    },
+    messages: mockMessages,
+    runs: mockRuns,
+    models: mockModels,
+  },
+};
+
+/** Run の取得に失敗（黙って起動フォームに戻さない） */
+export const LoadFailed: Story = {
+  args: {
+    run: null,
+    runs: mockRuns,
+    models: mockModels,
+    loadError: '実行を読み込めませんでした: Not Found',
   },
 };

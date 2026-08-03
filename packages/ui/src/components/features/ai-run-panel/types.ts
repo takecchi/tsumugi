@@ -46,6 +46,11 @@ export interface AiRunEditMessage {
   action: 'create' | 'update';
   contentType: string;
   targetName: string;
+  /**
+   * 適用結果。`accepted` 以外（編集保護やコンフリクトで弾かれた場合）は
+   * 「適用しました」と書かないための情報。
+   */
+  status: 'pending' | 'accepted' | 'rejected' | 'conflict';
 }
 
 export type AiRunMessage = AiRunTextMessage | AiRunEditMessage;
@@ -102,8 +107,13 @@ export interface AiRunPanelProps {
   /** 過去の Run 一覧（新しい順） */
   runs?: AiRunSummary[];
   onSelectRun?: (runId: string) => void;
-  /** 新しい実行を作る（起動フォームに戻す） */
-  onNewRun?: () => void;
+  /**
+   * 新しい実行を作る（起動フォームに戻す）。
+   * 打ち切られた Run の続きを実行しやすくするため、表示中のゴールを渡す。
+   */
+  onNewRun?: (prefillGoal?: string) => void;
+  /** 起動フォームのゴール初期値（打ち切り後の再実行用） */
+  initialGoal?: string;
   onStartRun?: (input: AiRunStartInput) => void;
   onStopRun?: () => void;
   /** 起動リクエスト中（二重送信抑止に使う） */
@@ -112,6 +122,15 @@ export interface AiRunPanelProps {
   isStopping?: boolean;
   /** ストリーム切断からの再接続待機中 */
   isReconnecting?: boolean;
+  /**
+   * 購読を打ち切ったときのエラー（復旧しない）。
+   * `transientError` と違い、ユーザーに再接続を促す。
+   */
+  fatalError?: string | null;
+  /** `fatalError` からの再接続 */
+  onRetryConnection?: () => void;
+  /** Run の取得自体に失敗したときのメッセージ */
+  loadError?: string | null;
   /**
    * リトライ中のエラー。
    * 自律Run の `error` は終端ではなく自動リトライされるため、

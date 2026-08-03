@@ -40,8 +40,12 @@ export function AiRunPanel({
   isStopping = false,
   isReconnecting = false,
   transientError = null,
+  fatalError = null,
+  onRetryConnection,
+  loadError = null,
   startError = null,
   models = [],
+  initialGoal,
   goalMaxLength = 4000,
   maxStepsRange = DEFAULT_MAX_STEPS_RANGE,
   maxTotalTokensRange = DEFAULT_MAX_TOTAL_TOKENS_RANGE,
@@ -63,7 +67,8 @@ export function AiRunPanel({
             variant="ghost"
             size="sm"
             className="h-7 gap-1 px-2 text-xs"
-            onClick={onNewRun}
+            // 打ち切られた Run の続きを実行しやすいようゴールを引き継ぐ
+            onClick={() => onNewRun?.(run?.goal)}
           >
             <Plus className="size-3" />
             新しい実行
@@ -71,7 +76,21 @@ export function AiRunPanel({
         )}
       </div>
 
-      {run == null && isLoadingRun ? (
+      {run == null && loadError ? (
+        // 取得に失敗したときに黙って起動フォームへ落とすと、実行中でも
+        // 気づかず2本目を投げて 409 になるため、明示的にエラーを見せる
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center">
+          <p className="text-xs text-destructive">{loadError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={onRetryConnection}
+          >
+            再試行
+          </Button>
+        </div>
+      ) : run == null && isLoadingRun ? (
         <div className="flex flex-1 items-center justify-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="size-3 animate-spin" />
           実行を読み込んでいます…
@@ -87,6 +106,7 @@ export function AiRunPanel({
             goalMaxLength={goalMaxLength}
             maxStepsRange={maxStepsRange}
             maxTotalTokensRange={maxTotalTokensRange}
+            initialGoal={initialGoal}
           />
         </ScrollArea>
       ) : (
@@ -97,8 +117,10 @@ export function AiRunPanel({
               <StatusBadge status={run.status} />
             </div>
 
-            {/* status だけでは成否が判別できないため、終了理由で文言を出し分ける */}
-            {run.finishReason && (
+            {/* status だけでは成否が判別できないため、終了理由で文言を出し分ける。
+                終了しているのに理由が未知の場合も必ずバナーを出す（黙って
+                「終了」だけ見せると成功と誤解されるため）。 */}
+            {!isActive && (
               <FinishBanner
                 finishReason={run.finishReason}
                 lastError={run.lastError}
@@ -112,8 +134,23 @@ export function AiRunPanel({
               </p>
             )}
 
+            {/* 購読の打ち切り。自動リトライされる error とは別物として見せる */}
+            {fatalError && (
+              <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2">
+                <p className="text-xs text-destructive">{fatalError}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={onRetryConnection}
+                >
+                  再接続する
+                </Button>
+              </div>
+            )}
+
             {/* error チャンクは終端ではなく自動リトライされるため、失敗とは書かない */}
-            {transientError && !run.finishReason && (
+            {transientError && !fatalError && isActive && (
               <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300">
                 <AlertTriangle className="mt-0.5 size-3 shrink-0" />
                 <span className="min-w-0 break-words">
