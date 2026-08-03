@@ -12,6 +12,7 @@ import { createAIAdapter } from '@/adapters/ai';
 import { createConsistencyAdapter } from '@/adapters/consistency';
 import { createGlossaryAdapter } from '@/adapters/glossary';
 import { createInstructionAdapter } from '@/adapters/instruction';
+import { createVersionAdapter } from '@/adapters/version';
 import { createExportAdapter } from '@/adapters/export';
 import { TokenManager } from '@/token-manager';
 
@@ -42,6 +43,7 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
     consistency: createConsistencyAdapter(clients),
     glossary: createGlossaryAdapter(clients),
     instructions: createInstructionAdapter(clients),
+    versions: createVersionAdapter(clients),
     export: createExportAdapter(clients),
   };
 }
