@@ -34,6 +34,16 @@ import type {
   AuthState,
   GoogleAuthUrl,
 } from './types';
+import type {
+  Commit,
+  CommitDiff,
+  CommitEntry,
+  CommitList,
+  CreateCommitResult,
+  NodeRevisionList,
+  PaginationParams,
+  RestoreCommitResult,
+} from './version-types';
 
 /**
  * アダプター設定
@@ -334,6 +344,98 @@ export interface AuthAdapter {
 }
 
 /**
+ * バージョン管理（コミット / 差分 / 復元）操作のインターフェース
+ *
+ * コンテンツを変更する API を叩くと、最後の変更から一定時間操作が止まった時点で
+ * `commitType: 'auto'` のコミットがバックエンドで自動生成される。
+ * タイマーはインメモリでサーバー再起動により消えるため、
+ * 「一定時間後に必ずコミットされる」前提の UI（カウントダウン等）を作ってはならない。
+ */
+export interface VersionAdapter {
+  /**
+   * 手動コミット（保存）を作成する
+   *
+   * 前回コミットから変更が無い場合は `{ status: 'no_changes' }` を返す（正常系）。
+   * 保存ボタンを無効化するのではなく、「変更はありません」と穏当に見せること。
+   * @param projectId - プロジェクトID
+   * @param message - コミットメッセージ（1〜500文字）
+   */
+  createCommit(projectId: string, message: string): Promise<CreateCommitResult>;
+
+  /**
+   * プロジェクトのコミット履歴を取得する（新しい順）
+   */
+  listCommits(
+    projectId: string,
+    params?: PaginationParams,
+  ): Promise<CommitList>;
+
+  /**
+   * コミットを 1 件取得する（存在しない場合は null）
+   */
+  getCommit(commitId: string): Promise<Commit | null>;
+
+  /**
+   * コミットの差分を取得する
+   * @param commitId - 差分を見るコミットID
+   * @param baseCommitId - 比較元コミットID。省略時は親コミットとの差分
+   */
+  getCommitDiff(commitId: string, baseCommitId?: string): Promise<CommitDiff>;
+
+  /**
+   * 未コミットの作業差分を取得する
+   *
+   * 返り値の `commitId` は常に null になる。
+   * @param projectId - プロジェクトID
+   * @param baseCommitId - 比較元コミットID。省略時は最新コミットとの差分
+   */
+  getProjectDiff(projectId: string, baseCommitId?: string): Promise<CommitDiff>;
+
+  /**
+   * コミット時点のエントリのスナップショットを取得する（存在しない場合は null）
+   *
+   * 差分 API では `added` / `removed` の中身が返らないため、
+   * 追加された本文を表示したい場合にこれを使う。
+   */
+  getCommitEntry(
+    commitId: string,
+    targetId: string,
+  ): Promise<CommitEntry | null>;
+
+  /**
+   * プロジェクト全体をコミット時点の状態に復元する
+   *
+   * 破壊的操作。復元先に存在しないノード・指示文・用語は物理削除される。
+   * 呼び出し前に必ず確認ダイアログを出すこと。
+   * 復元前の状態は自動でバックアップコミットに退避される
+   * （`RestoreResult.backupCommitId`）。
+   *
+   * `editPolicy` はバージョン管理の対象外であり、復元しても現在の保護設定が維持される。
+   *
+   * 現在の状態が復元先と完全一致している場合は
+   * `{ status: 'already_at_commit' }` を返す（正常系）。
+   */
+  restoreCommit(commitId: string): Promise<RestoreCommitResult>;
+
+  /**
+   * ノードの変更履歴を取得する（新しい順）
+   */
+  listNodeRevisions(
+    nodeId: string,
+    params?: PaginationParams,
+  ): Promise<NodeRevisionList>;
+
+  /**
+   * ノードの本文をコミット時点の状態に復元する
+   *
+   * 本文のみが戻る。名前・親・並び順・canonStatus / contextPolicy は変わらない。
+   * フォルダノードに対して呼ぶとエラー（400）になる。
+   * @returns 復元後のノード（`RestoreResult` ではない）
+   */
+  restoreNode(nodeId: string, commitId: string): Promise<Node>;
+}
+
+/**
  * エクスポート操作のインターフェース
  */
 export interface ExportAdapter {
@@ -360,5 +462,6 @@ export interface Adapter {
   readonly consistency: ConsistencyAdapter;
   readonly glossary: GlossaryAdapter;
   readonly instructions: InstructionAdapter;
+  readonly versions: VersionAdapter;
   readonly export: ExportAdapter;
 }

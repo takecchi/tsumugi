@@ -8,16 +8,19 @@ import {
   AiApi,
   AuthApi,
   NodesApi,
+  CommitsApi,
   ConsistencyApi,
   GlossaryApi,
   InstructionsApi,
 } from '@tsumugi-chan/client';
 import type { TokenManager } from '@/token-manager';
+import { stripEmptyQueryParams } from '@/internal/helpers/query';
 
 export interface ApiClients {
   readonly auth: AuthApi;
   readonly projects: ProjectsApi;
   readonly nodes: NodesApi;
+  readonly commits: CommitsApi;
   readonly plots: PlotsApi;
   readonly characters: CharactersApi;
   readonly memos: MemosApi;
@@ -36,11 +39,21 @@ export function createApiClients(
   const configuration = new Configuration({
     basePath: baseUrl,
     accessToken: () => tokenManager.getAccessToken(),
+    middleware: [
+      {
+        // 生成クライアントが必須扱いしている省略可能なクエリパラメータ
+        // （limit / cursor / base_commit_id）は、省略を空文字で表現して
+        // ここで実際のリクエストから落とす。詳細は stripEmptyQueryParams を参照。
+        pre: ({ url, init }) =>
+          Promise.resolve({ url: stripEmptyQueryParams(url), init }),
+      },
+    ],
   });
   return {
     auth: new AuthApi(configuration),
     projects: new ProjectsApi(configuration),
     nodes: new NodesApi(configuration),
+    commits: new CommitsApi(configuration),
     plots: new PlotsApi(configuration),
     characters: new CharactersApi(configuration),
     memos: new MemosApi(configuration),

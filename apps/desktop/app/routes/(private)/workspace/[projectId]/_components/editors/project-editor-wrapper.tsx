@@ -12,6 +12,7 @@ import {
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
 import { GlossaryManagerWrapper } from '../glossary-manager-wrapper';
 import { InstructionsManagerWrapper } from '../instructions-manager-wrapper';
+import { VersionHistoryWrapper } from '../version-history/version-history-wrapper';
 import type { Project } from '@tsumugi/adapter';
 
 const NO_REVALIDATE = {
@@ -81,6 +82,7 @@ export function ProjectEditorWrapper({
         <TabsTrigger value="basic">基本情報</TabsTrigger>
         <TabsTrigger value="glossary">用語集</TabsTrigger>
         <TabsTrigger value="instructions">執筆指示</TabsTrigger>
+        <TabsTrigger value="history">変更履歴</TabsTrigger>
       </TabsList>
       <TabsContent value="basic" className="min-h-0 flex-1">
         <ProjectEditor
@@ -95,6 +97,9 @@ export function ProjectEditorWrapper({
       </TabsContent>
       <TabsContent value="instructions" className="min-h-0 flex-1">
         <InstructionsManagerWrapper projectId={projectId} />
+      </TabsContent>
+      <TabsContent value="history" className="min-h-0 flex-1">
+        <VersionHistoryWrapper projectId={projectId} />
       </TabsContent>
     </Tabs>
   );

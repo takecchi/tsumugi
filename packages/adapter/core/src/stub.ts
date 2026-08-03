@@ -111,6 +111,17 @@ export function createAdapter(_: AdapterConfig = {}): Adapter {
       update: () => notImplemented(),
       delete: () => notImplemented(),
     },
+    versions: {
+      createCommit: () => notImplemented(),
+      listCommits: () => notImplemented(),
+      getCommit: () => notImplemented(),
+      getCommitDiff: () => notImplemented(),
+      getProjectDiff: () => notImplemented(),
+      getCommitEntry: () => notImplemented(),
+      restoreCommit: () => notImplemented(),
+      listNodeRevisions: () => notImplemented(),
+      restoreNode: () => notImplemented(),
+    },
     export: {
       exportProject: () => notImplemented(),
     },

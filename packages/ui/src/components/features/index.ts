@@ -10,3 +10,4 @@ export * from './instructions';
 export * from './node-ai-attributes';
 export * from './project-list';
 export * from './sidebar';
+export * from './version-history';
