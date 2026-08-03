@@ -20,6 +20,10 @@ import type {
   AIMemory,
   AIProjectUsage,
   AIContextPack,
+  AIRun,
+  AIRunStreamChunk,
+  CreateAIRunData,
+  CreateAIRunResult,
   ConsistencyCheck,
   ConsistencyCheckSummary,
   ConsistencyFinding,
@@ -220,6 +224,86 @@ export interface AIAdapter {
    * @param mode - チャットモード（ask/write でコンテキストが変わる）
    */
   getContext(projectId: string, mode: AIChatMode): Promise<AIContextPack>;
+}
+
+/**
+ * 自律Run 購読時のオプション
+ */
+export interface AIRunSubscribeOptions {
+  /**
+   * 終端に達する前に切断された場合の再接続試行回数の上限。
+   * 既定は adapter 実装依存。
+   */
+  maxReconnectAttempts?: number;
+  /**
+   * 再接続までの待機時間（ミリ秒）の列。
+   * n 回目の再接続では `reconnectDelaysMs[n - 1]`（範囲外なら末尾の値）を待つ。
+   */
+  reconnectDelaysMs?: number[];
+}
+
+/**
+ * 自律エージェント Run 操作のインターフェース
+ *
+ * 対話チャット（{@link AIAdapter}）とは別系統。AI が自分で計画を立てて
+ * 複数ステップを自動実行する。
+ */
+export interface AIRunAdapter {
+  /**
+   * 自律Run を作成して起動する。
+   *
+   * 1プロジェクトにつき同時に走れる Run は1本だけ。既に進行中の Run がある場合は
+   * throw せず `{ status: 'conflict' }` を返すので、必ず `status` で分岐して
+   * 進行中 Run への導線を出すこと。
+   */
+  create(projectId: string, data: CreateAIRunData): Promise<CreateAIRunResult>;
+
+  /**
+   * プロジェクトの自律Run 一覧を取得する（新しい順）
+   */
+  list(projectId: string): Promise<AIRun[]>;
+
+  /**
+   * 自律Run の現在の状態を取得する。
+   * 進捗（step / トークン）の累積値はここから読む。
+   */
+  get(runId: string): Promise<AIRun>;
+
+  /**
+   * Run の transcript（メッセージ一覧）を取得する。
+   *
+   * SSE は過去チャンクをリプレイしないため、これが表示内容の正となる。
+   * 到着順に依存せず、提案とツール呼び出しの正しい順序はこの結果の順序に従う。
+   * バッチ境界（`usage` チャンク）や再接続のたびに取り直すとよい。
+   */
+  getMessages(runId: string): Promise<AIMessage[]>;
+
+  /**
+   * 自律Run を停止する（冪等）。
+   *
+   * 停止は現在のバッチ終了後に確定するため、**戻り値の `status` はまだ
+   * `running` のことがある。** これをそのまま「停止済み」として UI に反映しないこと。
+   * 確定は購読ストリームの `run_status`（`finishReason: 'stopped'`）で検知する。
+   */
+  stop(runId: string): Promise<AIRun>;
+
+  /**
+   * 自律Run を購読する。
+   *
+   * 実行中・終了済みのどちらでも購読できる（途中参加可）。返すストリームは
+   * 切断時の再接続まで面倒をみるため、受け取り側は届いたチャンクを
+   * 反映するだけでよい。
+   *
+   * - 購読開始時と再接続時に `transcript` チャンクが流れる。
+   *   SSE は過去チャンクをリプレイしないため、これでメッセージ状態を**置き換える**
+   * - 終端は `run_status` かつ `finishReason` が付いたチャンク。
+   *   ストリームはその後クローズされる
+   * - `error` チャンクは終端ではない（バックエンドが最大2回リトライする）
+   */
+  subscribe(
+    runId: string,
+    options?: AIRunSubscribeOptions,
+  ): ReadableStream<AIRunStreamChunk>;
 }
 
 /**
@@ -476,6 +560,7 @@ export interface Adapter {
   readonly memos: MemoAdapter;
   readonly writings: WritingAdapter;
   readonly ai: AIAdapter;
+  readonly runs: AIRunAdapter;
   readonly consistency: ConsistencyAdapter;
   readonly glossary: GlossaryAdapter;
   readonly instructions: InstructionAdapter;

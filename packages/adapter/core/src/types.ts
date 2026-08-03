@@ -542,6 +542,252 @@ export interface AIChatMessageRequest extends AIChatRequestBase {
  */
 export type AIChatRequest = AIChatMessageRequest;
 
+// ─── 自律エージェント Run ───
+
+/**
+ * 自律Run のステータス
+ *
+ * `paused` は型上存在するが現状どこからも遷移しない（将来用の予約）。
+ *
+ * **`completed` は「成功」を意味しない。** ステップ/トークン上限による打ち切りも
+ * `completed` になるため、ユーザーへの文言は必ず {@link AIRunFinishReason} で出し分ける。
+ */
+export type AIRunStatus =
+  | 'queued'
+  | 'running'
+  | 'paused'
+  | 'completed'
+  | 'stopped'
+  | 'error';
+
+/**
+ * 自律Run の終了理由
+ *
+ * `status` だけでは成否が判別できないため、UI 文言はこの値で決める。
+ * - `agent_completed` / `completed_plan`: 成功
+ * - `max_steps` / `max_tokens` / `node_limit` / `diminishing_returns`: 打ち切り（続きがある）
+ * - `stopped`: ユーザーによる停止
+ * - `error`: エラー（`lastError` を表示する）
+ * - `interrupted`: サーバー再起動等による中断。**自動再開しない**ため再実行を促す
+ */
+export type AIRunFinishReason =
+  | 'agent_completed'
+  | 'completed_plan'
+  | 'max_steps'
+  | 'max_tokens'
+  | 'node_limit'
+  | 'diminishing_returns'
+  | 'stopped'
+  | 'error'
+  | 'interrupted';
+
+/**
+ * 計画項目の状態
+ */
+export type AIRunPlanItemStatus = 'pending' | 'in_progress' | 'completed';
+
+/**
+ * 自律Run の計画項目
+ */
+export interface AIRunPlanItem {
+  /**
+   * 計画項目ID。
+   *
+   * **React の key など安定キーには使わないこと。** 実体は `${runId}-plan-${index}` の
+   * インデックス採番で、計画更新は全上書きのため項目が入れ替わると
+   * 同じ id が別内容を指す。
+   */
+  id: string;
+  /** 命令形の内容 */
+  content: string;
+  /** 進行形の表示（実行中の項目はこちらを表示する） */
+  activeForm: string;
+  /** 項目の状態 */
+  status: AIRunPlanItemStatus;
+}
+
+/**
+ * 自律エージェント Run
+ *
+ * AI が自分で計画を立て、複数ステップを自動実行する処理の1単位。
+ * 対話チャット（{@link AIChatSession}）とは別系統。
+ */
+export interface AIRun extends Timestamps {
+  id: string;
+  projectId: string;
+  /** ステータス（成否の判定には使えない。{@link finishReason} を見ること） */
+  status: AIRunStatus;
+  /** ユーザーが与えた自律ゴール */
+  goal: string;
+  /** 現在の計画（全項目） */
+  plan: AIRunPlanItem[];
+  /** 終了理由（未終了なら null） */
+  finishReason: AIRunFinishReason | null;
+  /** 使用モデル（未指定なら null = バックエンド既定） */
+  model: string | null;
+  /** Run 全体の step 総上限 */
+  maxSteps: number;
+  /** 実行済み step 数 */
+  stepCount: number;
+  /** 実行済みバッチ数 */
+  batchCount: number;
+  /** トークン予算（入力＋出力の合計。未指定時はサーバー既定値が入る） */
+  maxTotalTokens: number | null;
+  /** 累積プロンプト（入力）トークン */
+  promptTokens: number;
+  /** 累積生成（出力）トークン */
+  completionTokens: number;
+  /** 累積合計トークン（入力＋出力。進捗表示にはこれを使う） */
+  totalTokens: number;
+  /** この Run が生成したノード数 */
+  createdNodeCount: number;
+  /** 起動したサブエージェント数 */
+  subagentCount: number;
+  /** 最後のエラー（なければ null） */
+  lastError: string | null;
+}
+
+/**
+ * 自律Run の作成データ
+ */
+export interface CreateAIRunData {
+  /** AI に与える自律ゴール（1〜4000文字） */
+  goal: string;
+  /** 使用するモデル（未指定ならバックエンド既定） */
+  model?: string;
+  /** Run 全体の step 総上限（1〜200、未指定なら 60） */
+  maxSteps?: number;
+  /**
+   * トークン予算（1000〜5,000,000、未指定なら 2,000,000）。
+   *
+   * **出力だけでなく入力を含む合計。** 毎バッチでコンテキスト全文を再送するため
+   * 入力:出力は 10〜30:1 になり得る。UI では合計であることを明記する。
+   */
+  maxTotalTokens?: number;
+}
+
+/**
+ * 自律Run の作成結果（判別可能なユニオン）
+ *
+ * 同時実行の衝突は「起きて当然のユーザー向け状態」なので例外にせず、
+ * 結果の型で表現する。
+ *
+ * バックエンドの `createAIRun` には `@ApiConflictResponse` が付いていないため
+ * **生成された型付きクライアントに 409 が現れない**。型に出てこないと気づかず
+ * 握り潰してしまうため、ここで型として明示し、呼び出し側に `status` の分岐を
+ * 強制する。
+ */
+export type CreateAIRunResult =
+  | {
+      status: 'created';
+      run: AIRun;
+    }
+  | {
+      /**
+       * 同時実行の衝突（HTTP 409）。
+       *
+       * 1プロジェクトにつき同時に走れる Run は1本だけ。UI では
+       * `runningRun` への導線を出し、二重送信を抑止すること。
+       * サーバークラッシュ等で残った Run は10分後に自動回収されるため、
+       * 時間経過で解消することもある。
+       */
+      status: 'conflict';
+      /** バックエンドが返したメッセージ */
+      message: string;
+      /** 進行中の Run（取得できなかった場合は null） */
+      runningRun: AIRun | null;
+    };
+
+/**
+ * 自律Run ストリームのチャンク種別
+ *
+ * 対話チャット（{@link AIStreamChunk}）とはセマンティクスが異なる。
+ * - `done` / `finish` は流れない。終端は `run_status` かつ `finishReason` が付いたチャンク
+ * - `error` は終端ではない（バックエンドが最大2回リトライする）
+ */
+export type AIRunStreamChunkType =
+  | 'transcript'
+  | 'text'
+  | 'tool_call'
+  | 'tool_result'
+  | 'proposal'
+  | 'proposal_result'
+  | 'usage'
+  | 'error'
+  | 'plan'
+  | 'run_status'
+  | 'reconnecting'
+  | 'disconnected';
+
+/**
+ * 自律Run ストリームのチャンク
+ *
+ * adapter-api がバックエンドの SSE を正規化し、さらに切断時の再購読までを
+ * 面倒みたうえでこの安定した形で流す。
+ */
+export interface AIRunStreamChunk {
+  type: AIRunStreamChunkType;
+  /**
+   * transcript 全体（type='transcript'時）。
+   *
+   * 購読開始時と再接続時に流れる。SSE は過去チャンクをリプレイしないため、
+   * 受け取り側はこのチャンクで**メッセージ状態を置き換える**（追記しない）。
+   */
+  messages?: AIMessage[];
+  /** テキストの増分（type='text'時） */
+  content?: string;
+  /** ツール呼び出し情報（type='tool_call'時） */
+  toolCall?: AIToolCall;
+  /** ツール実行結果（type='tool_result'時） */
+  toolResult?: { toolCallId: string; toolName: AIToolName; result: string };
+  /**
+   * AI変更提案（type='proposal'時）。
+   *
+   * 対応する tool_call より先に届くことがある。到着順に依存しないこと。
+   * 順序の正は transcript の順序。
+   */
+  proposal?: AIProposal;
+  /**
+   * 提案の適用結果（type='proposal_result'時）。
+   *
+   * 自律Run が作ったノードは `canonStatus: 'draft'` で**即座に保存済み**であり
+   * 「提案→承認」ではない。`targetId` が作成/更新されたノードID。
+   * これを受けたらツリーを再取得する。
+   */
+  proposalFeedback?: AIProposalFeedback;
+  /** トークン使用量（type='usage'時）。**そのバッチ単体**の値で累積ではない */
+  usage?: AITokenUsage;
+  /**
+   * エラーメッセージ（type='error' / 'disconnected'時）。
+   *
+   * `type='error'` は **終端ではない。** バックエンドが最大2回リトライするため
+   * 後続処理が続く（2秒 / 4秒の無音区間が発生する）。3回連続で失敗して初めて
+   * `run_status` の `error` になる。したがって UI では「失敗」ではなく
+   * 「リトライ中」として見せること。
+   *
+   * `type='disconnected'` は逆に**クライアント側の打ち切り**で、以降チャンクは
+   * 流れない。両者を同じ扱いにしないこと。
+   */
+  error?: string;
+  /** 現在の計画（type='plan'時、全項目） */
+  plan?: AIRunPlanItem[];
+  /** Run のステータス（type='run_status'時） */
+  status?: AIRunStatus;
+  /**
+   * 終了理由（type='run_status'時、終了時のみ）。
+   *
+   * これが設定された `run_status` チャンクが**終端**。
+   */
+  finishReason?: AIRunFinishReason;
+  /**
+   * 再接続までの待機ミリ秒（type='reconnecting'時）。
+   *
+   * 終端 `run_status` を受け取る前にストリームが閉じた場合に流れる。
+   * この後 `transcript` が流れれば再接続成功、`disconnected` が流れれば打ち切り。
+   */
+  reconnectDelayMs?: number;
+}
+
 // ─── AIコンテキストプレビュー ───
 
 /**

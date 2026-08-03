@@ -8,13 +8,33 @@ import {
   ToolResultStreamChunkFromJSON,
   UsageStreamChunkFromJSON,
 } from '@tsumugi-chan/client';
-import type { Proposal } from '@tsumugi-chan/client';
+import type {
+  Proposal,
+  AIProposalFeedback as ClientAIProposalFeedback,
+} from '@tsumugi-chan/client';
 import {
   AIProposal,
+  AIProposalFeedback,
   AIStreamChunk,
   AIToolName,
   FieldChange,
 } from '@tsumugi/adapter';
+
+/**
+ * SSE リクエストが HTTP エラーになったことを表すエラー。
+ *
+ * `status` を保持するため、呼び出し側が「リトライして意味があるか」を判断できる
+ * （例: 404 は再接続しても直らない）。
+ */
+export class SSEResponseError extends Error {
+  readonly status: number;
+
+  constructor(status: number, statusText: string) {
+    super(`SSE request failed: ${status} ${statusText}`);
+    this.name = 'SSEResponseError';
+    this.status = status;
+  }
+}
 
 /**
  * RequestOpts から SSE リクエストを発行する
@@ -41,9 +61,7 @@ export async function fetchSSE(
   });
 
   if (!response.ok) {
-    throw new Error(
-      `SSE request failed: ${response.status} ${response.statusText}`,
-    );
+    throw new SSEResponseError(response.status, response.statusText);
   }
 
   return response;
@@ -53,7 +71,7 @@ export async function fetchSSE(
  * 生の SSE フレーム（`data: <JSON>`）を 1 件パースし、変換関数で任意のチャンク型に変換する。
  * data 行が無い / 不正な JSON の場合は null を返す。
  */
-function parseSSEFrame<T>(
+export function parseSSEFrame<T>(
   raw: string,
   toChunk: (data: unknown) => T | null,
 ): T | null {
@@ -195,6 +213,22 @@ export function toAIProposal(proposal: Proposal): AIProposal {
     targetName: proposal.targetName,
     status: proposal.proposalStatus,
     diffs,
+  };
+}
+
+/**
+ * 提案の適用結果（生成クライアント型）を adapter-core の AIProposalFeedback に変換する。
+ * 対話チャットの承認/拒否レスポンスと自律Run の proposal-result チャンクで共用する。
+ */
+export function toProposalFeedback(
+  feedback: ClientAIProposalFeedback,
+): AIProposalFeedback {
+  return {
+    toolCallId: feedback.toolCallId,
+    status: feedback.status,
+    contentType: feedback.contentType,
+    targetId: feedback.targetId,
+    conflictDetails: feedback.conflictDetails,
   };
 }
 

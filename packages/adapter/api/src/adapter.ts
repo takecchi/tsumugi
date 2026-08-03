@@ -9,6 +9,7 @@ import { createMemoAdapter } from '@/adapters/memo';
 import { createWritingAdapter } from '@/adapters/writing';
 import { createSettingsAdapter } from '@/adapters/settings';
 import { createAIAdapter } from '@/adapters/ai';
+import { createAIRunAdapter } from '@/adapters/run';
 import { createConsistencyAdapter } from '@/adapters/consistency';
 import { createGlossaryAdapter } from '@/adapters/glossary';
 import { createInstructionAdapter } from '@/adapters/instruction';
@@ -41,6 +42,7 @@ export function createAdapter(config: AdapterConfig = {}): Adapter {
     memos: createMemoAdapter(clients),
     writings: createWritingAdapter(clients),
     ai: createAIAdapter(clients),
+    runs: createAIRunAdapter(clients),
     consistency: createConsistencyAdapter(clients),
     glossary: createGlossaryAdapter(clients),
     instructions: createInstructionAdapter(clients),

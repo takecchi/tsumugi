@@ -13,32 +13,27 @@ import {
   AIMemory as AdapterAIMemory,
   AIProjectUsage as AdapterAIProjectUsage,
   AIProposalFeedback,
-  AITextMessage,
-  AIToolCallMessage,
-  AIToolResultMessage,
-  AIProposalMessage,
 } from '@tsumugi/adapter';
 import type { ApiClients } from '@/client';
 import {
   AIModelConfigModelEnum,
   ProposalResultStreamChunkFromJSON,
   type AISession as ClientAISession,
-  type AIMessage as ClientAIMessage,
   type AIMemory as ClientAIMemory,
   type AIModelConfig as ClientAIModelConfig,
   type AIChatContext as ClientAIChatContext,
   type AIProjectUsage as ClientAIProjectUsage,
   type AIContextPack as ClientAIContextPack,
   type ChatRequest as ClientChatRequest,
-  type AIProposalFeedback as ClientAIProposalFeedback,
 } from '@tsumugi-chan/client';
 import {
   fetchSSE,
   hasType,
   parseSSEEvent,
   parseSSEStream,
-  toAIProposal,
+  toProposalFeedback,
 } from '@/internal/helpers/sse';
+import { toMessage } from '@/internal/helpers/message';
 
 // ─── 型変換 ───
 
@@ -63,58 +58,6 @@ function toContextPack(api: ClientAIContextPack): AIContextPack {
     })),
     totalCharCount: api.totalCharCount,
   };
-}
-
-function toMessage(api: ClientAIMessage): AdapterAIMessage {
-  const role = api.role;
-  const messageType = api.messageType;
-  const base = {
-    id: api.id,
-    sessionId: api.sessionId,
-    role,
-  };
-
-  switch (messageType) {
-    case 'text': {
-      const textContent = api.content
-        .filter((c) => c.type === 'text')
-        .map((c) => c.text)
-        .join('');
-      return {
-        ...base,
-        messageType: 'text',
-        content: textContent,
-      } satisfies AITextMessage;
-    }
-    case 'tool_call': {
-      return {
-        ...base,
-        messageType: 'tool_call',
-        content: JSON.stringify(api.content),
-      } satisfies AIToolCallMessage;
-    }
-    // tool_result / feedback は LLM ↔ アダプター間・フロント→AI 間の内部メッセージ。
-    // UI には表示しない（buildDisplayMessages が text / proposal のみ表示）ため
-    // tool_result として畳み込む。
-    case 'tool_result':
-    case 'feedback': {
-      return {
-        ...base,
-        messageType: 'tool_result',
-        content: JSON.stringify(api.content),
-      } satisfies AIToolResultMessage;
-    }
-    case 'proposal': {
-      if (api.proposal) {
-        return {
-          ...base,
-          messageType: 'proposal',
-          proposal: toAIProposal(api.proposal),
-        } satisfies AIProposalMessage;
-      }
-    }
-  }
-  return { ...base, messageType: 'text', content: '' };
 }
 
 function toMemory(api: ClientAIMemory): AdapterAIMemory {
@@ -142,16 +85,6 @@ function toUsage(api: ClientAIProjectUsage): AdapterAIProjectUsage {
       completionTokens: api.total.completionTokens,
       totalTokens: api.total.totalTokens,
     },
-  };
-}
-
-function toFeedback(feedback: ClientAIProposalFeedback): AIProposalFeedback {
-  return {
-    toolCallId: feedback.toolCallId,
-    status: feedback.status,
-    contentType: feedback.contentType,
-    targetId: feedback.targetId,
-    conflictDetails: feedback.conflictDetails,
   };
 }
 
@@ -377,7 +310,7 @@ export async function parseProposalSSEResponse(
       }
       if (hasType(parsed) && parsed.type === 'proposal-result') {
         const result = ProposalResultStreamChunkFromJSON(parsed).result;
-        feedback = toFeedback(result.feedback);
+        feedback = toProposalFeedback(result.feedback);
         hasStream = result.hasStream;
         // proposal-result と同じバッチに含まれる後続フレームは AI 応答へ引き継ぐ
         leftoverFrames = parts.slice(i + 1);

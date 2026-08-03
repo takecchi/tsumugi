@@ -6,6 +6,7 @@ import {
   MemosApi,
   WritingsApi,
   AiApi,
+  AiRunsApi,
   AuthApi,
   NodesApi,
   CommitsApi,
@@ -27,6 +28,8 @@ export interface ApiClients {
   readonly memos: MemosApi;
   readonly writings: WritingsApi;
   readonly ai: AiApi;
+  /** 自律Run（`/v1/ai/runs/*`）。Run の作成・一覧は projects 側にある */
+  readonly runs: AiRunsApi;
   readonly consistency: ConsistencyApi;
   readonly glossary: GlossaryApi;
   readonly instructions: InstructionsApi;
@@ -61,6 +64,7 @@ export function createApiClients(
     memos: new MemosApi(configuration),
     writings: new WritingsApi(configuration),
     ai: new AiApi(configuration),
+    runs: new AiRunsApi(configuration),
     consistency: new ConsistencyApi(configuration),
     glossary: new GlossaryApi(configuration),
     instructions: new InstructionsApi(configuration),
