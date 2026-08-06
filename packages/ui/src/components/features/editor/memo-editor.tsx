@@ -49,23 +49,23 @@ export function MemoEditor({
 
   return (
     <div className={cn('flex h-full flex-col bg-background', className)}>
-      {name !== undefined && (
-        <div className="flex items-center border-b px-6 py-3">
-          {onNameChange ? (
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              className="w-full bg-transparent text-lg font-semibold outline-none focus:ring-1 focus:ring-ring rounded px-1"
-              placeholder="メモ名を入力..."
-              readOnly={readOnly}
-            />
-          ) : (
-            <h1 className="text-lg font-semibold">{name}</h1>
-          )}
-        </div>
-      )}
       <ScrollArea className="flex-1 overflow-hidden">
+        {name !== undefined && (
+          <div className="flex items-center border-b px-6 py-3">
+            {onNameChange ? (
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => onNameChange(e.target.value)}
+                className="w-full bg-transparent text-lg font-semibold outline-none focus:ring-1 focus:ring-ring rounded px-1"
+                placeholder="メモ名を入力..."
+                readOnly={readOnly}
+              />
+            ) : (
+              <h1 className="text-lg font-semibold">{name}</h1>
+            )}
+          </div>
+        )}
         <div className="space-y-5 p-6">
           <div className="space-y-1.5">
             <label
