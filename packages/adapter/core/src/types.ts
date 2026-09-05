@@ -1041,7 +1041,7 @@ export interface ProductSignal extends Timestamps {
   kind: ProductSignalKind;
   /** どの画面・機能についてか */
   surface: string;
-  /** 匿名化・要約済みの内容（最大280文字。作品本文は含まれない） */
+  /** 伏字化・切り詰め済みの内容（最大280文字。長い引用は伏字になる） */
   summary: string;
   /** シグナルが発生した日時 */
   occurredAt: Date;

@@ -48,7 +48,7 @@ export interface FeedbackFormProps {
 /**
  * プロダクトへの要望・不満を送るフォーム。
  *
- * 送信内容はサーバー側で伏字化・要約されるため、その旨を明示している。
+ * 送信内容はサーバー側で伏字化・切り詰めされるため、その旨を明示している。
  */
 export function FeedbackForm({
   maxLength = FEEDBACK_MAX_LENGTH,
@@ -99,7 +99,7 @@ export function FeedbackForm({
           <div className="space-y-1">
             <p className="font-medium">送信しました。ありがとうございます。</p>
             <p className="text-muted-foreground">
-              内容はサーバー側で要約・匿名化されて保存されました。
+              サーバー側で伏字化・切り詰めが行われるため、保存された内容は送信した文章と一致しない場合があります。
             </p>
           </div>
         </div>
@@ -172,8 +172,8 @@ export function FeedbackForm({
       </div>
 
       <p className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-        送信された内容はサーバー側で匿名化・要約され、最大{maxLength}
-        文字で保存されます。そのため保存内容は入力した文章と一致しない場合があります。
+        送信された内容は、改行や連続する空白を詰めたうえで最大{maxLength}
+        文字に切り詰めて保存されます。そのため保存内容は入力した文章と一致しない場合があります。
       </p>
 
       {error !== null && (
