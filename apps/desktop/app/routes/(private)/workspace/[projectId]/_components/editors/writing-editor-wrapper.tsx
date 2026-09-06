@@ -8,6 +8,7 @@ import {
   TabsContent,
 } from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
+import { useFieldDrafts } from '~/routes/(private)/workspace/[projectId]/_hooks/useFieldDrafts';
 import { NodeAttributesBar } from './node-attributes-bar';
 import { ConsistencyPanelWrapper } from '../consistency-panel-wrapper';
 import { NodeRevisionWrapper } from '../version-history/node-revision-wrapper';
@@ -29,6 +30,7 @@ export function WritingEditorWrapper({
   const { data: writing, mutate } = useWriting(id, NO_REVALIDATE);
   const { mutate: mutateTree } = useWritingTree(projectId);
   const { trigger: updateWriting } = useUpdateWriting(id);
+  const { markDraft, releaseDraft, withDrafts } = useFieldDrafts(id);
 
   const onSave = useCallback(
     async (field: string, value: unknown) => {
@@ -38,36 +40,42 @@ export function WritingEditorWrapper({
       } else {
         await updateWriting({ [field]: value });
       }
+      releaseDraft(field, value);
       if (field === 'name') await mutateTree();
     },
-    [updateWriting, mutateTree],
+    [updateWriting, mutateTree, releaseDraft],
   );
 
   const debouncedSave = useDebouncedSave(onSave);
 
   const handleNameChange = useCallback(
     (value: string) => {
+      markDraft('name', value);
       void mutate((prev) => (prev ? { ...prev, name: value } : prev), {
         revalidate: false,
       });
       debouncedSave('name', value);
     },
-    [mutate, debouncedSave],
+    [mutate, debouncedSave, markDraft],
   );
 
   const handleContentChange = useCallback(
     (value: string) => {
       const wc = value.length;
+      markDraft('content', value);
       void mutate(
         (prev) => (prev ? { ...prev, content: value, wordCount: wc } : prev),
         { revalidate: false },
       );
       debouncedSave('content', value);
     },
-    [mutate, debouncedSave],
+    [mutate, debouncedSave, markDraft],
   );
 
   if (!writing) return null;
+
+  // 未保存の入力はサーバ値より優先して表示する（再フェッチで巻き戻さない）
+  const displayed = withDrafts(writing);
 
   return (
     <Tabs defaultValue="body" className="flex h-full min-h-0 flex-col gap-0">
@@ -87,8 +95,8 @@ export function WritingEditorWrapper({
       </NodeAttributesBar>
       <TabsContent value="body" className="min-h-0 flex-1">
         <WritingEditor
-          name={writing.name}
-          content={writing.content}
+          name={displayed.name}
+          content={displayed.content}
           onNameChange={handleNameChange}
           onContentChange={handleContentChange}
         />

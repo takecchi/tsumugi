@@ -14,6 +14,7 @@
     "start": "npx serve -s build/client",
     "tsc": "react-router typegen && tsc",
     "lint": "eslint --fix",
+    "test": "TZ=Asia/Tokyo jest",
     "typegen": "react-router typegen"
   },
   "dependencies": {
