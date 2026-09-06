@@ -10,6 +10,7 @@ import {
   TabsContent,
 } from '@tsumugi/ui';
 import { useDebouncedSave } from '~/routes/(private)/workspace/[projectId]/_hooks/useDebouncedSave';
+import { useFieldDrafts } from '~/routes/(private)/workspace/[projectId]/_hooks/useFieldDrafts';
 import { GlossaryManagerWrapper } from '../glossary-manager-wrapper';
 import { InstructionsManagerWrapper } from '../instructions-manager-wrapper';
 import { VersionHistoryWrapper } from '../version-history/version-history-wrapper';
@@ -43,6 +44,7 @@ export function ProjectEditorWrapper({
   const { trigger: updateProject } = useUpdateProject(projectId);
   const { trigger: exportProject, isMutating: isExporting } =
     useExportProject();
+  const { markDraft, releaseDraft, withDrafts } = useFieldDrafts(projectId);
 
   const onSave = useCallback(
     async (field: string, value: unknown) => {
@@ -53,21 +55,23 @@ export function ProjectEditorWrapper({
             : Number(value)
           : value;
       await updateProject({ [field]: saveValue });
+      releaseDraft(field, value);
     },
-    [updateProject],
+    [updateProject, releaseDraft],
   );
 
   const debouncedSave = useDebouncedSave(onSave);
 
   const handleChange = useCallback(
     (field: keyof ProjectEditorData, value: string) => {
+      markDraft(field, value);
       void mutate((prev) => (prev ? { ...prev, [field]: value } : prev), {
         revalidate: false,
       });
       debouncedSave(field, value);
       if (field === 'name') onNameChange?.(value);
     },
-    [mutate, debouncedSave, onNameChange],
+    [mutate, debouncedSave, onNameChange, markDraft],
   );
 
   const handleExport = useCallback(async () => {
@@ -75,6 +79,9 @@ export function ProjectEditorWrapper({
   }, [exportProject, projectId]);
 
   if (!project) return null;
+
+  // 未保存の入力はサーバ値より優先して表示する（再フェッチで巻き戻さない）
+  const displayed = withDrafts(project);
 
   return (
     <Tabs defaultValue="basic" className="flex h-full flex-col">
@@ -86,7 +93,7 @@ export function ProjectEditorWrapper({
       </TabsList>
       <TabsContent value="basic" className="min-h-0 flex-1">
         <ProjectEditor
-          data={toEditorData(project)}
+          data={toEditorData(displayed)}
           onChange={handleChange}
           onExport={handleExport}
           isExporting={isExporting}

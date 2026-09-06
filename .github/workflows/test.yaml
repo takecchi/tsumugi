@@ -95,3 +95,6 @@ jobs:
 
       - name: Lint
         run: npm run lint -w desktop
+
+      - name: Test
+        run: npm run test -w desktop
