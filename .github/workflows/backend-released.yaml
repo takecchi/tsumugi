@@ -292,6 +292,7 @@ jobs:
           TITLE: ${{ steps.body.outputs.title }}
         run: |
           set -euo pipefail
+          # 接頭辞 chore/bump-client- を使う理由は「ブランチを作りcommitする」stepのコメントを参照。
           BRANCH="chore/bump-client-${VERSION}"
 
           # gh は一切呼ばない。代わりにoriginに同名ブランチが在るかで新規/更新を代替判定する。
@@ -342,7 +343,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin main
-          # ブランチ名は版から決まる決定的な名前にし、常にorigin/mainから作り直す（同じ版の再通知でブランチが増えないようにするため）。
+          # ブランチ名は版から決まる決定的な名前にし、常にorigin/mainから作り直す。
+          # 同じ版の再通知が来てもブランチが増えず、既存PRの更新に落ちるようにするため。
+          #
+          # ⚠ 接頭辞が既存の慣習と違うのは意図的です（手作業の追随PRは chore/client-<version> を使ってきた）。
+          # このstepの直後で force push するため、慣習に揃えると
+          # 人が手で作った chore/client-<version> を踏み潰す事故が起こりえます。
+          # ⟹ 「慣習に合っていない」という理由で揃えないでください。
           git checkout -B "${BRANCH}" origin/main
           git add packages/adapter/api/package.json package-lock.json
           git commit -m "chore(deps): @tsumugi-chan/client を ${{ steps.current.outputs.current_version }} から ${{ steps.normalize.outputs.version }} へ更新"
