@@ -326,7 +326,12 @@ jobs:
             echo ""
             echo "### 新規作成 / 更新の判定"
             echo "${DECISION}"
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          } > dry-run-report.md
+
+          # パイプで繋ぐと終了コードが最後のコマンドのものになり嘘をつくため、
+          # 一度ファイルへ書いてから標準出力とJob Summaryへ別々に流す。
+          cat dry-run-report.md
+          cat dry-run-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: ブランチを作りcommitする
         if: steps.current.outputs.current_version != steps.normalize.outputs.version && steps.normalize.outputs.dry_run != 'true'
