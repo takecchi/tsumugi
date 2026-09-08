@@ -1,0 +1,266 @@
+name: Backend Released
+
+# backend から repository_dispatch(event_type=backend-released) で通知が来た場合と、
+# 手動で workflow_dispatch した場合の両方に対応する。
+# ⭐ 重要: この2つの経路は最初のstep(normalize)で1組のstep outputへ合流させ、
+# 以降の全stepはそのoutputだけを見る。経路ごとに別ロジックを書くと、
+# 手で検証した経路と本番経路が乖離してしまうため。
+on:
+  repository_dispatch:
+    types: [backend-released]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "通知されたバージョン（vを外したもの。例: 1.3.6）"
+        required: true
+        type: string
+      release_tag:
+        description: "リリースタグ（例: v1.3.6）。無ければ空でよい"
+        required: false
+        type: string
+      previous_tag:
+        description: "直前のタグ。初回リリース等で無ければ空でよい"
+        required: false
+        type: string
+      breaking:
+        description: "true / false / unknown / 空 のいずれも試せるよう自由入力にする（choiceにしない）"
+        required: false
+        type: string
+      package:
+        description: "追随対象のパッケージ名（既定: @tsumugi-chan/client）"
+        required: false
+        type: string
+
+# 同じバージョンの通知が重なって競らないようにする。
+# 通知の取りこぼしを避けたいので cancel-in-progress は使わない。
+concurrency:
+  group: backend-released-${{ github.event.client_payload.version || github.event.inputs.version || 'unknown' }}
+  cancel-in-progress: false
+
+# このリポジトリの既定はread-onlyのため、必要な権限をここで明示する。
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-client-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ⭐ ここで repository_dispatch(client_payload) と workflow_dispatch(inputs) を
+      # 1組のstep outputへ正規化する。以降のstepはこのoutputだけを参照する。
+      # 値は env 経由でシェルへ渡す（run内で直接 ${{ }} を展開するとinjectionの経路になるため）。
+      - name: 入力を正規化する
+        id: normalize
+        env:
+          IN_VERSION: ${{ github.event.client_payload.version || github.event.inputs.version }}
+          IN_RELEASE_TAG: ${{ github.event.client_payload.release_tag || github.event.inputs.release_tag }}
+          IN_PREVIOUS_TAG: ${{ github.event.client_payload.previous_tag || github.event.inputs.previous_tag }}
+          IN_BREAKING_RAW: ${{ github.event.client_payload.breaking || github.event.inputs.breaking }}
+          IN_PACKAGE: ${{ github.event.client_payload.package || github.event.inputs.package }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${IN_VERSION:-}"
+          RELEASE_TAG="${IN_RELEASE_TAG:-}"
+          PREVIOUS_TAG="${IN_PREVIOUS_TAG:-}"
+          BREAKING_RAW="${IN_BREAKING_RAW:-}"
+          PACKAGE="${IN_PACKAGE:-}"
+
+          # version がどちらの経路からも来ていなければ、何を更新すればよいか分からないので明示的に失敗させる。
+          if [ -z "$VERSION" ]; then
+            echo "::error::version が client_payload / inputs のどちらにも含まれていません。処理を中止します。"
+            exit 1
+          fi
+
+          # breaking は true / false の2値だけを採用する。
+          # unknown・空・未定義・想定外の語はすべて unknown に丸める。
+          # 「falseではない」ことが重要なので、絶対に false へは倒さない。
+          case "$BREAKING_RAW" in
+            true) BREAKING="true" ;;
+            false) BREAKING="false" ;;
+            *) BREAKING="unknown" ;;
+          esac
+
+          # package は空なら既定値を補う。@tsumugi-chan/client 以外はこのワークフローが
+          # 追随方法を知らないため明示的に失敗させる。
+          if [ -z "$PACKAGE" ]; then
+            PACKAGE="@tsumugi-chan/client"
+          fi
+          if [ "$PACKAGE" != "@tsumugi-chan/client" ]; then
+            echo "::error::このワークフローは @tsumugi-chan/client 以外の追随方法を知りません（package=${PACKAGE}）。処理を中止します。"
+            exit 1
+          fi
+
+          # previous_tag / release_tag は空・欠落のまま保持する（でっち上げない）。
+          {
+            echo "version=${VERSION}"
+            echo "release_tag=${RELEASE_TAG}"
+            echo "previous_tag=${PREVIOUS_TAG}"
+            echo "breaking=${BREAKING}"
+            echo "breaking_raw=${BREAKING_RAW}"
+            echo "package=${PACKAGE}"
+          } >> "$GITHUB_OUTPUT"
+
+      # ⚠ ここが差し替え点: PR作成・force pushに使うトークンの発行元はまだ未確定。
+      # 識別が決まったら、このstepだけを置き換えればよい構造にしている。
+      # 暫定として GitHub App からトークンを発行する。
+      - name: "PR作成用トークンを発行する（暫定: GitHub App）"
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # 発行したトークンを GH_TOKEN という名前に統一して以降のstepへ渡す。
+      # gh コマンドは GH_TOKEN を自動で見るため、以降のstepでの分岐が要らなくなる。
+      - name: トークンを GH_TOKEN として以降のstepに渡す
+        run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
+
+      - name: Node セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # 現在の依存バージョンを読む。npm pkg get はワークスペース名をキーにしたJSONを返すため jq で1値に落とす。
+      - name: 現在の依存バージョンを読む
+        id: current
+        run: |
+          set -euo pipefail
+          CURRENT=$(npm pkg get "dependencies.@tsumugi-chan/client" --workspace=packages/adapter/api | jq -r '[.[]][0]')
+          echo "current_version=${CURRENT}" >> "$GITHUB_OUTPUT"
+
+      # 通知された版と現在の版が同じなら、上げるものが無い。
+      # 空PRは作れないため、ここでJob Summaryに書いて正常終了する。
+      # ⚠ 新旧比較で「古い通知だからskip」というガードはここでは行わない。常に通知された版へ追随する。
+      - name: 既に同じ版なら追随不要として終わる
+        if: steps.current.outputs.current_version == steps.normalize.outputs.version
+        run: |
+          {
+            echo "### backend-released: 追随不要"
+            echo ""
+            echo "通知されたバージョン \`${{ steps.normalize.outputs.version }}\` は既に \`packages/adapter/api/package.json\` に反映済みです。PRは作成しません。"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 依存バージョンを更新する。存在しない版が来た場合は、この後のnpm installで大きく失敗させるのが望ましい。
+      - name: 依存バージョンを更新する
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version
+        run: npm pkg set "dependencies.@tsumugi-chan/client=${{ steps.normalize.outputs.version }}" --workspace=packages/adapter/api
+
+      - name: package-lock.json を更新する
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version
+        run: npm install
+
+      - name: ブランチを作りcommitする
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version
+        env:
+          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          # ブランチ名は版から決まる決定的な名前にし、常にorigin/mainから作り直す（同じ版の再通知でブランチが増えないようにするため）。
+          git checkout -B "${BRANCH}" origin/main
+          git add packages/adapter/api/package.json package-lock.json
+          git commit -m "chore(deps): @tsumugi-chan/client を ${{ steps.current.outputs.current_version }} から ${{ steps.normalize.outputs.version }} へ更新"
+
+      - name: force push する
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version
+        env:
+          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
+        run: |
+          set -euo pipefail
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/${BRANCH}"
+
+      # PR本文はヒアドキュメントでファイルに書き出し、--body-file で渡す（クォート事故を避けるため）。
+      - name: PR本文を組み立てる
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version
+        id: body
+        env:
+          VERSION: ${{ steps.normalize.outputs.version }}
+          RELEASE_TAG: ${{ steps.normalize.outputs.release_tag }}
+          PREVIOUS_TAG: ${{ steps.normalize.outputs.previous_tag }}
+          BREAKING: ${{ steps.normalize.outputs.breaking }}
+          BREAKING_RAW: ${{ steps.normalize.outputs.breaking_raw }}
+          PACKAGE: ${{ steps.normalize.outputs.package }}
+          EVENT_NAME: ${{ github.event_name }}
+          CURRENT_VERSION: ${{ steps.current.outputs.current_version }}
+        run: |
+          set -euo pipefail
+
+          fmt() {
+            if [ -z "${1:-}" ]; then
+              echo "(通知に含まれていません)"
+            else
+              echo "$1"
+            fi
+          }
+
+          {
+            if [ "$BREAKING" = "true" ]; then
+              echo "> **破壊的変更を含むリリースです。** この PR の CI が赤いなら、それは backend の API が壊れる変更を含んでいるという意味です。"
+              echo ""
+            elif [ "$BREAKING" = "unknown" ]; then
+              echo "> **breaking の判定が取れていません（false ではありません）。** 送信された生の値: \`$(fmt "${BREAKING_RAW:-}")\`"
+              echo ""
+            fi
+
+            echo "## backend リリース通知への追随"
+            echo ""
+            echo "backend のリリース通知を受けて \`@tsumugi-chan/client\` を更新します。"
+            echo ""
+            echo "### 通知された内容"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "| --- | --- |"
+            echo "| version | $(fmt "${VERSION:-}") |"
+            echo "| release_tag | $(fmt "${RELEASE_TAG:-}") |"
+            echo "| previous_tag | $(fmt "${PREVIOUS_TAG:-}") |"
+            echo "| breaking（正規化後） | ${BREAKING} |"
+            echo "| breaking（生の値） | $(fmt "${BREAKING_RAW:-}") |"
+            echo "| package | $(fmt "${PACKAGE:-}") |"
+            echo ""
+            echo "### トリガ"
+            echo ""
+            echo "- イベント: \`${EVENT_NAME}\`"
+            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+              echo "- これは手動の確認用の実行です。"
+            fi
+            echo ""
+            echo "### この PR に走るチェック"
+            echo ""
+            echo "- \`Test Workflow\`（\`test.yaml\`）の \`check-draft\` → \`check_paths\` → \`test_all\`"
+            echo "- \`test_desktop\` は依存関係の変更のみのため skip される見込みです"
+          } > pr-body.md
+
+      - name: PRを作成または更新する
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version
+        env:
+          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
+          BREAKING: ${{ steps.normalize.outputs.breaking }}
+          VERSION: ${{ steps.normalize.outputs.version }}
+          CURRENT_VERSION: ${{ steps.current.outputs.current_version }}
+        run: |
+          set -euo pipefail
+
+          # breaking=true のときはtitleでも分かるようにConventional Commitsの破壊的変更記法(!)を使う。
+          if [ "$BREAKING" = "true" ]; then
+            TITLE="chore(deps)!: @tsumugi-chan/client を ${CURRENT_VERSION} から ${VERSION} へ更新（破壊的変更あり）"
+          else
+            TITLE="chore(deps): @tsumugi-chan/client を ${CURRENT_VERSION} から ${VERSION} へ更新"
+          fi
+
+          # 同じ版の通知が重複してもPRが増えないよう、既存PRの有無を先に確認する。
+          EXISTING=$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh pr edit "$EXISTING" --title "$TITLE" --body-file pr-body.md
+          else
+            gh pr create --base main --head "${BRANCH}" --title "$TITLE" --body-file pr-body.md
+          fi
