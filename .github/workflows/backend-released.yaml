@@ -5,6 +5,7 @@ name: Backend Released
 # ⭐ 重要: この2つの経路は最初のstep(normalize)で1組のstep outputへ合流させ、
 # 以降の全stepはそのoutputだけを見る。経路ごとに別ロジックを書くと、
 # 手で検証した経路と本番経路が乖離してしまうため。
+# dry_run(後述)についても同様に、この1本の正規化stepで1つのoutputに落とす。
 on:
   repository_dispatch:
     types: [backend-released]
@@ -30,6 +31,11 @@ on:
         description: "追随対象のパッケージ名（既定: @tsumugi-chan/client）"
         required: false
         type: string
+      dry_run:
+        description: "trueなら版上げ(npm install等)だけ行いpush/PR作成はしない。手動実行の既定は安全側のtrue"
+        required: false
+        type: boolean
+        default: true
 
 # 同じバージョンの通知が重なって競らないようにする。
 # 通知の取りこぼしを避けたいので cancel-in-progress は使わない。
@@ -63,6 +69,8 @@ jobs:
           IN_PREVIOUS_TAG: ${{ github.event.client_payload.previous_tag || github.event.inputs.previous_tag }}
           IN_BREAKING_RAW: ${{ github.event.client_payload.breaking || github.event.inputs.breaking }}
           IN_PACKAGE: ${{ github.event.client_payload.package || github.event.inputs.package }}
+          IN_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
 
@@ -97,6 +105,18 @@ jobs:
             exit 1
           fi
 
+          # dry_run は workflow_dispatch の入力だけを見る。
+          # repository_dispatch(本番通知)は必ず実行したいので、ここで強制的にfalseへ倒す。
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            DRY_RUN="false"
+          else
+            case "${IN_DRY_RUN:-}" in
+              true) DRY_RUN="true" ;;
+              false) DRY_RUN="false" ;;
+              *) DRY_RUN="true" ;;
+            esac
+          fi
+
           # previous_tag / release_tag は空・欠落のまま保持する（でっち上げない）。
           {
             echo "version=${VERSION}"
@@ -105,13 +125,46 @@ jobs:
             echo "breaking=${BREAKING}"
             echo "breaking_raw=${BREAKING_RAW}"
             echo "package=${PACKAGE}"
+            echo "dry_run=${DRY_RUN}"
           } >> "$GITHUB_OUTPUT"
 
-      # ⚠ ここが差し替え点: PR作成・force pushに使うトークンの発行元はまだ未確定。
-      # 識別が決まったら、このstepだけを置き換えればよい構造にしている。
-      # 暫定として GitHub App からトークンを発行する。
-      - name: "PR作成用トークンを発行する（暫定: GitHub App）"
+      # secretの値そのものは絶対に出力せず、有無だけを見る。
+      # dry_run のときはPRを作らずトークンも使わないので検査自体を省略するが、
+      # 黙って飛ばさず「省略した」ことと有無を出力する。
+      - name: "secret(APP_ID / APP_PRIVATE_KEY)の有無を検査する"
+        id: check-secrets
+        env:
+          DRY_RUN: ${{ steps.normalize.outputs.dry_run }}
+          HAS_APP_ID: ${{ secrets.APP_ID != '' }}
+          HAS_APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY != '' }}
+        run: |
+          set -euo pipefail
+
+          to_ja() {
+            if [ "$1" = "true" ]; then echo "有"; else echo "無"; fi
+          }
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "dry_run なので secret 検査を省略した。APP_ID の有無: $(to_ja "$HAS_APP_ID") / APP_PRIVATE_KEY の有無: $(to_ja "$HAS_APP_PRIVATE_KEY")"
+            exit 0
+          fi
+
+          MISSING=""
+          [ "$HAS_APP_ID" = "true" ] || MISSING="${MISSING}APP_ID "
+          [ "$HAS_APP_PRIVATE_KEY" = "true" ] || MISSING="${MISSING}APP_PRIVATE_KEY "
+
+          if [ -n "$MISSING" ]; then
+            echo "::error::takecchi/tsumugi の secrets に APP_ID / APP_PRIVATE_KEY が必要です（欠けているsecret: ${MISSING})"
+            exit 1
+          fi
+
+          echo "APP_ID / APP_PRIVATE_KEY はいずれも設定されています。"
+
+      # 必要な secret はこの2つ: APP_ID（GitHub AppのApp ID） / APP_PRIVATE_KEY（その秘密鍵）。
+      # dry_run のときはPRを作らないためトークンは要らない。
+      - name: PR作成用トークンを発行する
         id: app-token
+        if: steps.normalize.outputs.dry_run != 'true'
         uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.APP_ID }}
@@ -120,6 +173,7 @@ jobs:
       # 発行したトークンを GH_TOKEN という名前に統一して以降のstepへ渡す。
       # gh コマンドは GH_TOKEN を自動で見るため、以降のstepでの分岐が要らなくなる。
       - name: トークンを GH_TOKEN として以降のstepに渡す
+        if: steps.normalize.outputs.dry_run != 'true'
         run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
 
       - name: Node セットアップ
@@ -149,6 +203,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       # 依存バージョンを更新する。存在しない版が来た場合は、この後のnpm installで大きく失敗させるのが望ましい。
+      # dry_run でもここは実際に実行する（変更が本当に作れることを確かめたいため）。
       - name: 依存バージョンを更新する
         if: steps.current.outputs.current_version != steps.normalize.outputs.version
         run: npm pkg set "dependencies.@tsumugi-chan/client=${{ steps.normalize.outputs.version }}" --workspace=packages/adapter/api
@@ -157,30 +212,10 @@ jobs:
         if: steps.current.outputs.current_version != steps.normalize.outputs.version
         run: npm install
 
-      - name: ブランチを作りcommitする
-        if: steps.current.outputs.current_version != steps.normalize.outputs.version
-        env:
-          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          # ブランチ名は版から決まる決定的な名前にし、常にorigin/mainから作り直す（同じ版の再通知でブランチが増えないようにするため）。
-          git checkout -B "${BRANCH}" origin/main
-          git add packages/adapter/api/package.json package-lock.json
-          git commit -m "chore(deps): @tsumugi-chan/client を ${{ steps.current.outputs.current_version }} から ${{ steps.normalize.outputs.version }} へ更新"
-
-      - name: force push する
-        if: steps.current.outputs.current_version != steps.normalize.outputs.version
-        env:
-          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
-        run: |
-          set -euo pipefail
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/${BRANCH}"
-
-      # PR本文はヒアドキュメントでファイルに書き出し、--body-file で渡す（クォート事故を避けるため）。
-      - name: PR本文を組み立てる
+      # PRのタイトルと本文は、dry_run時のプレビューと実際のPR作成の両方で
+      # 同じものを使う（ここで1回だけ組み立てる）。
+      # 本文はヒアドキュメントでファイルに書き出し、--body-file で渡す（クォート事故を避けるため）。
+      - name: PRタイトル・本文を組み立てる
         if: steps.current.outputs.current_version != steps.normalize.outputs.version
         id: body
         env:
@@ -202,6 +237,14 @@ jobs:
               echo "$1"
             fi
           }
+
+          # breaking=true のときはtitleでも分かるようにConventional Commitsの破壊的変更記法(!)を使う。
+          if [ "$BREAKING" = "true" ]; then
+            TITLE="chore(deps)!: @tsumugi-chan/client を ${CURRENT_VERSION} から ${VERSION} へ更新（破壊的変更あり）"
+          else
+            TITLE="chore(deps): @tsumugi-chan/client を ${CURRENT_VERSION} から ${VERSION} へ更新"
+          fi
+          echo "title=${TITLE}" >> "$GITHUB_OUTPUT"
 
           {
             if [ "$BREAKING" = "true" ]; then
@@ -240,22 +283,80 @@ jobs:
             echo "- \`test_desktop\` は依存関係の変更のみのため skip される見込みです"
           } > pr-body.md
 
-      - name: PRを作成または更新する
-        if: steps.current.outputs.current_version != steps.normalize.outputs.version
+      # ⭐ secret 無しでも測れる経路。ここから先(commit/push/PR作成)は一切行わず、
+      # 何をするつもりだったかを標準出力とJob Summaryの両方に出して終える。
+      - name: dry_run のときは実行内容を出力して終える
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version && steps.normalize.outputs.dry_run == 'true'
         env:
-          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
-          BREAKING: ${{ steps.normalize.outputs.breaking }}
           VERSION: ${{ steps.normalize.outputs.version }}
-          CURRENT_VERSION: ${{ steps.current.outputs.current_version }}
+          TITLE: ${{ steps.body.outputs.title }}
         run: |
           set -euo pipefail
+          BRANCH="chore/bump-client-${VERSION}"
 
-          # breaking=true のときはtitleでも分かるようにConventional Commitsの破壊的変更記法(!)を使う。
-          if [ "$BREAKING" = "true" ]; then
-            TITLE="chore(deps)!: @tsumugi-chan/client を ${CURRENT_VERSION} から ${VERSION} へ更新（破壊的変更あり）"
+          # gh は一切呼ばない。代わりにoriginに同名ブランチが在るかで新規/更新を代替判定する。
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            DECISION="既存PRを更新する経路に入る見込み（※ gh pr list の代替として、originに同名ブランチ ${BRANCH} が存在するかで判定。実際にはghを呼んでいません）"
           else
-            TITLE="chore(deps): @tsumugi-chan/client を ${CURRENT_VERSION} から ${VERSION} へ更新"
+            DECISION="新規PRを作成する経路に入る見込み（※ gh pr list の代替として、originに同名ブランチ ${BRANCH} が存在するかで判定。実際にはghを呼んでいません）"
           fi
+
+          {
+            echo "## dry_run: ここから先(push・PR作成)は実行していません"
+            echo ""
+            echo "- 作るつもりのブランチ名: \`${BRANCH}\`"
+            echo ""
+            echo "### git diff --stat"
+            echo '```'
+            git diff --stat
+            echo '```'
+            echo ""
+            echo "### git diff（packages/adapter/api/package.json）"
+            echo '```diff'
+            git diff -- packages/adapter/api/package.json
+            echo '```'
+            echo ""
+            echo "### PRタイトル（予定）"
+            echo "\`${TITLE}\`"
+            echo ""
+            echo "### PR本文（予定・全文）"
+            echo '```markdown'
+            cat pr-body.md
+            echo '```'
+            echo ""
+            echo "### 新規作成 / 更新の判定"
+            echo "${DECISION}"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: ブランチを作りcommitする
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version && steps.normalize.outputs.dry_run != 'true'
+        env:
+          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          # ブランチ名は版から決まる決定的な名前にし、常にorigin/mainから作り直す（同じ版の再通知でブランチが増えないようにするため）。
+          git checkout -B "${BRANCH}" origin/main
+          git add packages/adapter/api/package.json package-lock.json
+          git commit -m "chore(deps): @tsumugi-chan/client を ${{ steps.current.outputs.current_version }} から ${{ steps.normalize.outputs.version }} へ更新"
+
+      - name: force push する
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version && steps.normalize.outputs.dry_run != 'true'
+        env:
+          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
+        run: |
+          set -euo pipefail
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/${BRANCH}"
+
+      - name: PRを作成または更新する
+        if: steps.current.outputs.current_version != steps.normalize.outputs.version && steps.normalize.outputs.dry_run != 'true'
+        env:
+          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
+          TITLE: ${{ steps.body.outputs.title }}
+        run: |
+          set -euo pipefail
 
           # 同じ版の通知が重複してもPRが増えないよう、既存PRの有無を先に確認する。
           EXISTING=$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number // empty')
