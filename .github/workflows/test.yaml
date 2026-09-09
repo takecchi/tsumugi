@@ -44,6 +44,14 @@ jobs:
           # .prettierrc / .prettierignore / .mise.toml) は壊しても 5 工程すべて緑だった。
           # ⟹ ここへ足しても「走った」が増えるだけで、拾えるものは 1 つも増えない。
           # 詳細と対照の取り方は、この変更の PR 本文にある。
+          #
+          # 追記: 上の 6 つのうち eslint.config.js と .depcheckrc.json は、CI だけでなく
+          # 手元にも消費者が居ないことを確かめたうえで削除した (ルート設定は 6 ファイルになった)。
+          # 残りの 4 つは CI では緑でも手元では読まれているので、消していない:
+          #   .lintstagedrc.js            … pre-commit の lint-staged が実際にこれを選ぶ
+          #   .prettierrc / .prettierignore … prettier が読む (値を足すと --check の件数が変わる)
+          #   .mise.toml                  … README が案内している手元セットアップの入口
+          # ⟹ 「CI で緑」を「誰も読んでいない」と読まないこと。
           filters: |
             packages:
               - 'package.json'
