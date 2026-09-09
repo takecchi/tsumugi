@@ -52,6 +52,32 @@ jobs:
           #   .prettierrc / .prettierignore … prettier が読む (値を足すと --check の件数が変わる)
           #   .mise.toml                  … README が案内している手元セットアップの入口
           # ⟹ 「CI で緑」を「誰も読んでいない」と読まないこと。
+          #
+          # `.github/**` がここに在る理由 (2026-09-09 に数えた)。
+          # ここに `.github/**` が無かったあいだ、test.yaml を書き換える PR では
+          # packages も desktop も false になり、test_all と test_desktop が両方
+          # skip されていた。job の if: による skip を GitHub は Success として
+          # 報告するので、required 4 本 (check-draft / check_paths / test_all /
+          # test_desktop) が全部緑のまま、テストを 1 本も走らせずに main へ入る。
+          #   実測: 保護された main へマージ済み 43 件のうち 5 件
+          #         (#24 / #36 / #48 / #49 / #55)。run では 62 件中 12 件 (19.4%) で
+          #         テストが 1 本も走っていない。
+          #   ⚠ #24 と #36 の当時この repo に protection が在ったかは検証できて
+          #     いない (public repo でも protection の変更履歴は API から取れない)。
+          #     ⟹ 現在の設定下だと確実に言えるのは #48 / #49 / #55 の 3 件。
+          #   ⟹ とくに #55 は test.yaml 1 ファイルだけを触った PR である。
+          #     「門の定義を書き換える PR が、その門に一度も検査されないまま
+          #      merge された」実例そのものだった。
+          #
+          # 費用は測った。これを足して新たに test_all が走るようになるのは全 62 run
+          # のうち 4 run (+6.5%)。test_all の所要は中央値 99 秒 (最大 215 秒) なので
+          # 6.4 か月ぶんで約 6.6 分、月あたり約 1 分。
+          # ⟹ paths-filter ごと外して「常に全部走らせる」必要は無い。1 行で足りる。
+          #
+          # ⚠ もともと `.github/**` がここに無かったのが、意図的な除外だったのか
+          #   見落としだったのかは分からない。上のコメントはルート設定 8 ファイルに
+          #   ついて「壊しても緑だった」と実測を書いているが、`.github/**` 自身に
+          #   ついては何も書いていない。
           filters: |
             packages:
               - 'package.json'
@@ -59,20 +85,35 @@ jobs:
               - 'packages/**'
               - 'turbo.json'
               - '.npmrc'
+              # 門の定義そのもの。理由は直上のコメントに在る。
+              - '.github/**'
             desktop:
               - 'apps/desktop/**'
 
       # 歯。filter の「設定の文面」ではなく「判定結果」を測る。
       # 変更ファイル一覧を paths-filter とは別の経路 (PR の files API) で取り直し、
-      # turbo.json / .npmrc が変わっているのに packages が true でなければ落とす。
+      # 見張り対象が変わっているのに packages が true でなければ落とす。
+      #
+      # ⚠ この歯が要る理由 (実測 2026-09-09)。上の 1 行だけでは閉じない:
+      #   pull_request の workflow は PR の head 版で走る。base 版ではない。
+      #   ⟹ 上の `- '.github/**'` を消す PR は、消した状態で判定される。その回に
+      #      test_all は走らないので、「消したこと」がその回の門に見られることは無い。
+      #   ⟹ 裏は取ってある: PR #55 の run 34302274054 の check_paths の step 一覧に、
+      #      #55 自身がそこで追加した歯の step が入っていた。⟹ head 版で走っている。
+      #   ⟹ だから filter の 1 行を「消えたら落ちる」形で支えるものが要る。それがこの歯。
+      #   ⟹ 同じ理由で、逆向きにも効く。`.github/**` を足したこの PR 自身が新しい filter
+      #      で判定されるので、この PR では test_all が走る (skip されない)。
       #
       # ⚠ この歯の限界を、歯自身が名乗っておく:
-      #   - turbo.json / .npmrc を触る PR でしか発火しない。マージ済み 41 件のうち
-      #     該当は 1 件だけで、ふだんこの歯は何も測っていない。
+      #   - 見張り対象 (turbo.json / .npmrc / .github/**) を触る PR でしか発火しない。
+      #     全 48 PR のうち .github/** を含むのは 9 件。ふだんこの歯は何も測っていない。
       #     ⟹ 「緑だった」を「filter は正しい」と読まないこと。
-      #   - 測るのは packages が true になるかどうかまで。test_all がその壊れを
-      #     実際に落とすかは見ていない (それは手元での実測に拠っている)。
-      - name: filter が turbo.json / .npmrc を拾えているか (判定結果で測る)
+      #   - filter の行とこの歯を「同じ PR で両方」消せば、この歯も走らないので捕まらない。
+      #     ⟹ 閉じてはいない。上げたのは敷居だけである。repo の中に置く歯は、同じ PR で
+      #        一緒に編集できる以上こうなる。ここを閉じたいなら repo の外に置くしかない。
+      #   - 測るのは packages が true になるかどうかまで。test_all がその壊れを実際に
+      #     落とすかは見ていない (それは手元での実測に拠っている)。
+      - name: filter が見張り対象を拾えているか (判定結果で測る)
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -81,15 +122,15 @@ jobs:
         run: |
           set -euo pipefail
           CHANGED=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename')
-          WATCHED=$(printf '%s\n' "$CHANGED" | grep -xE 'turbo\.json|\.npmrc' || true)
+          WATCHED=$(printf '%s\n' "$CHANGED" | grep -E '^(turbo\.json|\.npmrc)$|^\.github/' || true)
           if [ -z "$WATCHED" ]; then
-            echo "turbo.json / .npmrc は変更されていません。この歯はこの PR では何も測っていません"
+            echo "turbo.json / .npmrc / .github/** は変更されていません。この歯はこの PR では何も測っていません"
             exit 0
           fi
           echo "変更されています:"
           printf '  %s\n' ${WATCHED}
           if [ "${PACKAGES_CHANGED}" != 'true' ]; then
-            echo "::error::AssertionError: turbo.json / .npmrc が変わったのに check_paths の packages が '${PACKAGES_CHANGED}' です (期待: true)。この PR ではテストが 1 本も走りません"
+            echo "::error::AssertionError: turbo.json / .npmrc / .github/** が変わったのに check_paths の packages が '${PACKAGES_CHANGED}' です (期待: true)。この PR ではテストが 1 本も走りません"
             exit 1
           fi
           echo "packages=true。test_all が走ります"
