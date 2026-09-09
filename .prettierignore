@@ -3,6 +3,10 @@
 **/.next/**
 **/.react-router/**
 **/build/**
+# prettier が読む .gitignore はリポジトリルートの 1 枚だけで、packages/*/.gitignore は読まれない。
+# ⟹ 各パッケージの .gitignore にしか書かれていない生成物は、ここに書かないと素通りする。
+**/storybook-static/**
+**/coverage/**
 **/src-tauri/gen/schemas/**
 **/src-tauri/target/**
 **/src-tauri/gen/android/app/src/main/assets/tauri.conf.json
