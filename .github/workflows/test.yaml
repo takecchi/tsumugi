@@ -44,7 +44,7 @@ jobs:
     #   この job が skipped だった run は 0 件。まだ一度も起きていない壊れ方である。
     #
     # draft の PR での挙動はこの変更で変わらない ('true' なら従来どおり skip)。
-    if: needs.check-draft.outputs.is_draft != 'true'
+    if: needs.check-draft.outputs.is_draft == 'false'
     runs-on: ubuntu-latest
     # 下の歯が PR の変更ファイル一覧を読むために要る
     permissions:
