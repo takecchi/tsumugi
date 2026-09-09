@@ -21,6 +21,10 @@ jobs:
     needs: check-draft
     if: needs.check-draft.outputs.is_draft == 'false'
     runs-on: ubuntu-latest
+    # 下の歯が PR の変更ファイル一覧を読むために要る
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       packages_changed: ${{ steps.filter.outputs.packages }}
       desktop_changed: ${{ steps.filter.outputs.desktop }}
@@ -30,13 +34,57 @@ jobs:
         name: Check changed files
         uses: dorny/paths-filter@v3
         with:
+          # turbo.json / .npmrc がここに在る理由は実測にある。ルート設定 8 ファイルを
+          # 1 つずつ壊して test_all の 5 工程 (build/tsc/lint/test/build-storybook) を
+          # 回したところ、CI が落ちたのはこの 2 つだけだった。
+          #   turbo.json  … tasks の "test" を "tests" に打ち間違える → npm run test が EXIT=1
+          #   .npmrc      … registry を到達不能にする → npm install が EXIT=1
+          #                  (冷えたキャッシュでのみ再現する。素の .npmrc なら同条件で EXIT=0)
+          # 残る 6 つ (eslint.config.js / .lintstagedrc.js / .depcheckrc.json /
+          # .prettierrc / .prettierignore / .mise.toml) は壊しても 5 工程すべて緑だった。
+          # ⟹ ここへ足しても「走った」が増えるだけで、拾えるものは 1 つも増えない。
+          # 詳細と対照の取り方は、この変更の PR 本文にある。
           filters: |
             packages:
               - 'package.json'
               - 'package-lock.json'
               - 'packages/**'
+              - 'turbo.json'
+              - '.npmrc'
             desktop:
               - 'apps/desktop/**'
+
+      # 歯。filter の「設定の文面」ではなく「判定結果」を測る。
+      # 変更ファイル一覧を paths-filter とは別の経路 (PR の files API) で取り直し、
+      # turbo.json / .npmrc が変わっているのに packages が true でなければ落とす。
+      #
+      # ⚠ この歯の限界を、歯自身が名乗っておく:
+      #   - turbo.json / .npmrc を触る PR でしか発火しない。マージ済み 41 件のうち
+      #     該当は 1 件だけで、ふだんこの歯は何も測っていない。
+      #     ⟹ 「緑だった」を「filter は正しい」と読まないこと。
+      #   - 測るのは packages が true になるかどうかまで。test_all がその壊れを
+      #     実際に落とすかは見ていない (それは手元での実測に拠っている)。
+      - name: filter が turbo.json / .npmrc を拾えているか (判定結果で測る)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PACKAGES_CHANGED: ${{ steps.filter.outputs.packages }}
+        run: |
+          set -euo pipefail
+          CHANGED=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename')
+          WATCHED=$(printf '%s\n' "$CHANGED" | grep -xE 'turbo\.json|\.npmrc' || true)
+          if [ -z "$WATCHED" ]; then
+            echo "turbo.json / .npmrc は変更されていません。この歯はこの PR では何も測っていません"
+            exit 0
+          fi
+          echo "変更されています:"
+          printf '  %s\n' ${WATCHED}
+          if [ "${PACKAGES_CHANGED}" != 'true' ]; then
+            echo "::error::AssertionError: turbo.json / .npmrc が変わったのに check_paths の packages が '${PACKAGES_CHANGED}' です (期待: true)。この PR ではテストが 1 本も走りません"
+            exit 1
+          fi
+          echo "packages=true。test_all が走ります"
 
   test_all:
     needs: check_paths
