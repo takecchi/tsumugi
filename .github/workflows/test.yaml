@@ -19,7 +19,28 @@ jobs:
 
   check_paths:
     needs: check-draft
-    if: needs.check-draft.outputs.is_draft == 'false'
+    # draft のときだけ skip する。判定できないときは走らせる (fail-closed)。
+    #
+    # `== 'false'` ではなく `!= 'true'` である理由:
+    #   is_draft は check-draft が `github.event.pull_request.draft` を文字列として
+    #   書いたもの。`== 'false'` だと、is_draft が 'false' 以外の「何か」(空文字を含む)
+    #   になった瞬間に、この job も下流の test_all / test_desktop も丸ごと skip される。
+    #   job の if: による skip を GitHub は Success として報告するので、結果は
+    #   「draft ですらない普通の PR で、required 4 本が全部緑・テストは 1 本も走らない」。
+    #   is_draft が空になる経路は、たとえば check-draft の `id: check` を書き換えて
+    #   output が出なくなる、`on:` に pull_request 以外を足して
+    #   github.event.pull_request が無い文脈が来る、など。
+    #   ⟹ 既定が「skip」だと、壊れ方が「黙って緑」になる。だから既定を「走らせる」にする。
+    #
+    # ⚠ 既存の歯 (下の「filter が見張り対象を拾えているか」) はこれを捕まえない。
+    #   あの歯はこの job の中に在るので、この job ごと skip されれば一緒に消える。
+    #
+    # ⚠ この変更を守る歯は置けない。壊れ方が「黙って緑」なので、戻されても赤くならない。
+    #   実測 (2026-09-09): test.yaml の run 65 件のうち、is_draft=false なのに
+    #   この job が skipped だった run は 0 件。まだ一度も起きていない壊れ方である。
+    #
+    # draft の PR での挙動はこの変更で変わらない ('true' なら従来どおり skip)。
+    if: needs.check-draft.outputs.is_draft != 'true'
     runs-on: ubuntu-latest
     # 下の歯が PR の変更ファイル一覧を読むために要る
     permissions:
