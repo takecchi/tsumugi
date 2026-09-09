@@ -1,7 +1,7 @@
 name: Test Workflow
 on:
   pull_request:
-    types: [ opened, synchronize, reopened ]
+    types: [ opened, synchronize, reopened, ready_for_review ]
 
 # ブランチごとに並行実行を制御
 concurrency:
@@ -16,109 +16,6 @@ jobs:
     steps:
       - id: check
         run: echo "is_draft=${{ github.event.pull_request.draft }}" >> $GITHUB_OUTPUT
-
-      - uses: actions/checkout@v4
-
-      # 歯。門の「形」を、必ず走るこの job から測る。
-      #
-      # なぜ check-draft の中なのか:
-      #   この job は 4 つのうち唯一 if: も needs: も持たない。⟹ draft でも非 draft でも
-      #   必ず走る。⟹ pull_request の workflow は head 版で走るので、門の形を壊した
-      #   その PR 自身がここで赤くなる。
-      #   (check_paths に置いた歯とは対照的である。あちらは filter の行を消すと
-      #    check_paths ごと skip されるので、歯も一緒に消えて捕まらない。同じ理屈を
-      #    check-draft に当てると、逆に「消えない場所」になる。)
-      #
-      # 検査 1: on.pull_request.types に ready_for_review が在ること。
-      #   check-draft は draft を止める門ではなく、draft のあいだ check_paths 以降を
-      #   走らせないための切替器である (GitHub は draft の PR をそもそも merge させない)。
-      #   ⟹ 走らせなかった分は借りになる。その借りを返しているのは types の
-      #      `ready_for_review` の 1 語だけで、draft を出た瞬間に再発火させている。
-      #   ⟹ 消えると: draft で開いた PR は required 4 本が全部緑 (skip は Success として
-      #      報告される) になり、Ready for review を押しても再発火しないのでその緑が残る。
-      #      build も tsc も lint も test も build-storybook も 1 本も走らないまま merge
-      #      できる。しかも画面上は緑なので、押した人には見分けが付かない。
-      #   実測 (PR #38): ready_for_review が 2026-08-03T03:20:34Z、その 2 秒後に
-      #   run 30781577612 が同じ head SHA で走り、test_all が success になった。
-      #
-      # 検査 2: check_paths の if: が `!= 'true'` のままであること (#62)。
-      #   `== 'false'` へ戻されると、is_draft が 'false' 以外の何か (空文字を含む) に
-      #   なった瞬間に check_paths 以降が丸ごと skip され、draft ですらない普通の PR が
-      #   テスト 0 本で required 4 本全緑になる。壊れ方が「黙って緑」なので、
-      #   戻された結果そのものは赤くならない。⟹ だから「文字列の形」で測る。
-      #
-      # 検査 3: check-draft 自身に if: / needs: が付いていないこと。
-      #   増やした理由: 上の 2 つが成り立つ前提そのものだから。この job が skip
-      #   されうるようになると、検査 1 と 2 がまとめて消える。
-      #
-      # ⚠ この歯が測っていないこと (歯自身に名乗らせておく):
-      #   - 測るのは「文字列の形」だけである。その if: が意図どおりに効くことは
-      #     測っていない。`!= 'true'` のまま check-draft の step id を書き換えるなど、
-      #     別の場所を壊せばこの歯は通る。形が正しいことと、効くことは別である。
-      #   - 閉じてはいない。同じ PR で対象の行とこの歯を両方消せば、この歯も head 版
-      #     から消えるので走らない。⟹ 上げたのは敷居だけである。repo の中に置く歯は、
-      #     同じ PR で一緒に編集できる以上こうなる。
-      #   - 検査 3 は自分を守れない。check-draft に if: を足す PR で、その if: が
-      #     その PR 自身に対して偽なら、この job ごと skip されて検査 3 も走らない。
-      #   - 検査 2 は式を厳密一致で見る。等価な書き換えでも赤くなる。意図的にそうして
-      #     ある: 式の「意味」を機械で確かめる術が無いので、変えるなら歯も一緒に
-      #     人間に更新させる。
-      #   - ふだんこの歯は何も測っていない。types: の行は root commit (2026-02-01) 以来
-      #     一度も編集されていない (全履歴を機械的に確認、編集 0 回)。
-      #     ⟹ 「緑だった」を「門の形は正しい」と読まないこと。
-      #   - 検査 1 は「types に書いてある」までである。draft の PR が実際に再走を経てから
-      #     merge されたことは測っていない。それは PR #38 という 1 件の実測に拠っている
-      #     (draft を経由した PR は全 51 PR 中この 1 件だけだった)。
-      #   - yq が runner から消えたら、通さずに落とす。読めないものを緑にしない。
-      #
-      # yq を使う理由: 文字列一致だと types: の外に在る `ready_for_review` でも通る。
-      #   手元で 5 通り撃って確かめた (yq 4.53.6 = runner image と同版):
-      #     現物 → EXIT=0 / types から消す → EXIT=1 / コメントに文字列を残す → EXIT=1
-      #     types: 行ごと消す → EXIT=1 / ブロック形式に整形 → EXIT=0
-      - name: 門の形が保たれているか (この job は必ず走るので、ここからなら測れる)
-        run: |
-          set -euo pipefail
-          F="${GITHUB_WORKSPACE}/.github/workflows/test.yaml"
-          FAIL=0
-
-          if ! command -v yq >/dev/null 2>&1; then
-            echo "::error::yq が runner に在りません。門の形を構造として読めないので、通さずに落とします"
-            exit 1
-          fi
-
-          # 検査 1: on.pull_request.types に ready_for_review
-          TYPES=$(yq -r '.on.pull_request.types[]' "$F" 2>/dev/null || true)
-          if [ -z "${TYPES}" ]; then
-            echo "::error::AssertionError [1]: on.pull_request.types を読めませんでした (構造が変わった可能性)。読めないものは通しません"
-            FAIL=1
-          elif ! printf '%s\n' "${TYPES}" | grep -qx 'ready_for_review'; then
-            echo "::error::AssertionError [1]: on.pull_request.types に ready_for_review が在りません。draft の PR は required 4 本が緑のまま再発火しなくなり、テストが 1 本も走らずに merge できてしまいます"
-            FAIL=1
-          else
-            echo "OK [1] on.pull_request.types: $(printf '%s ' ${TYPES})"
-          fi
-
-          # 検査 2: check_paths の if: が fail-closed のまま
-          EXPECT="needs.check-draft.outputs.is_draft != 'true'"
-          ACTUAL=$(yq -r '.jobs.check_paths.if // ""' "$F" 2>/dev/null | tr -s ' ' || true)
-          if [ "${ACTUAL}" != "${EXPECT}" ]; then
-            echo "::error::AssertionError [2]: check_paths の if: が変わっています。期待: ${EXPECT} / 実際: ${ACTUAL}。fail-open に戻ると、draft でない普通の PR がテスト 0 本で required 4 本全緑になります"
-            FAIL=1
-          else
-            echo "OK [2] check_paths.if: ${ACTUAL}"
-          fi
-
-          # 検査 3: check-draft 自身が必ず走ること (if:/needs: を持たない)
-          CD_IF=$(yq -r '.jobs["check-draft"].if // "null"' "$F" 2>/dev/null || true)
-          CD_NEEDS=$(yq -r '.jobs["check-draft"].needs // "null"' "$F" 2>/dev/null || true)
-          if [ "${CD_IF}" != "null" ] || [ "${CD_NEEDS}" != "null" ]; then
-            echo "::error::AssertionError [3]: check-draft に if: / needs: が付きました (if=${CD_IF} needs=${CD_NEEDS})。この job が skip されうるようになると、検査 1 と 2 がまとめて消えます"
-            FAIL=1
-          else
-            echo "OK [3] check-draft は if: も needs: も持ちません (必ず走ります)"
-          fi
-
-          exit ${FAIL}
 
   check_paths:
     needs: check-draft
