@@ -49,8 +49,6 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - 'packages/**'
-              - 'turbo.json'
-              - '.npmrc'
             desktop:
               - 'apps/desktop/**'
 
