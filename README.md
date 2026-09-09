@@ -120,8 +120,11 @@ npm run build:web
 # 全パッケージビルド
 npm run build
 
-# Lint
+# Lint (検査のみ)
 npm run lint
+
+# Lint (自動修正)
+npm run lint:fix
 
 # 型チェック
 npm run tsc

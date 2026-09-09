@@ -13,7 +13,8 @@
     "dev:web": "react-router dev --open",
     "start": "npx serve -s build/client",
     "tsc": "react-router typegen && tsc",
-    "lint": "eslint --fix",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "test": "TZ=Asia/Tokyo jest",
     "typegen": "react-router typegen"
   },

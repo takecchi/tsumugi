@@ -30,6 +30,11 @@
       "cache": false,
       "persistent": false
     },
+    "lint:fix": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": false
+    },
     "build": {
       "dependsOn": ["^build"],
       "cache": false,

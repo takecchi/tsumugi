@@ -112,6 +112,21 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # 歯。門が自分の入力を直していないことを、出力で測る。
+      # lint が eslint --fix に戻されると、自動修正できる違反が在るファイルが
+      # ここで書き換わり、git diff が空でなくなる。
+      #
+      # ⚠ 限界を歯自身に名乗らせておく:
+      #   自動修正できる違反が実際に在る PR でしか発火しない。いまの main では
+      #   eslint --fix は 1 ファイルも書き換えないので、ふだんこの歯は何も測っていない。
+      #   ⟹ 「緑だった」を「lint は検査専用のままだ」と読まないこと。
+      - name: lint が作業ツリーを書き換えていないか (門が入力を直していないことの確認)
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::AssertionError: npm run lint が作業ツリーを書き換えました。lint は検査専用のはずです (自動修正は npm run lint:fix)"
+            exit 1
+          fi
+
       - name: Test
         run: npm run test
 
@@ -143,6 +158,21 @@ jobs:
 
       - name: Lint
         run: npm run lint -w desktop
+
+      # 歯。門が自分の入力を直していないことを、出力で測る。
+      # lint が eslint --fix に戻されると、自動修正できる違反が在るファイルが
+      # ここで書き換わり、git diff が空でなくなる。
+      #
+      # ⚠ 限界を歯自身に名乗らせておく:
+      #   自動修正できる違反が実際に在る PR でしか発火しない。いまの main では
+      #   eslint --fix は 1 ファイルも書き換えないので、ふだんこの歯は何も測っていない。
+      #   ⟹ 「緑だった」を「lint は検査専用のままだ」と読まないこと。
+      - name: lint が作業ツリーを書き換えていないか (門が入力を直していないことの確認)
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::AssertionError: npm run lint が作業ツリーを書き換えました。lint は検査専用のはずです (自動修正は npm run lint:fix)"
+            exit 1
+          fi
 
       - name: Test
         run: npm run test -w desktop
