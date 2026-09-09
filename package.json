@@ -13,15 +13,6 @@
     "packages/adapter/api",
     "packages/react-router"
   ],
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,css,scss,html,md}": [
-      "prettier --write"
-    ]
-  },
   "scripts": {
     "format": "prettier --write \"**/*.{js,jsx,mjs,ts,tsx,css,scss,html,json}\"",
     "prepare": "husky",
