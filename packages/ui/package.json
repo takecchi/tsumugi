@@ -32,7 +32,7 @@
     "dev": "vite build --watch",
     "dev:tauri": "vite build --watch",
     "dev:web": "vite build --watch",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings 0",
     "lint:fix": "eslint --fix",
     "tsc": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
