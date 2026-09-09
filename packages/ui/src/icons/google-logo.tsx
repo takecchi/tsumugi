@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 /**
  * Google "G" ロゴ（公式ブランディングガイドライン準拠）
  * @see https://developers.google.com/identity/branding-guidelines

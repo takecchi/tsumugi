@@ -26,6 +26,7 @@
     "format": "prettier --write \"**/*.{js,jsx,mjs,ts,tsx,css,scss,html,json}\"",
     "prepare": "husky",
     "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
     "build": "turbo run build",
     "tsc": "turbo run tsc",
     "test": "turbo run test",

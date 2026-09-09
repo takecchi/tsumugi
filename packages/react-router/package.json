@@ -30,7 +30,8 @@
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "dev:tauri": "tsup src/index.ts --format cjs,esm --dts --watch",
     "dev:web": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "lint": "eslint --fix",
+    "lint": "eslint --max-warnings 0",
+    "lint:fix": "eslint --fix",
     "tsc": "tsc --noEmit"
   },
   "peerDependencies": {
