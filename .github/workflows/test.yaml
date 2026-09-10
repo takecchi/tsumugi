@@ -160,7 +160,25 @@ jobs:
       - uses: actions/checkout@v6
       - id: filter
         name: Check changed files
-        uses: dorny/paths-filter@v3
+        # node20 は 2026-09-23 に runner から削除される。⟹ v3 は runs.using が node20
+        # なので、その日に動かなくなる。この repo に残っていた node20 の action は
+        # これ 1 箇所だった (checkout / setup-node は #66 で v6 = node24 へ移行済み)。
+        #
+        # v4 を選ぶ根拠 (upstream の現物を読んで確かめた):
+        #   v4.0.0 の変更は「action runtime を node24 にする」1 件だけ (upstream PR #294)。
+        #   action.yml の inputs: / outputs: は v3 (= v3.0.4) と v4 (= v4.0.3) で
+        #   名前・既定値ともに同一だった。差分は 2 点しかない:
+        #     - predicate-quantifier の description が増えた
+        #       ('some-with-excludes' が選べるようになった。既定は 'some' のまま)
+        #     - runs.using: node20 → node24
+        #   ⟹ ここが渡しているのは filters: だけなので、渡している入力に触る変更は 0 件。
+        #
+        # ⚠ この上げの挙動上の risk が低い理由 (「無い」ではない):
+        #   2026-06-16 の既定切替以降、この action はすでに node24 の上で強制実行されて
+        #   いる (runner が「node20 を狙う action を node24 で走らせている」と注釈を
+        #   出している)。⟹ 9/23 に変わるのは「警告付きで動く」→「動かない」だけである。
+        #   ⟹ node24 での動作は、この上げの前からこの repo の門で毎回試されていた。
+        uses: dorny/paths-filter@v4
         with:
           # turbo.json / .npmrc がここに在る理由は実測にある。ルート設定 8 ファイルを
           # 1 つずつ壊して test_all の 5 工程 (build/tsc/lint/test/build-storybook) を
