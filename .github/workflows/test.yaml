@@ -17,7 +17,7 @@ jobs:
       - id: check
         run: echo "is_draft=${{ github.event.pull_request.draft }}" >> $GITHUB_OUTPUT
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # 歯。門の「形」を、必ず走るこの job から測る。
       #
@@ -157,7 +157,7 @@ jobs:
       packages_changed: ${{ steps.filter.outputs.packages }}
       desktop_changed: ${{ steps.filter.outputs.desktop }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - id: filter
         name: Check changed files
         uses: dorny/paths-filter@v3
@@ -269,10 +269,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -316,10 +316,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
