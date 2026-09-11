@@ -176,6 +176,101 @@ jobs:
         if: steps.normalize.outputs.dry_run != 'true'
         run: echo "GH_TOKEN=${{ steps.app-token.outputs.token }}" >> "$GITHUB_ENV"
 
+      # ⭐ 版上げ(npm pkg set / npm install)より「先に」ブランチを切る。
+      #
+      # 🔴 なぜ順序が効くのか (#68)。
+      #   以前このcheckoutは版上げの後ろに在り、作業ツリーが汚れた状態で
+      #     git checkout -B "${BRANCH}" origin/main
+      #   を打っていた。git はこのとき、汚れているファイルが HEAD と始点
+      #   (origin/main) で異なると checkout を中断する:
+      #     error: Your local changes to the following files would be overwritten by checkout:
+      #       package-lock.json
+      #       packages/adapter/api/package.json
+      #     Please commit your changes or stash them before you switch branches.
+      #     Aborting
+      #   ⟹ run のチェックアウト以降に main がその2ファイルについて動いていると落ちる
+      #      (直前の git fetch origin main で origin/main が進むため)。
+      #
+      #   実測 (手元に空の repo を作り、git 2.47.3 で4通り撃った):
+      #     汚したファイルが HEAD と始点で異なる    → EXIT=1 中断
+      #     汚したファイルが HEAD と始点で同一      → EXIT=0 汚れを持ったまま切替
+      #     汚れの中身が始点と同一・HEADとは異なる  → EXIT=1 中断
+      #       ⟹ 「中身が始点と同じなら通る」ではない。index が HEAD 版のままなので中断する。
+      #     切ってから汚す (この形)                 → EXIT=0
+      #
+      #   ⟹ これを踏んだのは run 34354449082 の attempt 2 (再実行)。fetch の出力が
+      #      `a42f57f..1dbdb21  main -> origin/main` で、その区間に 9e16923
+      #      (1.3.8 を手で入れた commit) が含まれていた。⟹ package.json と
+      #      package-lock.json の両方が HEAD と origin/main で食い違い、中断した。
+      #   ⟹ 再実行は前の attempt から時間が経っているぶん main が動いている公算が高い。
+      #      「権限を直したので再実行して確かめる」という手順が、これで塞がれていた。
+      #      (⚠ 「再実行なら必ず落ちる」ではない。落ちる条件は上の2ファイルが
+      #        HEAD と origin/main で食い違うことで、main が別のファイルだけ
+      #        動いた場合は通る。実測の2番目がそれ。)
+      #
+      # ⟹ 汚れが生まれる前に切ることで、中断の経路そのものを無くす。
+      #   ⛔ このstepを版上げ(下の「依存バージョンを更新する」)より後ろへ動かさないこと。
+      #      戻すと上の中断が再発する。test.yaml の check-draft に、この順序を
+      #      構造で測る歯 (検査 4) を置いてある。
+      #
+      # ⚠ if: を付けていない (＝ 追随不要のときも切る) 理由:
+      #   1. このstepは「現在の依存バージョンを読む」より前に居る必要があるので、
+      #      あのstepの output には依存できない。
+      #   2. push しない。ローカルにブランチを作るだけなので、外への副作用が無い。
+      #   3. ⭐ 追随不要で終わる run でも checkout -B が実際に走る。⟹ PRを1本も
+      #      作らずに、再実行がこの不具合を踏まないことを確かめられる。
+      #
+      # ⚠ dry_run でもこのstepは走る。dry_run と本番で経路を分けない
+      #   (このファイル冒頭のコメントの方針)。push は本番経路にしか無い。
+      #
+      # ⚠ 「現在の依存バージョンを読む」より前に置いた理由 (#68 で意味が変わる箇所):
+      #   以前は current_version を「run がチェックアウトした commit」から読み、
+      #   commit は origin/main の上に作っていた。⟹ 読んだ木と作る木が食い違いうる。
+      #   main が既にその版へ手で追随済みだと (9e16923 で実際に起きた)、
+      #   「追随必要」と判定 → 版上げしても差分ゼロ → git commit が
+      #   「nothing to commit」で落ちる、という別の倒れ方になる。
+      #   ⟹ 先に origin/main へ切ってから読めば、判定・版上げ・commit がすべて
+      #      同じ木の上で起きる。判定が「不要」へ倒れるのは origin/main が既に
+      #      その版を持つときだけなので、追随が必要なのに不要と判定することは無い
+      #      (＝ 黙って終わる向きへは倒れない)。
+      #   ⚠ 副次: PRタイトル/本文/commitメッセージの「X から Y へ」の X が、
+      #      実際の差分の基点と一致するようになる。
+      - name: 版上げより先にブランチを作る
+        env:
+          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+
+          # 歯。このstepが「汚れる前」に居ることを実行時にも測る。順序をコメントだけで
+          # 守らせない。順序が戻されると、checkout の中断より先に、原因の名前で落ちる。
+          #
+          # ⚠ この歯が測っているのは「原因が消えたこと」(checkout -B の直前で作業ツリーが
+          #   汚れていないこと) であって、「checkout -B が成功すること」ではない。
+          # ⚠ この歯は PR の CI では 1 度も走らない。backend-released.yaml は
+          #   pull_request では発火しないため。⟹ PR の段で順序を守るのは
+          #   test.yaml の check-draft に置いた構造の歯 (検査 4) のほう。
+          DIRTY=$(git status --porcelain)
+          if [ -n "$DIRTY" ]; then
+            echo "::error::AssertionError: git checkout -B の前で作業ツリーが汚れています。この状態で checkout -B を打つと、汚れたファイルが HEAD と origin/main で異なるとき git が中断します (#68)。版上げするstepがこのstepより前に来ていないか確認してください"
+            printf '%s\n' "$DIRTY"
+            exit 1
+          fi
+
+          # ブランチ名は版から決まる決定的な名前にし、常にorigin/mainから作り直す。
+          # 同じ版の再通知が来てもブランチが増えず、既存PRの更新に落ちるようにするため。
+          #
+          # ⚠ 接頭辞が既存の慣習と違うのは意図的です（手作業の追随PRは chore/client-<version> を使ってきた）。
+          # この後の「force push する」stepで force push するため、慣習に揃えると
+          # 人が手で作った chore/client-<version> を踏み潰す事故が起こりえます。
+          # ⟹ 「慣習に合っていない」という理由で揃えないでください。
+          #
+          # （↑ この4行は元は「ブランチを作りcommitする」stepに在った原文です。#68 で
+          #   checkout を版上げの前へ移したのに伴い、原文の「このstepの直後で force push
+          #   するため」だけを「この後の『force push する』stepで force push するため」へ
+          #   直しました。接頭辞についての結論は原文のままで、変えていません。）
+          git checkout -B "${BRANCH}" origin/main
+
       - name: Node セットアップ
         uses: actions/setup-node@v6
         with:
@@ -292,7 +387,7 @@ jobs:
           TITLE: ${{ steps.body.outputs.title }}
         run: |
           set -euo pipefail
-          # 接頭辞 chore/bump-client- を使う理由は「ブランチを作りcommitする」stepのコメントを参照。
+          # 接頭辞 chore/bump-client- を使う理由は「版上げより先にブランチを作る」stepのコメントを参照。
           BRANCH="chore/bump-client-${VERSION}"
 
           # gh は一切呼ばない。代わりにoriginに同名ブランチが在るかで新規/更新を代替判定する。
@@ -334,23 +429,15 @@ jobs:
           cat dry-run-report.md
           cat dry-run-report.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: ブランチを作りcommitする
+      # ブランチは「版上げより先にブランチを作る」stepで既に切ってある (#68)。
+      # ここは commit だけを行う。⛔ このstepへ checkout を戻さないこと
+      # (作業ツリーが汚れた状態の checkout -B は、main が動いていると中断する)。
+      - name: 変更をcommitする
         if: steps.current.outputs.current_version != steps.normalize.outputs.version && steps.normalize.outputs.dry_run != 'true'
-        env:
-          BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          # ブランチ名は版から決まる決定的な名前にし、常にorigin/mainから作り直す。
-          # 同じ版の再通知が来てもブランチが増えず、既存PRの更新に落ちるようにするため。
-          #
-          # ⚠ 接頭辞が既存の慣習と違うのは意図的です（手作業の追随PRは chore/client-<version> を使ってきた）。
-          # このstepの直後で force push するため、慣習に揃えると
-          # 人が手で作った chore/client-<version> を踏み潰す事故が起こりえます。
-          # ⟹ 「慣習に合っていない」という理由で揃えないでください。
-          git checkout -B "${BRANCH}" origin/main
           git add packages/adapter/api/package.json package-lock.json
           git commit -m "chore(deps): @tsumugi-chan/client を ${{ steps.current.outputs.current_version }} から ${{ steps.normalize.outputs.version }} へ更新"
 

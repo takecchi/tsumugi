@@ -51,6 +51,12 @@ jobs:
       #   増やした理由: 上の 2 つが成り立つ前提そのものだから。この job が skip
       #   されうるようになると、検査 1 と 2 がまとめて消える。
       #
+      # 検査 4: backend-released.yaml で checkout -B が版上げより前に在ること (#68)。
+      #   この 1 件だけ、測る対象が test.yaml ではなく別の workflow である。
+      #   backend-released.yaml は pull_request では発火しないので、あのファイルの
+      #   中に置いた歯は PR の段では順序を守れない。⟹ 必ず走るこの job から測る。
+      #   詳細は下の run: の中のコメントに在る。
+      #
       # ⚠ この歯が測っていないこと (歯自身に名乗らせておく):
       #   - 測るのは「文字列の形」だけである。その if: が意図どおりに効くことは
       #     測っていない。`!= 'true'` のまま check-draft の step id を書き換えるなど、
@@ -116,6 +122,59 @@ jobs:
             FAIL=1
           else
             echo "OK [3] check-draft は if: も needs: も持ちません (必ず走ります)"
+          fi
+
+          # 検査 4: backend-released.yaml の checkout が版上げより前に在ること (#68)。
+          #   `git checkout -B <branch> origin/main` は、汚れているファイルが HEAD と
+          #   始点で異なると中断する (中身が始点と一致していても index が HEAD 版なので中断する)。
+          #   ⟹ 版上げ (npm pkg set / npm install) が作業ツリーを汚したあとで打つと、
+          #      run のチェックアウト以降に main がその2ファイルを動かしていた場合に落ちる。
+          #      実測: run 34354449082 の attempt 2 (再実行) が
+          #      `a42f57f..1dbdb21  main -> origin/main` のあとで中断した。
+          #   ⟹ #68 で順序を入れ替えて直した。この歯はその順序が戻されていないかを測る。
+          #
+          #   なぜ test.yaml のこの job から測るのか:
+          #     backend-released.yaml は repository_dispatch / workflow_dispatch でしか
+          #     発火しない。⟹ PR の CI では 1 度も走らない。⟹ あちらの中に置いた実行時の
+          #     歯 (checkout 直前で作業ツリーの汚れを測るもの) は、順序を戻す PR を
+          #     PR の段では捕まえられない。ここなら PR ごとに必ず走る。
+          #     (`.github/**` は check_paths の packages filter に入っているが、
+          #      あちらは draft のあいだ skip される。ここは if: も needs: も無い。)
+          #
+          #   ⚠ この歯が測っていないこと (歯自身に名乗らせておく):
+          #     - 測るのは step の並び順と BRANCH の接頭辞だけである。checkout -B が実際に
+          #       成功することは測っていない。それは backend-released.yaml 側の実行時の歯と、
+          #       #68 で手元で撃った git の実測に拠っている。
+          #     - 版上げstepを `npm pkg set` / `npm install` という文字列で見つけている。
+          #       別のコマンドで版を上げるよう書き換えられると、この歯は見落とす。
+          #     - 最初に現れた checkout -B と、最初に現れた版上げしか見ていない。
+          #       2 本目の checkout -B を版上げの後ろに足されると見落とす。
+          #     - 閉じてはいない。同じ PR で順序とこの歯を両方いじれば通る。
+          #       上げたのは敷居だけである (検査 1〜3 と同じ理屈)。
+          B="${GITHUB_WORKSPACE}/.github/workflows/backend-released.yaml"
+          if [ ! -f "$B" ]; then
+            echo "::error::AssertionError [4]: ${B} が在りません。読めないものは通しません"
+            FAIL=1
+          else
+            CO_IDX=$(yq -r '[.jobs.bump-client-version.steps[] | .run // ""] | to_entries | map(select(.value | test("git checkout -B"))) | .[0].key // "none"' "$B" 2>/dev/null || echo none)
+            BUMP_IDX=$(yq -r '[.jobs.bump-client-version.steps[] | .run // ""] | to_entries | map(select(.value | test("npm pkg set|npm install"))) | .[0].key // "none"' "$B" 2>/dev/null || echo none)
+            BRANCH_EXPR=$(yq -r '[.jobs.bump-client-version.steps[] | select((.run // "") | test("git checkout -B")) | .env.BRANCH // ""] | .[0] // ""' "$B" 2>/dev/null || echo "")
+
+            if [ "${CO_IDX}" = "none" ]; then
+              echo "::error::AssertionError [4]: backend-released.yaml に git checkout -B を打つ step が在りません。構造が変わったか、#68 の直しが消えています。読めないものは通しません"
+              FAIL=1
+            elif [ "${BUMP_IDX}" = "none" ]; then
+              echo "::error::AssertionError [4]: backend-released.yaml に版上げ (npm pkg set / npm install) の step が在りません。構造が変わっています。読めないものは通しません"
+              FAIL=1
+            elif [ "${CO_IDX}" -ge "${BUMP_IDX}" ]; then
+              echo "::error::AssertionError [4]: backend-released.yaml で git checkout -B (steps[${CO_IDX}]) が版上げ (steps[${BUMP_IDX}]) より後ろに在ります。汚れた作業ツリーでの checkout -B は、run のチェックアウト以降に main が package.json / package-lock.json を動かしていると中断します (#68)。とくに再実行が塞がれます"
+              FAIL=1
+            elif [ "${BRANCH_EXPR#chore/bump-client-}" = "${BRANCH_EXPR}" ]; then
+              echo "::error::AssertionError [4]: checkout -B する step の env.BRANCH が chore/bump-client- で始まっていません (実際: ${BRANCH_EXPR})。直後に force push するため、手作業の追随PRが使う chore/client-<version> へ揃えるとそれを踏み潰します"
+              FAIL=1
+            else
+              echo "OK [4] backend-released.yaml: checkout -B は steps[${CO_IDX}]、版上げは steps[${BUMP_IDX}] (checkout が先) / BRANCH=${BRANCH_EXPR}"
+            fi
           fi
 
           exit ${FAIL}
