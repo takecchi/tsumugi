@@ -449,18 +449,83 @@ jobs:
           set -euo pipefail
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/${BRANCH}"
 
+      # 🔴 このstepが失敗するとき (#71): 直前の「force push する」stepは既に成功しており、
+      # ブランチの中身(版上げcommit)は origin に存在する。足りないのは「PRを開く/更新する」その一手だけ。
+      # 本番経路(repository_dispatch)は史上2回とも、GitHub Appに Pull requests: write 権限が
+      # 無いために `Resource not accessible by integration` でここが落ちている。これはyamlでは
+      # 直せない(人間がGitHub App側の権限設定を直す話)ため、このstepでは「落ちたまま」
+      # 人間が手で回復できるだけの情報を出す。
+      #
+      # ⛔ continue-on-error は使わない。人間が気付けなくなる。失敗は失敗のまま最後まで伝える。
+      # ⚠ set -euo pipefail の下で `gh pr create/edit` の失敗理由(標準エラー)を掴むため、
+      #   ここだけ `コマンド 2>ファイル || STATUS=$?` の形にして、失敗を検知したら自前で
+      #   exit 1 する(pipeで繋いで拾うと、pipefail下でも読み手の意図と違う終了コードに
+      #   化けやすいため使わない)。
       - name: PRを作成または更新する
         if: steps.current.outputs.current_version != steps.normalize.outputs.version && steps.normalize.outputs.dry_run != 'true'
         env:
           BRANCH: chore/bump-client-${{ steps.normalize.outputs.version }}
           TITLE: ${{ steps.body.outputs.title }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+
+          ERR_FILE=$(mktemp)
 
           # 同じ版の通知が重複してもPRが増えないよう、既存PRの有無を先に確認する。
           EXISTING=$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number // empty')
           if [ -n "$EXISTING" ]; then
-            gh pr edit "$EXISTING" --title "$TITLE" --body-file pr-body.md
+            ACTION="更新(gh pr edit)"
+            STATUS=0
+            gh pr edit "$EXISTING" --title "$TITLE" --body-file pr-body.md 2>"$ERR_FILE" || STATUS=$?
           else
-            gh pr create --base main --head "${BRANCH}" --title "$TITLE" --body-file pr-body.md
+            ACTION="作成(gh pr create)"
+            STATUS=0
+            gh pr create --base main --head "${BRANCH}" --title "$TITLE" --body-file pr-body.md 2>"$ERR_FILE" || STATUS=$?
           fi
+
+          if [ "$STATUS" -eq 0 ]; then
+            exit 0
+          fi
+
+          # ここから先は失敗確定。人間可読なエラーと、手で回復するための情報を残してから落ちる。
+          ERR_OUTPUT=$(cat "$ERR_FILE")
+          echo "$ERR_OUTPUT" >&2
+
+          COMPARE_URL="${SERVER_URL}/${REPO}/compare/main...${BRANCH}?expand=1"
+
+          # `Resource not accessible by integration` は権限不足で確定しているケース。
+          # それ以外(rate limit・一時的な障害等)まで権限不足と決めつけないよう文言を分ける。
+          if printf '%s' "$ERR_OUTPUT" | grep -qF "Resource not accessible by integration"; then
+            echo "::error::PRの${ACTION}に失敗しました。この repo に対する GitHub App の Pull requests 権限が不足している可能性が高いです。手で回復してください（Job Summary参照）。"
+          else
+            echo "::error::PRの${ACTION}に失敗しました。原因は不明です。手で回復してください（Job Summary参照）。"
+          fi
+
+          {
+            echo "## PRの${ACTION}に失敗しました。手で回復してください"
+            echo ""
+            echo "変更は既に \`${BRANCH}\` へ push 済みです（直前の「force push する」stepは成功しています）。"
+            echo "以下のURLから手でPRを作成してください。"
+            echo ""
+            echo "${COMPARE_URL}"
+            echo ""
+            echo "### 用意していたPRタイトル"
+            echo ""
+            echo "\`${TITLE}\`"
+            echo ""
+            echo "### 用意していたPR本文"
+            echo ""
+            echo '```markdown'
+            cat pr-body.md
+            echo '```'
+            echo ""
+            echo "### ghのエラー出力"
+            echo ""
+            echo '```'
+            echo "$ERR_OUTPUT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit 1
